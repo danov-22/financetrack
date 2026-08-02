@@ -80,14 +80,25 @@ async function syncFromSheets() {
 }
 
 async function pushAddToSheets(tx) {
-  if (!app.settings.scriptUrl) return;
+  if (!app.settings.scriptUrl) {
+    console.log("No script URL");
+    return;
+  }
+
   try {
-    await fetch(app.settings.scriptUrl, {
+    const response = await fetch(app.settings.scriptUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'add', ...tx })
     });
-  } catch { /* silent — data saved locally */ }
+
+    const result = await response.text();
+
+    console.log("Google response:", result);
+
+  } catch (error) {
+    console.error("Google error:", error);
+  }
 }
 
 async function pushUpdateToSheets(tx) {
@@ -122,6 +133,7 @@ function normalizeTx(tx) {
     category:    tx.category || 'Other',
     description: tx.description || '',
     amount:      parseFloat(tx.amount) || 0,
+    currency:    tx.currency || "IDR",
     createdTime: tx.createdTime || new Date().toISOString()
   };
 }
