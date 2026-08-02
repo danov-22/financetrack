@@ -57,6 +57,44 @@ function saveSettings() {
 function loadCache()   { app.transactions = load('finance_cache', []); }
 function saveCache()   { save('finance_cache', app.transactions); }
 
+async function pushSettingToSheets({ type, name }) {
+  if (!app.settings.scriptUrl) return;
+
+  const payload = { action: 'addSetting', type, name };
+  console.log('[Settings] Sending to Sheets:', payload);
+
+  try {
+    const response = await fetch(app.settings.scriptUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const result = await response.text();
+    console.log('[Settings] Sheets response:', result);
+  } catch (error) {
+    console.error('[Settings] Send failed:', error);
+  }
+}
+
+async function deleteSettingFromSheets(type, name) {
+  if (!app.settings.scriptUrl) return;
+
+  const payload = { action: 'deleteSetting', type, name };
+  console.log('[Settings] Deleting from Sheets:', payload);
+
+  try {
+    const response = await fetch(app.settings.scriptUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const result = await response.text();
+    console.log('[Settings] Delete response:', result);
+  } catch (error) {
+    console.error('[Settings] Delete failed:', error);
+  }
+}
+
 // ============================================================
 // GOOGLE SHEETS API
 // ============================================================
@@ -174,25 +212,29 @@ function loadLastSync(){
 
 async function syncSettingsFromSheets(){
   if (!app.settings.scriptUrl) return;
+
+  console.log('[Settings] Requesting settings from Sheets:', app.settings.scriptUrl + '?action=getSettings');
+
   try {
-    const res = await fetch(
-      app.settings.scriptUrl + '?action=getSettings'
-    );
+    const res = await fetch(app.settings.scriptUrl + '?action=getSettings');
     const data = await res.json();
 
-    if(data.wallets){
-      app.settings.wallets = data.wallets;
+    console.log('[Settings] Received from Sheets:', data);
+
+    const wallets = data.wallets || data.settings?.wallets || [];
+    const categories = data.categories || data.settings?.categories || [];
+
+    if (Array.isArray(wallets) && wallets.length) {
+      app.settings.wallets = wallets;
+    }
+    if (Array.isArray(categories) && categories.length) {
+      app.settings.categories = categories;
     }
 
-    if(data.categories){
-      app.settings.categories = data.categories;
-    }
-    saveCache();
-    renderSettings();
-  }
-
-  catch(error){
-    console.error("Settings sync failed:", error);
+    saveSettings();
+    renderCurrentPage();
+  } catch(error){
+    console.error('[Settings] Sync failed:', error);
   }
 }
 
@@ -927,10 +969,13 @@ function renderSettings() {
       </div>`).join('') +
     '</div>';
   wList.querySelectorAll('.tag-remove').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       if (app.settings.wallets.length <= 1) { showToast('You need at least one wallet.', 'error'); return; }
-      app.settings.wallets = app.settings.wallets.filter(w => w !== btn.dataset.wallet);
-      saveSettings(); renderSettings();
+      const name = btn.dataset.wallet;
+      app.settings.wallets = app.settings.wallets.filter(w => w !== name);
+      saveSettings();
+      await deleteSettingFromSheets('Wallet', name);
+      renderSettings();
     });
   });
 
@@ -944,9 +989,12 @@ function renderSettings() {
       </div>`).join('') +
     '</div>';
   cList.querySelectorAll('.tag-remove').forEach(btn => {
-    btn.addEventListener('click', () => {
-      app.settings.categories = app.settings.categories.filter(c => c !== btn.dataset.cat);
-      saveSettings(); renderSettings();
+    btn.addEventListener('click', async () => {
+      const name = btn.dataset.cat;
+      app.settings.categories = app.settings.categories.filter(c => c !== name);
+      saveSettings();
+      await deleteSettingFromSheets('Category', name);
+      renderSettings();
     });
   });
 
@@ -1241,11 +1289,12 @@ function setupEvents() {
   });
 
   // Settings: save script URL
-  document.getElementById('saveScriptUrlBtn').addEventListener('click', () => {
+  document.getElementById('saveScriptUrlBtn').addEventListener('click', async () => {
     app.settings.scriptUrl = document.getElementById('scriptUrlInput').value.trim();
     saveSettings();
     showToast('URL saved!', 'success');
     showBanner();
+    await syncSettingsFromSheets();
   });
 
   // Settings: test connection
@@ -1271,26 +1320,31 @@ function setupEvents() {
   });
 
   // Settings: add wallet
-  document.getElementById('addWalletBtn').addEventListener('click', () => {
+  document.getElementById('addWalletBtn').addEventListener('click', async () => {
     const name = document.getElementById('newWalletInput').value.trim();
     if (!name) return;
     if (app.settings.wallets.includes(name)) { showToast('Wallet already exists.', 'error'); return; }
     app.settings.wallets.push(name);
     saveSettings();
+    await pushSettingToSheets({ type: 'Wallet', name });
     document.getElementById('newWalletInput').value = '';
     renderSettings();
   });
 
   // Settings: add category
-  document.getElementById('addCategoryBtn').addEventListener('click', () => {
-    const name = document.getElementById('newCategoryInput').value.trim();
-    if (!name) return;
-    if (app.settings.categories.includes(name)) { showToast('Category already exists.', 'error'); return; }
-    app.settings.categories.push(name);
-    saveSettings();
-    document.getElementById('newCategoryInput').value = '';
-    renderSettings();
-  });
+document.getElementById('addCategoryBtn').addEventListener('click', async () => {
+  const name = document.getElementById('newCategoryInput').value.trim();
+  if (!name) return;
+  if (app.settings.categories.includes(name)) {
+    showToast('Category already exists.', 'error');
+    return;
+  }
+  app.settings.categories.push(name);
+  saveSettings();
+  await pushSettingToSheets({ type: 'Category', name });
+  document.getElementById('newCategoryInput').value = '';
+  renderSettings();
+});
 
   // Settings: CSV export
   document.getElementById('exportCsvBtn').addEventListener('click', exportCSV);
