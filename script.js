@@ -68,6 +68,14 @@ function saveSettings() {
 function loadCache()   { app.transactions = load('finance_cache', []); }
 function saveCache()   { save('finance_cache', app.transactions); }
 
+async function fetchFromSheets({ url = null, method = 'GET', headers = {}, body = undefined } = {}) {
+  const targetUrl = (url || app.settings.scriptUrl || DEFAULT_SCRIPT_URL).trim();
+  const proxyUrl = '/api/proxy?target=' + encodeURIComponent(targetUrl);
+  const init = { method, headers: { ...(headers || {}) } };
+  if (body !== undefined) init.body = body;
+  return fetch(proxyUrl, init);
+}
+
 async function pushSettingToSheets({ type, name }) {
   if (!app.settings.scriptUrl) return;
 
@@ -75,7 +83,7 @@ async function pushSettingToSheets({ type, name }) {
   console.log('[Settings] Sending to Sheets:', payload);
 
   try {
-    const response = await fetch(app.settings.scriptUrl, {
+    const response = await fetchFromSheets({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -94,7 +102,7 @@ async function deleteSettingFromSheets(type, name) {
   console.log('[Settings] Deleting from Sheets:', payload);
 
   try {
-    const response = await fetch(app.settings.scriptUrl, {
+    const response = await fetchFromSheets({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -113,7 +121,7 @@ async function syncFromSheets() {
   if (!app.settings.scriptUrl) { showBanner(); return; }
   showToast('Syncing with Google Sheets…');
   try {
-    const res  = await fetch(app.settings.scriptUrl + '?action=getAll');
+    const res  = await fetchFromSheets({ url: app.settings.scriptUrl + '?action=getAll' });
     const data = await res.json();
     if (data.transactions) {
       app.transactions = data.transactions.map(normalizeTx);
@@ -135,7 +143,7 @@ async function pushAddToSheets(tx) {
 
   try {
 
-    const response = await fetch(app.settings.scriptUrl, {
+    const response = await fetchFromSheets({
       method: 'POST',
       headers: {
         'Content-Type': 'text/plain'
@@ -159,7 +167,7 @@ async function pushAddToSheets(tx) {
 async function pushUpdateToSheets(tx) {
   if (!app.settings.scriptUrl) return;
   try {
-    await fetch(app.settings.scriptUrl, {
+    await fetchFromSheets({
       method: 'POST',
       headers: {
         'Content-Type': 'text/plain'
@@ -178,7 +186,7 @@ async function pushUpdateToSheets(tx) {
 async function pushDeleteToSheets(id) {
   if (!app.settings.scriptUrl) return;
   try {
-    await fetch(app.settings.scriptUrl, {
+    await fetchFromSheets({
       method: 'POST',
       headers: {
         'Content-Type': 'text/plain'
@@ -227,7 +235,7 @@ async function syncSettingsFromSheets(){
   console.log('[Settings] Requesting settings from Sheets:', app.settings.scriptUrl + '?action=getSettings');
 
   try {
-    const res = await fetch(app.settings.scriptUrl + '?action=getSettings');
+    const res = await fetchFromSheets({ url: app.settings.scriptUrl + '?action=getSettings' });
     const data = await res.json();
 
     console.log('[Settings] Received from Sheets:', data);
@@ -1315,7 +1323,7 @@ function setupEvents() {
     if (!url) { status.textContent = 'Please enter a URL first.'; status.className = 'connection-status error'; return; }
     status.textContent = 'Testing…'; status.className = 'connection-status';
     try {
-      const res  = await fetch(url + '?action=getAll');
+      const res  = await fetchFromSheets({ url: url + '?action=getAll' });
       const data = await res.json();
       if (data.transactions !== undefined) {
         status.textContent = 'Connected! Found ' + data.transactions.length + ' transactions.';
