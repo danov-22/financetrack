@@ -7,26 +7,29 @@ export default async function handler(req, res) {
   }
 
   try {
+    const method = req.method || 'GET';
+    const headers = {};
+
+    for (const [key, value] of Object.entries(req.headers || {})) {
+      if (!value || key === 'host' || key === 'connection') continue;
+      if (Array.isArray(value)) {
+        headers[key] = value[0];
+      } else {
+        headers[key] = value;
+      }
+    }
+
+    const body = method === 'GET' || method === 'HEAD' ? undefined : req.body;
     const response = await fetch(target, {
-      method: req.method,
-      headers: {
-        ...(req.headers || {}),
-        host: undefined
-      },
-      body: req.method === 'GET' || req.method === 'HEAD' ? undefined : req.body
+      method,
+      headers,
+      body
     });
 
-    const contentType = response.headers.get('content-type') || '';
     const text = await response.text();
-
     res.status(response.status);
-    if (contentType.includes('application/json')) {
-      res.setHeader('Content-Type', 'application/json');
-      res.send(text);
-    } else {
-      res.setHeader('Content-Type', contentType || 'text/plain');
-      res.send(text);
-    }
+    res.setHeader('Content-Type', response.headers.get('content-type') || 'application/json');
+    res.send(text);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
