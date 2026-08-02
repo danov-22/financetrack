@@ -70,7 +70,8 @@ function saveCache()   { save('finance_cache', app.transactions); }
 
 async function fetchFromSheets({ url = null, method = 'GET', headers = {}, body = undefined } = {}) {
   const targetUrl = (url || app.settings.scriptUrl || DEFAULT_SCRIPT_URL).trim();
-  const proxyUrl = '/api/proxy?target=' + encodeURIComponent(targetUrl);
+  const proxyBase = window.location.origin || '';
+  const proxyUrl = `${proxyBase}/api/proxy?target=${encodeURIComponent(targetUrl)}`;
   const init = { method, headers: { ...(headers || {}) } };
   if (body !== undefined) init.body = body;
   return fetch(proxyUrl, init);

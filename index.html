@@ -4,10 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Personal Finance Dashboard</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20260803">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <!-- Chart.js from CDN - no install needed -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <script src="script.js?v=20260803"></script>
 </head>
 <body>
 
@@ -63,7 +64,7 @@
             ☁️ Not synced yet
           </span>
         </div>
-        
+
       <button class="btn btn-outline btn-sm" id="syncBtn" title="Sync with Google Sheets">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
         Sync
@@ -483,6 +484,5 @@
     </svg>
   </button>
 
-  <script src="script.js"></script>
 </body>
 </html>
