@@ -8,7 +8,7 @@
 const app = {
   transactions: [],      // all transactions loaded from Sheets
   settings: {
-    scriptUrl:  'https://script.google.com/macros/s/AKfycbwMdx1fuYEwhruAxj-qZxknQVf1tifgYSk-1gB8PYjUF8M22bvnnkGpiZlBx4SGobQz/exec',
+    scriptUrl:  'https://script.google.com/macros/s/AKfycbwZCiIf-RyVZgZr3qV3Gf-AtePlX0Uj8lMR55uno8D7LdRz7Ytf8KEeNtIKYCUpI3co/exec',
     currency:   'IDR',
     wallets:    ['Personal Wallet', 'Other Wallet'],
     categories: ['Food', 'Transport', 'Shopping', 'Bills', 'Entertainment', 'Investment', 'Other']
