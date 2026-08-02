@@ -80,25 +80,30 @@ async function syncFromSheets() {
 }
 
 async function pushAddToSheets(tx) {
-  if (!app.settings.scriptUrl) {
-    console.log("No script URL");
-    return;
-  }
+
+  if (!app.settings.scriptUrl) return;
 
   try {
+
     const response = await fetch(app.settings.scriptUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'add', ...tx })
+      headers: {
+        'Content-Type': 'text/plain'
+      },
+      body: JSON.stringify({
+        action: 'add',
+        ...tx
+      })
     });
 
     const result = await response.text();
 
     console.log("Google response:", result);
 
-  } catch (error) {
+  } catch(error) {
     console.error("Google error:", error);
   }
+
 }
 
 async function pushUpdateToSheets(tx) {
@@ -106,8 +111,13 @@ async function pushUpdateToSheets(tx) {
   try {
     await fetch(app.settings.scriptUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'update', ...tx })
+      headers: {
+        'Content-Type': 'text/plain'
+      },
+      body: JSON.stringify({
+        action: 'update',
+        ...tx
+      })
     });
   } catch { /* silent */ }
 }
@@ -117,7 +127,9 @@ async function pushDeleteToSheets(id) {
   try {
     await fetch(app.settings.scriptUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'text/plain'
+      },
       body: JSON.stringify({ action: 'delete', id })
     });
   } catch { /* silent */ }
