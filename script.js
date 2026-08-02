@@ -5,10 +5,12 @@
 // ============================================================
 // APP STATE
 // ============================================================
+const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwZCiIf-RyVZgZr3qV3Gf-AtePlX0Uj8lMR55uno8D7LdRz7Ytf8KEeNtIKYCUpI3co/exec';
+
 const app = {
   transactions: [],      // all transactions loaded from Sheets
   settings: {
-    scriptUrl:  'https://script.google.com/macros/s/AKfycbwZCiIf-RyVZgZr3qV3Gf-AtePlX0Uj8lMR55uno8D7LdRz7Ytf8KEeNtIKYCUpI3co/exec',
+    scriptUrl:  DEFAULT_SCRIPT_URL,
     currency:   'IDR',
     wallets:    ['Personal Wallet', 'Other Wallet'],
     categories: ['Food', 'Transport', 'Shopping', 'Bills', 'Entertainment', 'Investment', 'Other']
@@ -44,13 +46,22 @@ function load(key, fallback = null) {
 
 function loadSettings() {
   const saved = load('finance_settings');
-  if (saved) app.settings = { ...app.settings, ...saved };
+  const legacyBlockedUrl = 'https://script.google.com/macros/s/AKfycbwMdx1fuYEwhruAxj-qZxknQVf1tifgYSk-1gB8PYjUF8M22bvnnkGpiZlBx4SGobQz/exec';
+  const resolvedScriptUrl = saved?.scriptUrl === legacyBlockedUrl ? DEFAULT_SCRIPT_URL : (saved?.scriptUrl || DEFAULT_SCRIPT_URL);
+
+  if (saved) {
+    app.settings = { ...app.settings, ...saved, scriptUrl: resolvedScriptUrl };
+  } else {
+    app.settings = { ...app.settings, scriptUrl: DEFAULT_SCRIPT_URL };
+  }
+
   const savedCurrency = load('currency', app.settings.currency || 'IDR');
   app.settings.currency = (savedCurrency || app.settings.currency || 'IDR').toUpperCase();
   currentCurrency = app.settings.currency;
 }
 function saveSettings() {
   app.settings.currency = (app.settings.currency || currentCurrency || 'IDR').toUpperCase();
+  app.settings.scriptUrl = app.settings.scriptUrl || DEFAULT_SCRIPT_URL;
   save('finance_settings', app.settings);
   save('currency', app.settings.currency);
 }

@@ -19,6 +19,10 @@ function doGet(e) {
   return jsonResponse({ transactions });
 }
 
+function doOptions(e) {
+  return jsonResponse({ ok: true });
+}
+
 function doPost(e) {
   let data = {};
 
@@ -260,7 +264,11 @@ function parseFormBody(raw) {
 }
 
 function jsonResponse(payload) {
-  return ContentService.createTextOutput(JSON.stringify(payload)).setMimeType(ContentService.MimeType.JSON);
+  return ContentService.createTextOutput(JSON.stringify(payload))
+    .setMimeType(ContentService.MimeType.JSON)
+    .setHeader('Access-Control-Allow-Origin', '*')
+    .setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+    .setHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
 
 function todayStr() {
