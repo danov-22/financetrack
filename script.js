@@ -70,6 +70,7 @@ async function syncFromSheets() {
       app.transactions = data.transactions.map(normalizeTx);
       saveCache();
       renderCurrentPage();
+      updateLastSyncTime();
       showToast('Synced successfully!', 'success');
     } else {
       showToast('Unexpected response from Sheets.', 'error');
@@ -119,7 +120,10 @@ async function pushUpdateToSheets(tx) {
         ...tx
       })
     });
-  } catch { /* silent */ }
+  } catch(error){
+    console.error("Sync error:", error);
+    showToast("Cloud sync failed", "error");
+  }
 }
 
 async function pushDeleteToSheets(id) {
@@ -132,7 +136,64 @@ async function pushDeleteToSheets(id) {
       },
       body: JSON.stringify({ action: 'delete', id })
     });
-  } catch { /* silent */ }
+  } catch(error){
+    console.error("Sync error:", error);
+    showToast("Cloud sync failed", "error");
+  }
+}
+
+function updateLastSyncTime(){
+
+  const now = new Date();
+
+  const formatted = now.toLocaleString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+
+  const element = document.getElementById("lastSync");
+
+  if(element){
+    element.innerHTML = `☁️ Synced: ${formatted}`;
+  }
+  localStorage.setItem("lastSync", formatted);
+
+}
+
+function loadLastSync(){
+  const saved = localStorage.getItem("lastSync");
+  const element = document.getElementById("lastSync");
+  if(saved && element){
+    element.innerHTML = `☁️ Synced: ${saved}`;
+  }
+
+}
+
+async function syncSettingsFromSheets(){
+  if (!app.settings.scriptUrl) return;
+  try {
+    const res = await fetch(
+      app.settings.scriptUrl + '?action=getSettings'
+    );
+    const data = await res.json();
+
+    if(data.wallets){
+      app.settings.wallets = data.wallets;
+    }
+
+    if(data.categories){
+      app.settings.categories = data.categories;
+    }
+    saveCache();
+    renderSettings();
+  }
+
+  catch(error){
+    console.error("Settings sync failed:", error);
+  }
 }
 
 // Normalize a transaction object (ensure all fields exist)
@@ -1257,6 +1318,7 @@ function init() {
   loadSettings();
   loadTheme();
   loadCache();
+  loadLastSync();
   setupEvents();
   const currencySelect = document.getElementById('currencySelect');
   if (currencySelect) currencySelect.value = app.settings.currency || currentCurrency || 'IDR';
@@ -1267,6 +1329,7 @@ function init() {
   // Fetch fresh data in background
   if (app.settings.scriptUrl) {
     setTimeout(syncFromSheets, 500);
+    setTimeout(syncSettingsFromSheets, 800);
   }
 }
 
