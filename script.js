@@ -666,15 +666,20 @@ function openDeleteModal(id) {
 }
 
 async function confirmDelete() {
-  const id  = app.deletingTxId;
+  const id = app.deletingTxId;
   if (!id) return;
+
+  // Delete from Google Sheet first
+  await pushDeleteToSheets(id);
+
+  // Then remove locally
   app.transactions = app.transactions.filter(t => t.id !== id);
   saveCache();
-  await pushDeleteToSheets(id);
   document.getElementById('deleteModal').close();
   app.deletingTxId = null;
   showToast('Transaction deleted.', 'success');
   renderCurrentPage();
+
 }
 
 // ============================================================
