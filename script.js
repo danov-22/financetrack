@@ -72,8 +72,17 @@ async function fetchFromSheets({ url = null, method = 'GET', headers = {}, body 
   const targetUrl = (url || app.settings.scriptUrl || DEFAULT_SCRIPT_URL).trim();
   const proxyBase = window.location.origin || '';
   const proxyUrl = `${proxyBase}/api/proxy?target=${encodeURIComponent(targetUrl)}`;
-  const init = { method, headers: { ...(headers || {}) } };
-  if (body !== undefined) init.body = body;
+  const init = {
+    method,
+    headers: {
+      ...(headers || {})
+    }
+  };
+
+  if (body !== undefined) {
+    init.body = body;
+  }
+
   return fetch(proxyUrl, init);
 }
 

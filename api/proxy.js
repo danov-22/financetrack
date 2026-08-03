@@ -7,30 +7,18 @@ export default async function handler(req, res) {
   }
 
   try {
-    const method = req.method || 'GET';
-    const headers = {};
-
-    for (const [key, value] of Object.entries(req.headers || {})) {
-      if (!value || key === 'host' || key === 'connection') continue;
-      if (Array.isArray(value)) {
-        headers[key] = value[0];
-      } else {
-        headers[key] = value;
-      }
-    }
-
-    const body = method === 'GET' || method === 'HEAD' ? undefined : req.body;
     const response = await fetch(target, {
-      method,
-      headers,
-      body
+      method: req.method,
+      headers: req.headers,
+      body: req.body
     });
 
     const text = await response.text();
     res.status(response.status);
-    res.setHeader('Content-Type', response.headers.get('content-type') || 'application/json');
+    res.setHeader('content-type', response.headers.get('content-type') || 'application/json');
     res.send(text);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Proxy error:', error);
+    res.status(500).json({ error: error.message || 'Proxy failed' });
   }
 }
