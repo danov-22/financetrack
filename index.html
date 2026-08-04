@@ -1,488 +1,889 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Personal Finance Dashboard</title>
-  <link rel="stylesheet" href="style.css?v=20260803">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <!-- Chart.js from CDN - no install needed -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
-  <script src="script.js?v=20260803"></script>
-</head>
-<body>
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Finance Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <!-- Toast container -->
+    <div id="toast-container"></div>
 
-  <!-- ===================== SIDEBAR (Desktop) ===================== -->
-  <aside class="sidebar" id="sidebar">
-    <div class="sidebar-brand">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-      <span>Web Finance</span>
+    <!-- Sync Status Bar -->
+    <div id="sync-status" class="sync-status hidden"></div>
+
+    <!-- Google Sheets missing banner -->
+    <div id="gas-banner" class="gas-banner hidden">
+      <span>&#9888; Connect Google Sheets to sync data across devices.</span>
+      <button onclick="navigate('settings')">Go to Settings</button>
     </div>
 
-    <nav class="sidebar-nav">
-      <a href="#" class="nav-link active" data-page="dashboard">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-        Dashboard
+    <div id="app">
+      <!-- Sidebar (desktop) -->
+      <aside id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+          <div class="sidebar-logo">
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+              <rect width="28" height="28" rx="8" fill="var(--accent)" />
+              <path
+                d="M7 18l5-5 4 4 5-6"
+                stroke="white"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+            <span class="sidebar-title">Web Finance</span>
+          </div>
+          <button
+            id="sidebar-collapse"
+            class="sidebar-collapse-btn"
+            title="Collapse sidebar"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+          </button>
+        </div>
+        <nav class="sidebar-nav">
+          <a href="#" class="nav-item active" data-page="dashboard">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect x="3" y="3" width="7" height="7" />
+              <rect x="14" y="3" width="7" height="7" />
+              <rect x="14" y="14" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" />
+            </svg>
+            <span>Dashboard</span>
+          </a>
+          <a href="#" class="nav-item" data-page="wallets">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M21 12V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2h14a2 2 0 002-2v-1"
+              />
+              <path d="M16 12a2 2 0 000 4h5v-4h-5z" />
+            </svg>
+            <span>Wallets</span>
+          </a>
+          <a href="#" class="nav-item" data-page="transactions">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
+            </svg>
+            <span>Transactions</span>
+          </a>
+          <a href="#" class="nav-item" data-page="reports">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+            </svg>
+            <span>Reports</span>
+          </a>
+          <a href="#" class="nav-item" data-page="settings">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="12" cy="12" r="3" />
+              <path
+                d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"
+              />
+            </svg>
+            <span>Settings</span>
+          </a>
+        </nav>
+        <div class="sidebar-footer">
+          <button
+            id="theme-toggle"
+            class="theme-toggle-btn"
+            title="Toggle theme"
+          >
+            <svg
+              class="icon-sun"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="12" cy="12" r="5" />
+              <line x1="12" y1="1" x2="12" y2="3" />
+              <line x1="12" y1="21" x2="12" y2="23" />
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+              <line x1="1" y1="12" x2="3" y2="12" />
+              <line x1="21" y1="12" x2="23" y2="12" />
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+            </svg>
+            <svg
+              class="icon-moon"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+            </svg>
+            <span class="theme-label"></span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- Main Content -->
+      <main id="main-content" class="main-content">
+        <!-- Top bar -->
+        <header class="topbar">
+          <button id="sidebar-toggle-mobile" class="mobile-menu-btn">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+          <h1 id="page-title" class="page-title">Dashboard</h1>
+          <div class="topbar-actions">
+            <div id="sync-indicator" class="sync-indicator" title="Sync status">
+              <svg
+                class="sync-icon"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polyline points="23 4 23 10 17 10" />
+                <polyline points="1 20 1 14 7 14" />
+                <path
+                  d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"
+                />
+              </svg>
+              <span id="sync-label">Synced</span>
+            </div>
+            <select id="currency-select" class="currency-select">
+              <option value="IDR">IDR</option>
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+            </select>
+          </div>
+        </header>
+
+        <!-- Pages -->
+        <!-- DASHBOARD PAGE -->
+        <section id="page-dashboard" class="page active">
+          <div class="page-header">
+            <h2>Overview</h2>
+            <div class="date-range-quick">
+              <button class="quick-date active" data-range="month">
+                This Month
+              </button>
+              <button class="quick-date" data-range="3month">3 Months</button>
+              <button class="quick-date" data-range="year">This Year</button>
+            </div>
+          </div>
+
+          <div class="summary-cards">
+            <div class="summary-card total-balance">
+              <div class="card-label">Total Balance</div>
+              <div class="card-value" id="dash-total-balance">Rp0</div>
+              <div class="card-sub" id="dash-balance-wallets">
+                Across all wallets
+              </div>
+            </div>
+            <div class="summary-card income">
+              <div class="card-label">Income</div>
+              <div class="card-value" id="dash-income">Rp0</div>
+              <div class="card-sub">This period</div>
+            </div>
+            <div class="summary-card expenses">
+              <div class="card-label">Expenses</div>
+              <div class="card-value" id="dash-expenses">Rp0</div>
+              <div class="card-sub">This period</div>
+            </div>
+            <div class="summary-card savings">
+              <div class="card-label">Savings</div>
+              <div class="card-value" id="dash-savings">Rp0</div>
+              <div class="card-sub" id="dash-savings-rate">0% savings rate</div>
+            </div>
+          </div>
+
+          <div class="dashboard-row">
+            <div class="dashboard-panel chart-panel">
+              <div class="panel-header">
+                <h3>Balance Over Time</h3>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="balance-chart"></canvas>
+              </div>
+            </div>
+            <div class="dashboard-panel wallet-panel">
+              <div class="panel-header">
+                <h3>Wallets</h3>
+                <button class="btn-link" onclick="navigate('wallets')">
+                  View all
+                </button>
+              </div>
+              <div id="wallet-breakdown"></div>
+            </div>
+          </div>
+
+          <div class="dashboard-panel">
+            <div class="panel-header">
+              <h3>Recent Transactions</h3>
+              <button class="btn-link" onclick="navigate('transactions')">
+                View all
+              </button>
+            </div>
+            <div id="recent-transactions" class="transaction-list"></div>
+          </div>
+        </section>
+
+        <!-- WALLETS PAGE -->
+        <section id="page-wallets" class="page">
+          <div class="page-header">
+            <h2>Wallets</h2>
+            <button class="btn-primary" onclick="openWalletModal()">
+              + Add Wallet
+            </button>
+          </div>
+          <div id="wallets-grid" class="wallets-grid"></div>
+        </section>
+
+        <!-- TRANSACTIONS PAGE -->
+        <section id="page-transactions" class="page">
+          <div class="page-header">
+            <h2>Transactions</h2>
+            <div class="page-actions">
+              <button class="btn-secondary" onclick="openTransferModal()">
+                Transfer
+              </button>
+              <button class="btn-secondary" onclick="exportCSV()">
+                Export CSV
+              </button>
+              <label class="btn-secondary btn-file-label">
+                Import CSV
+                <input
+                  type="file"
+                  id="csv-import"
+                  accept=".csv"
+                  style="display: none"
+                  onchange="importCSV(event)"
+                />
+              </label>
+            </div>
+          </div>
+
+          <div class="filter-bar">
+            <select id="filter-wallet" class="filter-select">
+              <option value="">All Wallets</option>
+            </select>
+            <select id="filter-type" class="filter-select">
+              <option value="">All Types</option>
+              <option value="income">Income</option>
+              <option value="expense">Expense</option>
+            </select>
+            <select id="filter-category" class="filter-select">
+              <option value="">All Categories</option>
+            </select>
+            <input
+              type="date"
+              id="filter-date-from"
+              class="filter-input"
+              placeholder="From"
+            />
+            <input
+              type="date"
+              id="filter-date-to"
+              class="filter-input"
+              placeholder="To"
+            />
+            <button class="btn-ghost" onclick="clearFilters()">Clear</button>
+          </div>
+
+          <div class="transactions-count" id="transactions-count"></div>
+          <div id="transactions-list" class="transaction-list"></div>
+        </section>
+
+        <!-- REPORTS PAGE -->
+        <section id="page-reports" class="page">
+          <div class="page-header">
+            <h2>Reports</h2>
+            <div class="report-period">
+              <select id="report-month" class="filter-select"></select>
+              <select id="report-year" class="filter-select"></select>
+            </div>
+          </div>
+
+          <div class="reports-grid">
+            <div class="dashboard-panel">
+              <div class="panel-header"><h3>Income vs Expenses</h3></div>
+              <div class="chart-wrapper chart-wrapper--bar">
+                <canvas id="bar-chart"></canvas>
+              </div>
+            </div>
+            <div class="dashboard-panel">
+              <div class="panel-header"><h3>Spending by Category</h3></div>
+              <div class="chart-wrapper chart-wrapper--doughnut">
+                <canvas id="doughnut-chart"></canvas>
+              </div>
+              <div id="category-legend" class="category-legend"></div>
+            </div>
+          </div>
+
+          <div class="dashboard-panel">
+            <div class="panel-header"><h3>Monthly Summary</h3></div>
+            <div id="monthly-summary" class="monthly-summary-grid"></div>
+          </div>
+        </section>
+
+        <!-- SETTINGS PAGE -->
+        <section id="page-settings" class="page">
+          <div class="page-header"><h2>Settings</h2></div>
+
+          <div class="settings-grid">
+            <div class="settings-card">
+              <h3>Google Sheets Connection</h3>
+              <p class="settings-desc">
+                Paste your Google Apps Script Web App URL to enable cloud sync.
+              </p>
+              <div class="input-row">
+                <input
+                  type="text"
+                  id="gas-url-input"
+                  class="input-field"
+                  placeholder="https://script.google.com/macros/s/..."
+                />
+                <button class="btn-primary" onclick="saveGASUrl()">Save</button>
+              </div>
+              <button class="btn-ghost btn-sm" onclick="testConnection()">
+                Test Connection
+              </button>
+              <div id="connection-status" class="connection-status"></div>
+            </div>
+
+            <div class="settings-card">
+              <h3>Currency</h3>
+              <p class="settings-desc">Default display currency.</p>
+              <select
+                id="settings-currency"
+                class="input-field"
+                onchange="saveCurrency(this.value)"
+              >
+                <option value="IDR">IDR — Indonesian Rupiah</option>
+                <option value="USD">USD — US Dollar</option>
+                <option value="EUR">EUR — Euro</option>
+              </select>
+            </div>
+
+            <div class="settings-card">
+              <h3>Wallets</h3>
+              <div id="settings-wallets-list" class="settings-list"></div>
+              <button class="btn-secondary btn-sm" onclick="openWalletModal()">
+                + Add Wallet
+              </button>
+            </div>
+
+            <div class="settings-card">
+              <h3>Categories</h3>
+              <div id="settings-categories-list" class="settings-list"></div>
+              <button
+                class="btn-secondary btn-sm"
+                onclick="openCategoryModal()"
+              >
+                + Add Category
+              </button>
+            </div>
+
+            <div class="settings-card danger-zone">
+              <h3>Data</h3>
+              <p class="settings-desc">
+                Sync data from Google Sheets or reset all local data.
+              </p>
+              <div class="btn-row">
+                <button class="btn-secondary" onclick="syncNow()">
+                  Sync Now
+                </button>
+                <button class="btn-danger" onclick="confirmReset()">
+                  Reset All Data
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Bottom Navigation (mobile) -->
+    <nav class="bottom-nav">
+      <a href="#" class="bottom-nav-item active" data-page="dashboard">
+        <svg
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <rect x="3" y="3" width="7" height="7" />
+          <rect x="14" y="3" width="7" height="7" />
+          <rect x="14" y="14" width="7" height="7" />
+          <rect x="3" y="14" width="7" height="7" />
+        </svg>
+        <span>Home</span>
       </a>
-      <a href="#" class="nav-link" data-page="wallets">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>
-        Wallets
+      <a href="#" class="bottom-nav-item" data-page="wallets">
+        <svg
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path
+            d="M21 12V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2h14a2 2 0 002-2v-1"
+          />
+          <path d="M16 12a2 2 0 000 4h5v-4h-5z" />
+        </svg>
+        <span>Wallets</span>
       </a>
-      <a href="#" class="nav-link" data-page="transactions">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-        Transactions
+      <a href="#" class="bottom-nav-item" data-page="transactions">
+        <svg
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
+        </svg>
+        <span>Transactions</span>
       </a>
-      <a href="#" class="nav-link" data-page="reports">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-        Reports
+      <a href="#" class="bottom-nav-item" data-page="reports">
+        <svg
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+        </svg>
+        <span>Reports</span>
       </a>
-      <a href="#" class="nav-link" data-page="settings">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-        Settings
+      <a href="#" class="bottom-nav-item" data-page="settings">
+        <svg
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <circle cx="12" cy="12" r="3" />
+          <path
+            d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"
+          />
+        </svg>
+        <span>Settings</span>
       </a>
     </nav>
 
-    <button class="theme-btn" id="themeToggle" title="Toggle dark/light mode">
-      <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-      <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-      <span class="theme-btn-text">Dark Mode</span>
+    <!-- Floating Add Button -->
+    <button
+      id="fab"
+      class="fab"
+      onclick="openTransactionModal()"
+      title="Add Transaction"
+    >
+      <svg
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+      >
+        <line x1="12" y1="5" x2="12" y2="19" />
+        <line x1="5" y1="12" x2="19" y2="12" />
+      </svg>
     </button>
-  </aside>
 
-  <!-- ===================== MAIN CONTENT ===================== -->
-  <div class="main-wrapper">
+    <!-- ============================================================ -->
+    <!-- MODALS                                                       -->
+    <!-- ============================================================ -->
 
-    <!-- Top Bar -->
-    <header class="topbar">
-      <button class="menu-btn" id="menuBtn" title="Toggle menu">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-      </button>
-      <h1 class="page-title" id="pageTitle">Dashboard</h1>
-
-        <div class="sync-status">
-          <span id="lastSync">
-            ☁️ Not synced yet
-          </span>
+    <!-- Transaction Modal -->
+    <div
+      id="modal-transaction"
+      class="modal-overlay"
+      onclick="closeModalOutside(event, 'modal-transaction')"
+    >
+      <div class="modal">
+        <div class="modal-header">
+          <h3 id="modal-transaction-title">Add Transaction</h3>
+          <button class="modal-close" onclick="closeModal('modal-transaction')">
+            &times;
+          </button>
         </div>
-
-      <button class="btn btn-outline btn-sm" id="syncBtn" title="Sync with Google Sheets">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-        Sync
-      </button>
-    </header>
-
-    <main class="main-content">
-
-      <!-- ======= SETUP BANNER (shown when no script URL) ======= -->
-      <div class="setup-banner" id="setupBanner" style="display:none">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        <span>Google Sheets not connected. Go to <strong>Settings</strong> to add your Apps Script URL.</span>
-        <a href="#" class="nav-link-inline" data-page="settings">Go to Settings</a>
-      </div>
-
-      <!-- =================== DASHBOARD PAGE =================== -->
-      <section class="page active" id="page-dashboard">
-
-        <div class="total-balance-card">
-          <div class="tb-label">Total Balance</div>
-          <div class="tb-amount" id="totalBalance">$0.00</div>
-          <div class="tb-sub">Across all wallets</div>
-        </div>
-
-        <div class="section-title">Wallets</div>
-        <div class="grid-auto" id="walletCardsGrid"></div>
-
-        <div class="section-title">This Month</div>
-        <div class="grid-3">
-          <div class="stat-card">
-            <div class="stat-label">Income</div>
-            <div class="stat-value positive" id="monthIncome">$0.00</div>
+        <form id="form-transaction" onsubmit="submitTransaction(event)">
+          <input type="hidden" id="tx-id" />
+          <div class="form-tabs">
+            <button
+              type="button"
+              class="form-tab active"
+              data-type="expense"
+              onclick="setTxType('expense')"
+            >
+              Expense
+            </button>
+            <button
+              type="button"
+              class="form-tab"
+              data-type="income"
+              onclick="setTxType('income')"
+            >
+              Income
+            </button>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">Expenses</div>
-            <div class="stat-value negative" id="monthExpenses">$0.00</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Amount <span class="required">*</span></label>
+              <div class="input-with-currency">
+                <span id="tx-currency-symbol" class="currency-symbol">Rp</span>
+                <input
+                  type="number"
+                  id="tx-amount"
+                  class="input-field"
+                  placeholder="0"
+                  min="0"
+                  step="any"
+                  required
+                />
+              </div>
+              <div class="field-error" id="err-amount"></div>
+            </div>
+            <div class="form-group">
+              <label>Currency</label>
+              <select
+                id="tx-currency"
+                class="input-field"
+                onchange="updateTxCurrencySymbol()"
+              >
+                <option value="IDR">IDR</option>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+              </select>
+            </div>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">Savings</div>
-            <div class="stat-value" id="monthSavings">$0.00</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Date <span class="required">*</span></label>
+              <input type="date" id="tx-date" class="input-field" required />
+            </div>
+            <div class="form-group">
+              <label>Wallet <span class="required">*</span></label>
+              <select id="tx-wallet" class="input-field" required>
+                <option value="">Select wallet</option>
+              </select>
+              <div class="field-error" id="err-wallet"></div>
+            </div>
           </div>
-        </div>
-
-        <div class="section-title">Recent Transactions</div>
-        <div class="card">
-          <div id="recentTransactionsList"><div class="empty-state">No transactions yet</div></div>
-        </div>
-
-      </section>
-
-      <!-- =================== WALLETS PAGE =================== -->
-      <section class="page" id="page-wallets">
-        <div class="page-header-row">
-          <div></div>
-          <button class="btn btn-primary btn-sm" id="openTransferBtn">Transfer Between Wallets</button>
-        </div>
-        <div id="walletsList"></div>
-      </section>
-
-      <!-- =================== TRANSACTIONS PAGE =================== -->
-      <section class="page" id="page-transactions">
-
-        <div class="page-header-row">
-          <div class="date-filter-group">
-            <button class="date-pill active" data-filter="all">All</button>
-            <button class="date-pill" data-filter="today">Today</button>
-            <button class="date-pill" data-filter="week">This Week</button>
-            <button class="date-pill" data-filter="month">This Month</button>
-            <button class="date-pill" data-filter="year">This Year</button>
-            <button class="date-pill" data-filter="custom">Custom</button>
-          </div>
-          <button class="btn btn-primary btn-sm" id="addTxBtn">+ Add Transaction</button>
-        </div>
-
-        <div class="custom-date-row" id="customDateRow" style="display:none">
-          <input type="date" id="dateFrom" class="input-sm">
-          <span>to</span>
-          <input type="date" id="dateTo" class="input-sm">
-          <button class="btn btn-outline btn-sm" id="applyDateBtn">Apply</button>
-        </div>
-
-        <div class="filters-row">
-          <input type="search" id="searchInput" class="search-input" placeholder="Search by description, category...">
-          <select id="filterType" class="select-sm">
-            <option value="all">All Types</option>
-            <option value="Income">Income</option>
-            <option value="Expense">Expense</option>
-            <option value="Transfer">Transfer</option>
-          </select>
-          <select id="filterWallet" class="select-sm">
-            <option value="all">All Wallets</option>
-          </select>
-          <select id="filterCategory" class="select-sm">
-            <option value="all">All Categories</option>
-          </select>
-          <select id="sortBy" class="select-sm">
-            <option value="newest">Newest First</option>
-            <option value="oldest">Oldest First</option>
-            <option value="highest">Highest Amount</option>
-            <option value="lowest">Lowest Amount</option>
-          </select>
-        </div>
-
-        <div id="transactionsList"></div>
-        <div id="paginationBar"></div>
-
-      </section>
-
-      <!-- =================== REPORTS PAGE =================== -->
-      <section class="page" id="page-reports">
-
-        <div class="month-picker-row">
-          <label>Period:</label>
-          <select id="reportMonth" class="select-sm"></select>
-          <select id="reportYear" class="select-sm"></select>
-        </div>
-
-        <div class="section-title">Monthly Summary</div>
-        <div id="reportSummary" class="grid-3 report-stats"></div>
-
-        <div class="charts-grid">
-          <div class="chart-card">
-            <div class="chart-title">Balance Over Time (12 months)</div>
-            <canvas id="balanceChart"></canvas>
-          </div>
-          <div class="chart-card">
-            <div class="chart-title">Income vs Expenses (12 months)</div>
-            <canvas id="incomeExpenseChart"></canvas>
-          </div>
-          <div class="chart-card chart-card-sm">
-            <div class="chart-title">Expenses by Category</div>
-            <canvas id="categoryChart"></canvas>
-          </div>
-        </div>
-
-      </section>
-
-      <!-- =================== SETTINGS PAGE =================== -->
-      <section class="page" id="page-settings">
-
-        <div class="settings-group">
-          <div class="settings-group-title">Preferences</div>
-          <p class="settings-desc">Choose your preferred currency and connect your Google Sheets app.</p>
-          <div class="input-row" style="margin-bottom:10px">
-            <select id="currencySelect" class="select-sm">
-              <option value="IDR">IDR (Rupiah)</option>
-              <option value="USD">USD (Dollar)</option>
-              <option value="EUR">EUR (Euro)</option>
+          <div class="form-group">
+            <label>Category</label>
+            <select id="tx-category" class="input-field">
+              <option value="">Select category</option>
             </select>
           </div>
-          <div class="settings-group-title" style="margin-top:12px">Google Sheets Connection</div>
-          <div class="input-row">
-            <input type="url" id="scriptUrlInput" class="input-full" placeholder="https://script.google.com/macros/s/.../exec">
-            <button class="btn btn-primary btn-sm" id="saveScriptUrlBtn">Save</button>
-          </div>
-          <button class="btn btn-outline btn-sm" id="testConnectionBtn" style="margin-top:8px">Test Connection</button>
-          <div id="connectionStatus" class="connection-status"></div>
-        </div>
-
-        <div class="settings-group">
-          <div class="settings-group-title">Wallets</div>
-          <div id="walletSettingsList"></div>
-          <div class="input-row" style="margin-top:10px">
-            <input type="text" id="newWalletInput" class="input-full" placeholder="New wallet name...">
-            <button class="btn btn-primary btn-sm" id="addWalletBtn">Add</button>
-          </div>
-        </div>
-
-        <div class="settings-group">
-          <div class="settings-group-title">Categories</div>
-          <div id="categorySettingsList"></div>
-          <div class="input-row" style="margin-top:10px">
-            <input type="text" id="newCategoryInput" class="input-full" placeholder="New category name...">
-            <button class="btn btn-primary btn-sm" id="addCategoryBtn">Add</button>
-          </div>
-        </div>
-
-        <div class="settings-group">
-          <div class="settings-group-title">Recurring Transactions</div>
-          <p class="settings-desc">Set up automatic recurring entries (salary, rent, subscriptions).</p>
-          <div id="recurringList"></div>
-          <button class="btn btn-outline btn-sm" id="addRecurringBtn" style="margin-top:10px">+ Add Recurring</button>
-        </div>
-
-        <div class="settings-group">
-          <div class="settings-group-title">Data Management</div>
-          <div class="btn-row">
-            <button class="btn btn-outline btn-sm" id="exportCsvBtn">Export CSV</button>
-            <label class="btn btn-outline btn-sm" for="importCsvInput" style="cursor:pointer">Import CSV</label>
-            <input type="file" id="importCsvInput" accept=".csv" style="display:none">
-          </div>
-        </div>
-
-      </section>
-
-    </main>
-  </div>
-
-  <!-- ===================== BOTTOM NAV (Mobile) ===================== -->
-  <nav class="bottom-nav">
-    <a href="#" class="bottom-link active" data-page="dashboard">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-      <span>Home</span>
-    </a>
-    <a href="#" class="bottom-link" data-page="wallets">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>
-      <span>Wallets</span>
-    </a>
-    <a href="#" class="bottom-link" data-page="transactions">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-      <span>Transactions</span>
-    </a>
-    <a href="#" class="bottom-link" data-page="reports">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-      <span>Reports</span>
-    </a>
-    <a href="#" class="bottom-link" data-page="settings">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      <span>Settings</span>
-    </a>
-  </nav>
-
-  <!-- ===================== TRANSACTION MODAL ===================== -->
-  <dialog class="modal" id="transactionModal">
-    <div class="modal-header">
-      <h2 id="modalTitle">Add Transaction</h2>
-      <button class="close-btn" id="closeTransactionModal">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-    <form id="transactionForm" class="modal-form">
-      <input type="hidden" id="txId">
-
-      <div class="form-row">
-        <div class="form-group">
-          <label for="txDate">Date</label>
-          <input type="date" id="txDate" required>
-        </div>
-        <div class="form-group">
-          <label for="txType">Type</label>
-          <select id="txType" required>
-            <option value="Income">Income</option>
-            <option value="Expense">Expense</option>
-            <option value="Transfer">Transfer</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- Regular wallet (shown for Income / Expense) -->
-      <div class="form-group" id="walletGroup">
-        <label for="txWallet">Wallet</label>
-        <select id="txWallet" required></select>
-      </div>
-
-      <!-- Transfer wallets (shown for Transfer) -->
-      <div id="transferGroup" style="display:none">
-        <div class="form-row">
           <div class="form-group">
-            <label for="txFromWallet">From Wallet</label>
-            <select id="txFromWallet"></select>
+            <label>Description</label>
+            <input
+              type="text"
+              id="tx-description"
+              class="input-field"
+              placeholder="What was this for?"
+              maxlength="200"
+            />
           </div>
           <div class="form-group">
-            <label for="txToWallet">To Wallet</label>
-            <select id="txToWallet"></select>
+            <label class="checkbox-label">
+              <input
+                type="checkbox"
+                id="tx-recurring"
+                onchange="toggleRecurring()"
+              />
+              Recurring transaction
+            </label>
           </div>
-        </div>
+          <div id="recurring-options" class="hidden">
+            <div class="form-group">
+              <label>Repeat every</label>
+              <select id="tx-recurring-freq" class="input-field">
+                <option value="daily">Day</option>
+                <option value="weekly">Week</option>
+                <option value="monthly" selected>Month</option>
+                <option value="yearly">Year</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn-ghost"
+              onclick="closeModal('modal-transaction')"
+            >
+              Cancel
+            </button>
+            <button type="submit" class="btn-primary" id="btn-save-tx">
+              Save
+            </button>
+          </div>
+        </form>
       </div>
-
-      <div class="form-row">
-        <div class="form-group" id="categoryGroup">
-          <label for="txCategory">Category</label>
-          <select id="txCategory"></select>
-        </div>
-        <div class="form-group">
-          <label for="txAmount">Amount</label>
-          <input type="number" id="txAmount" min="0" step="0.01" placeholder="0.00" required>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="txDescription">Description</label>
-        <input type="text" id="txDescription" placeholder="What was this for?">
-      </div>
-
-      <div class="modal-footer">
-        <button type="button" class="btn btn-outline" id="cancelTxBtn">Cancel</button>
-        <button type="submit" class="btn btn-primary">Save Transaction</button>
-      </div>
-    </form>
-  </dialog>
-
-  <!-- ===================== DELETE CONFIRMATION MODAL ===================== -->
-  <dialog class="modal modal-sm" id="deleteModal">
-    <div class="modal-header">
-      <h2>Delete Transaction</h2>
     </div>
-    <p class="modal-text">Are you sure you want to delete this transaction? This action cannot be undone.</p>
-    <div class="modal-footer">
-      <button class="btn btn-outline" id="cancelDeleteBtn">Cancel</button>
-      <button class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
-    </div>
-  </dialog>
 
-  <!-- ===================== TRANSFER MODAL ===================== -->
-  <dialog class="modal modal-sm" id="transferModal">
-    <div class="modal-header">
-      <h2>Transfer Between Wallets</h2>
-      <button class="close-btn" id="closeTransferModal">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-    <form id="transferForm" class="modal-form">
-      <div class="form-group">
-        <label>From Wallet</label>
-        <select id="transferFrom"></select>
-      </div>
-      <div class="form-group">
-        <label>To Wallet</label>
-        <select id="transferTo"></select>
-      </div>
-      <div class="form-group">
-        <label>Amount</label>
-        <input type="number" id="transferAmount" min="0.01" step="0.01" placeholder="0.00" required>
-      </div>
-      <div class="form-group">
-        <label>Description (optional)</label>
-        <input type="text" id="transferDescription" placeholder="e.g. Monthly savings">
-      </div>
-      <div class="form-group">
-        <label>Date</label>
-        <input type="date" id="transferDate" required>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-outline" id="cancelTransferBtn">Cancel</button>
-        <button type="submit" class="btn btn-primary">Transfer</button>
-      </div>
-    </form>
-  </dialog>
-
-  <!-- ===================== RECURRING MODAL ===================== -->
-  <dialog class="modal modal-sm" id="recurringModal">
-    <div class="modal-header">
-      <h2>Add Recurring Transaction</h2>
-      <button class="close-btn" id="closeRecurringModal">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-    <form id="recurringForm" class="modal-form">
-      <div class="form-group">
-        <label>Name</label>
-        <input type="text" id="recName" placeholder="e.g. Monthly Salary" required>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Type</label>
-          <select id="recType">
-            <option value="Income">Income</option>
-            <option value="Expense">Expense</option>
-          </select>
+    <!-- Transfer Modal -->
+    <div
+      id="modal-transfer"
+      class="modal-overlay"
+      onclick="closeModalOutside(event, 'modal-transfer')"
+    >
+      <div class="modal">
+        <div class="modal-header">
+          <h3>Transfer Between Wallets</h3>
+          <button class="modal-close" onclick="closeModal('modal-transfer')">
+            &times;
+          </button>
         </div>
-        <div class="form-group">
-          <label>Frequency</label>
-          <select id="recFrequency">
-            <option value="daily">Daily</option>
-            <option value="weekly">Weekly</option>
-            <option value="monthly">Monthly</option>
-          </select>
-        </div>
+        <form id="form-transfer" onsubmit="submitTransfer(event)">
+          <div class="form-group">
+            <label>From Wallet <span class="required">*</span></label>
+            <select id="transfer-from" class="input-field" required>
+              <option value="">Select wallet</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>To Wallet <span class="required">*</span></label>
+            <select id="transfer-to" class="input-field" required>
+              <option value="">Select wallet</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Amount <span class="required">*</span></label>
+              <input
+                type="number"
+                id="transfer-amount"
+                class="input-field"
+                placeholder="0"
+                min="0.01"
+                step="any"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label>Currency</label>
+              <select id="transfer-currency" class="input-field">
+                <option value="IDR">IDR</option>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Date <span class="required">*</span></label>
+            <input
+              type="date"
+              id="transfer-date"
+              class="input-field"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label>Description</label>
+            <input
+              type="text"
+              id="transfer-description"
+              class="input-field"
+              placeholder="Transfer note"
+            />
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn-ghost"
+              onclick="closeModal('modal-transfer')"
+            >
+              Cancel
+            </button>
+            <button type="submit" class="btn-primary">Transfer</button>
+          </div>
+        </form>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Wallet</label>
-          <select id="recWallet"></select>
-        </div>
-        <div class="form-group">
-          <label>Category</label>
-          <select id="recCategory"></select>
-        </div>
-      </div>
-      <div class="form-group">
-        <label>Amount</label>
-        <input type="number" id="recAmount" min="0" step="0.01" required>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-outline" id="cancelRecurringBtn">Cancel</button>
-        <button type="submit" class="btn btn-primary">Save</button>
-      </div>
-    </form>
-  </dialog>
-
-  <!-- ===================== TRANSACTION DETAILS MODAL ===================== -->
-  <dialog class="modal modal-sm" id="detailModal">
-    <div class="modal-header">
-      <h2>Transaction Details</h2>
-      <button class="close-btn" id="closeDetailModal">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
     </div>
-    <div id="detailContent" class="detail-content"></div>
-    <div class="modal-footer">
-      <button class="btn btn-outline btn-sm" id="detailEditBtn">Edit</button>
-      <button class="btn btn-danger btn-sm" id="detailDeleteBtn">Delete</button>
+
+    <!-- Wallet Modal -->
+    <div
+      id="modal-wallet"
+      class="modal-overlay"
+      onclick="closeModalOutside(event, 'modal-wallet')"
+    >
+      <div class="modal">
+        <div class="modal-header">
+          <h3 id="modal-wallet-title">Add Wallet</h3>
+          <button class="modal-close" onclick="closeModal('modal-wallet')">
+            &times;
+          </button>
+        </div>
+        <form id="form-wallet" onsubmit="submitWallet(event)">
+          <input type="hidden" id="wallet-edit-name" />
+          <div class="form-group">
+            <label>Wallet Name <span class="required">*</span></label>
+            <input
+              type="text"
+              id="wallet-name-input"
+              class="input-field"
+              placeholder="e.g. BCA Bank"
+              required
+              maxlength="50"
+            />
+            <div class="field-error" id="err-wallet-name"></div>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn-ghost"
+              onclick="closeModal('modal-wallet')"
+            >
+              Cancel
+            </button>
+            <button type="submit" class="btn-primary">Save</button>
+          </div>
+        </form>
+      </div>
     </div>
-  </dialog>
 
-  <!-- ===================== TOAST ===================== -->
-  <div class="toast" id="toast"></div>
+    <!-- Category Modal -->
+    <div
+      id="modal-category"
+      class="modal-overlay"
+      onclick="closeModalOutside(event, 'modal-category')"
+    >
+      <div class="modal">
+        <div class="modal-header">
+          <h3 id="modal-category-title">Add Category</h3>
+          <button class="modal-close" onclick="closeModal('modal-category')">
+            &times;
+          </button>
+        </div>
+        <form id="form-category" onsubmit="submitCategory(event)">
+          <input type="hidden" id="category-edit-name" />
+          <div class="form-group">
+            <label>Category Name <span class="required">*</span></label>
+            <input
+              type="text"
+              id="category-name-input"
+              class="input-field"
+              placeholder="e.g. Food & Drinks"
+              required
+              maxlength="50"
+            />
+            <div class="field-error" id="err-category-name"></div>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn-ghost"
+              onclick="closeModal('modal-category')"
+            >
+              Cancel
+            </button>
+            <button type="submit" class="btn-primary">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
 
-  <!-- ===================== SIDEBAR OVERLAY (Mobile) ===================== -->
-  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <!-- Confirm Delete Modal -->
+    <div
+      id="modal-confirm"
+      class="modal-overlay"
+      onclick="closeModalOutside(event, 'modal-confirm')"
+    >
+      <div class="modal modal--sm">
+        <div class="modal-header">
+          <h3 id="confirm-title">Confirm Delete</h3>
+          <button class="modal-close" onclick="closeModal('modal-confirm')">
+            &times;
+          </button>
+        </div>
+        <p id="confirm-message" class="confirm-message">Are you sure?</p>
+        <div class="modal-footer">
+          <button class="btn-ghost" onclick="closeModal('modal-confirm')">
+            Cancel
+          </button>
+          <button class="btn-danger" id="btn-confirm-action">Delete</button>
+        </div>
+      </div>
+    </div>
 
-  <!-- ===================== FLOATING ADD BUTTON ===================== -->
-  <button class="fab" id="fabBtn" title="Add Transaction">
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-      <line x1="12" y1="5" x2="12" y2="19"/>
-      <line x1="5" y1="12" x2="19" y2="12"/>
-    </svg>
-  </button>
-
-</body>
+    <script type="module" src="main.js"></script>
+  </body>
 </html>
