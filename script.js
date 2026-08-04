@@ -483,7 +483,10 @@ function emptyStateHtml(title, sub = "") {
 
 function formatDateShort(dateStr) {
   if (!dateStr) return "";
-  const d = new Date(dateStr + "T00:00:00");
+  // Extract YYYY-MM-DD from any format Google Sheets might return
+  const iso = String(dateStr).match(/(\d{4})-(\d{2})-(\d{2})/);
+  const d = iso ? new Date(iso[0] + "T00:00:00") : new Date(dateStr);
+  if (isNaN(d)) return String(dateStr); // never show "Invalid Date"
   return d.toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
