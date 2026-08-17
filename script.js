@@ -37,12 +37,16 @@ const STATE = {
   wallets: [],
   categories: [],
   pendingQueue: [], // offline mutations waiting to sync
+  feedback: [],
+  installationId: "",
   gasUrl: "",
   currency: "IDR",
   favoriteCurrencies: ["IDR", "USD", "EUR"],
   exchangeRates: {},
   exchangeRatesUpdated: null,
   theme: "light",
+  themePreset: "indigo",
+  customThemeColor: "#7c3aed",
   currentPage: "dashboard",
   dashRange: "month",
   isOnline: navigator.onLine,
@@ -83,6 +87,9 @@ function loadStateFromLS() {
   STATE.wallets = LS.get("fin_wallets", []);
   STATE.categories = LS.get("fin_categories", []);
   STATE.pendingQueue = LS.get("fin_pending", []);
+  STATE.feedback = LS.get("fin_feedback", []);
+  STATE.installationId = LS.get("fin_installation_id", "") || generateId();
+  LS.set("fin_installation_id", STATE.installationId);
   STATE.gasUrl = LS.get("fin_gas_url", "") || DEFAULT_GAS_URL;
   STATE.currency = LS.get("fin_currency", "IDR");
   STATE.favoriteCurrencies = LS.get("fin_favorite_currencies", ["IDR", "USD", "EUR"]);
@@ -92,6 +99,8 @@ function loadStateFromLS() {
     STATE.exchangeRatesUpdated = cachedRates.updated || null;
   }
   STATE.theme = LS.get("fin_theme", "light");
+  STATE.themePreset = LS.get("fin_theme_preset", "indigo");
+  STATE.customThemeColor = LS.get("fin_custom_theme_color", "#7c3aed");
   STATE.lastSynced = LS.get("fin_last_synced", null);
 }
 
@@ -107,11 +116,16 @@ function persistCategories() {
 function persistPending() {
   LS.set("fin_pending", STATE.pendingQueue);
 }
+function persistFeedback() {
+  LS.set("fin_feedback", STATE.feedback);
+}
 function persistSettings() {
   LS.set("fin_gas_url", STATE.gasUrl);
   LS.set("fin_currency", STATE.currency);
   LS.set("fin_favorite_currencies", STATE.favoriteCurrencies);
   LS.set("fin_theme", STATE.theme);
+  LS.set("fin_theme_preset", STATE.themePreset);
+  LS.set("fin_custom_theme_color", STATE.customThemeColor);
 }
 
 // ============================================================
@@ -333,6 +347,22 @@ async function apiDeleteSetting(type, name) {
   });
 }
 
+async function apiGetFeedback() {
+  return gasRequest({ method: "GET", query: { action: "getFeedback", userId: STATE.installationId } });
+}
+
+async function apiSaveFeedback(feedback) {
+  return gasRequest({ method: "POST", body: { action: "saveFeedback", ...feedback } });
+}
+
+async function apiWithdrawFeedback(id) {
+  return gasRequest({ method: "POST", body: { action: "withdrawFeedback", id, userId: STATE.installationId } });
+}
+
+async function apiDeleteFeedback(id) {
+  return gasRequest({ method: "POST", body: { action: "deleteFeedback", id, userId: STATE.installationId } });
+}
+
 // ============================================================
 // 5. SYNC FUNCTIONS
 // ============================================================
@@ -442,6 +472,10 @@ async function drainPendingQueue() {
         await apiAddSetting(op.settingType, op.name);
       else if (op.action === "deleteSetting")
         await apiDeleteSetting(op.settingType, op.name);
+      else if (op.action === "deleteFeedback") {
+        const response = await apiDeleteFeedback(op.id);
+        if (!response.success) throw new Error(response.error || "Feedback delete failed");
+      }
     } catch {
       failed.push(op);
     }
@@ -1992,10 +2026,68 @@ function populateFilterOptions() {
 // ============================================================
 // 18. THEME
 // ============================================================
+const THEME_PRESETS = {
+  indigo: "#4f46e5",
+  ocean: "#0284c7",
+  emerald: "#059669",
+  sunset: "#ea580c",
+  rose: "#e11d48",
+};
+
+function shadeHex(hex, percent) {
+  const value = parseInt(hex.slice(1), 16);
+  const amount = Math.round(2.55 * percent);
+  const r = Math.max(0, Math.min(255, (value >> 16) + amount));
+  const g = Math.max(0, Math.min(255, ((value >> 8) & 0xff) + amount));
+  const b = Math.max(0, Math.min(255, (value & 0xff) + amount));
+  return `#${[r, g, b].map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
+}
+
+function applyAccentTheme() {
+  const color = STATE.themePreset === "custom"
+    ? STATE.customThemeColor
+    : THEME_PRESETS[STATE.themePreset] || THEME_PRESETS.indigo;
+  const root = document.documentElement;
+  root.style.setProperty("--accent", color);
+  root.style.setProperty("--accent-hover", shadeHex(color, STATE.theme === "dark" ? 12 : -10));
+  root.style.setProperty("--accent-light", `${color}${STATE.theme === "dark" ? "28" : "16"}`);
+  document.querySelectorAll(".theme-preset").forEach((button) =>
+    button.classList.toggle("active", button.dataset.preset === STATE.themePreset));
+  const picker = document.getElementById("custom-theme-color");
+  const hexInput = document.getElementById("custom-theme-hex");
+  if (picker) picker.value = STATE.customThemeColor;
+  if (hexInput) hexInput.value = STATE.customThemeColor;
+}
+
+function setThemePreset(preset) {
+  if (!THEME_PRESETS[preset]) return;
+  STATE.themePreset = preset;
+  persistSettings();
+  applyAccentTheme();
+  refreshCurrentPage();
+}
+
+function saveCustomTheme() {
+  const hexInput = document.getElementById("custom-theme-hex");
+  const picker = document.getElementById("custom-theme-color");
+  const color = (hexInput?.value || picker?.value || "").trim();
+  if (!/^#[0-9a-f]{6}$/i.test(color)) {
+    showToast("Enter a valid six-digit color such as #7c3aed.", "warning");
+    return;
+  }
+  STATE.customThemeColor = color.toLowerCase();
+  STATE.themePreset = "custom";
+  persistSettings();
+  applyAccentTheme();
+  refreshCurrentPage();
+  showToast(`Custom theme applied: ${STATE.customThemeColor}`, "success");
+}
+
 function applyTheme(theme) {
   document.documentElement.setAttribute("data-theme", theme);
   STATE.theme = theme;
   persistSettings();
+  applyAccentTheme();
 }
 
 function toggleTheme() {
@@ -2017,6 +2109,138 @@ function openMobileSidebar() {
   const overlay = document.querySelector(".sidebar-overlay");
   sidebar?.classList.add("mobile-open");
   overlay?.classList.add("active");
+}
+
+// ============================================================
+// FEEDBACK
+// ============================================================
+function openFeedbackModal() {
+  document.getElementById("feedback-error").textContent = "";
+  renderFeedbackHistory();
+  openModal("modal-feedback");
+  setTimeout(() => document.getElementById("feedback-message")?.focus(), 250);
+}
+
+function renderFeedbackHistory() {
+  const container = document.getElementById("feedback-history");
+  if (!container) return;
+  const items = [...STATE.feedback].sort((a, b) => b.createdTime.localeCompare(a.createdTime));
+  if (!items.length) {
+    container.innerHTML = '<p class="feedback-empty">No feedback sent yet.</p>';
+    return;
+  }
+  container.innerHTML = items.map((item) => {
+    const withdrawn = item.status === "withdrawn";
+    return `<article class="feedback-entry ${withdrawn ? "withdrawn" : ""}">
+      <div class="feedback-entry-head">
+        <span class="feedback-type">${escHtml(item.type)}</span>
+        <span class="feedback-status">${withdrawn ? "Withdrawn" : item.status === "sent" ? "Sent" : "Saved locally"}</span>
+      </div>
+      <p>${escHtml(item.message)}</p>
+      <div class="feedback-entry-foot">
+        <time>${new Date(item.createdTime).toLocaleString()}</time>
+        <div class="feedback-entry-actions">
+          ${withdrawn ? '<span class="withdrawn-mark">This feedback was undone</span>' : `<button onclick="undoFeedback('${item.id}')">Undo send</button>`}
+          <button class="feedback-delete" onclick="deleteFeedbackRecord('${item.id}')">Delete</button>
+        </div>
+      </div>
+    </article>`;
+  }).join("");
+}
+
+async function submitFeedback(event) {
+  event.preventDefault();
+  const messageInput = document.getElementById("feedback-message");
+  const message = messageInput.value.trim();
+  if (!message) {
+    document.getElementById("feedback-error").textContent = "Please enter your feedback.";
+    return;
+  }
+  const feedback = {
+    id: generateId(),
+    userId: STATE.installationId,
+    type: document.getElementById("feedback-type").value,
+    message,
+    page: STATE.currentPage,
+    status: "local",
+    createdTime: new Date().toISOString(),
+    withdrawnTime: "",
+  };
+  STATE.feedback.push(feedback);
+  persistFeedback();
+  messageInput.value = "";
+  document.getElementById("feedback-count").textContent = "0 / 1000";
+  renderFeedbackHistory();
+
+  if (STATE.gasUrl && STATE.isOnline) {
+    try {
+      const response = await apiSaveFeedback(feedback);
+      if (!response.success) throw new Error(response.error || "Feedback was not accepted");
+      feedback.status = "sent";
+      persistFeedback();
+      renderFeedbackHistory();
+    } catch {}
+  }
+  const preview = `${message.slice(0, 70)}${message.length > 70 ? "…" : ""}`;
+  showToast(`Feedback received: “${preview}”`, "success");
+}
+
+async function undoFeedback(id) {
+  const item = STATE.feedback.find((feedback) => feedback.id === id);
+  if (!item || item.status === "withdrawn") return;
+  item.status = "withdrawn";
+  item.withdrawnTime = new Date().toISOString();
+  persistFeedback();
+  renderFeedbackHistory();
+  if (STATE.gasUrl && STATE.isOnline) {
+    try {
+      const response = await apiWithdrawFeedback(id);
+      if (!response.success) throw new Error(response.error || "Withdrawal was not accepted");
+    } catch {}
+  }
+  showToast("Feedback undone. A withdrawn record remains in your history.", "info");
+}
+
+async function deleteFeedbackRecord(id) {
+  const item = STATE.feedback.find((feedback) => feedback.id === id);
+  if (!item) return;
+  STATE.feedback = STATE.feedback.filter((feedback) => feedback.id !== id);
+  persistFeedback();
+  renderFeedbackHistory();
+  if (STATE.gasUrl && STATE.isOnline) {
+    try {
+      const response = await apiDeleteFeedback(id);
+      if (!response.success) throw new Error(response.error || "Delete was not accepted");
+    } catch {
+      showToast("Deleted locally. Cloud deletion will require an active connection.", "warning");
+      queueOperation({ action: "deleteFeedback", id });
+      return;
+    }
+  } else if (STATE.gasUrl) {
+    queueOperation({ action: "deleteFeedback", id });
+  }
+  showToast(`Deleted feedback: “${item.message.slice(0, 50)}${item.message.length > 50 ? "…" : ""}”`, "info");
+}
+
+async function syncFeedbackHistory() {
+  if (!STATE.gasUrl || !STATE.isOnline) return;
+  try {
+    const response = await apiGetFeedback();
+    if (response.success && Array.isArray(response.data)) {
+      const pendingDeletes = new Set(STATE.pendingQueue
+        .filter((operation) => operation.action === "deleteFeedback")
+        .map((operation) => operation.id));
+      const localById = new Map(STATE.feedback.map((item) => [item.id, item]));
+      response.data.forEach((item) => {
+        if (pendingDeletes.has(item.id)) return;
+        const local = localById.get(item.id);
+        if (!local || local.status !== "withdrawn") localById.set(item.id, item);
+      });
+      STATE.feedback = [...localById.values()];
+      persistFeedback();
+      renderFeedbackHistory();
+    }
+  } catch {}
 }
 
 // ============================================================
@@ -2125,6 +2349,13 @@ function initEventListeners() {
   // Sync indicator click
   document.getElementById("sync-indicator")?.addEventListener("click", syncNow);
 
+  document.getElementById("feedback-message")?.addEventListener("input", (event) => {
+    document.getElementById("feedback-count").textContent = `${event.target.value.length} / 1000`;
+  });
+  document.getElementById("custom-theme-color")?.addEventListener("input", (event) => {
+    document.getElementById("custom-theme-hex").value = event.target.value;
+  });
+
   // Keyboard close modals
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
@@ -2181,6 +2412,12 @@ window.removeFavoriteCurrency = removeFavoriteCurrency;
 window.testConnection = testConnection;
 window.confirmReset = confirmReset;
 window.syncNow = syncNow;
+window.openFeedbackModal = openFeedbackModal;
+window.submitFeedback = submitFeedback;
+window.undoFeedback = undoFeedback;
+window.deleteFeedbackRecord = deleteFeedbackRecord;
+window.setThemePreset = setThemePreset;
+window.saveCustomTheme = saveCustomTheme;
 
 // ============================================================
 // BOOT
@@ -2205,6 +2442,7 @@ function boot() {
   // Render initial page
   renderPage("dashboard");
   updateExchangeRates();
+  syncFeedbackHistory();
 
   // Auto-sync on startup if online and GAS URL is set
   if (STATE.gasUrl && STATE.isOnline) {

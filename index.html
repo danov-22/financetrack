@@ -447,6 +447,24 @@
             </div>
 
             <div class="settings-card">
+              <h3>Theme color</h3>
+              <p class="settings-desc">Choose a template or create your own accent color.</p>
+              <div class="theme-presets" id="theme-presets">
+                <button class="theme-preset" data-preset="indigo" onclick="setThemePreset('indigo')"><span style="--swatch:#4f46e5"></span>Indigo</button>
+                <button class="theme-preset" data-preset="ocean" onclick="setThemePreset('ocean')"><span style="--swatch:#0284c7"></span>Ocean</button>
+                <button class="theme-preset" data-preset="emerald" onclick="setThemePreset('emerald')"><span style="--swatch:#059669"></span>Emerald</button>
+                <button class="theme-preset" data-preset="sunset" onclick="setThemePreset('sunset')"><span style="--swatch:#ea580c"></span>Sunset</button>
+                <button class="theme-preset" data-preset="rose" onclick="setThemePreset('rose')"><span style="--swatch:#e11d48"></span>Rose</button>
+              </div>
+              <p class="settings-label">Custom color</p>
+              <div class="custom-theme-row">
+                <input type="color" id="custom-theme-color" value="#7c3aed" aria-label="Custom theme color" />
+                <input type="text" id="custom-theme-hex" class="input-field" value="#7c3aed" maxlength="7" aria-label="Custom theme hex color" />
+                <button class="btn-primary" onclick="saveCustomTheme()">Apply</button>
+              </div>
+            </div>
+
+            <div class="settings-card">
               <h3>Categories</h3>
               <div id="settings-categories-list" class="settings-list"></div>
               <button
@@ -571,6 +589,19 @@
       >
         <line x1="12" y1="5" x2="12" y2="19" />
         <line x1="5" y1="12" x2="19" y2="12" />
+      </svg>
+    </button>
+
+    <button
+      id="feedback-fab"
+      class="fab feedback-fab"
+      onclick="openFeedbackModal()"
+      title="Send feedback"
+      aria-label="Send feedback"
+    >
+      <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15a4 4 0 01-4 4H8l-5 3V7a4 4 0 014-4h10a4 4 0 014 4z" />
+        <path d="M8 9h8M8 13h5" />
       </svg>
     </button>
 
@@ -704,6 +735,39 @@
             </button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- Feedback Modal -->
+    <div id="modal-feedback" class="modal-overlay" onclick="closeModalOutside(event, 'modal-feedback')">
+      <div class="modal">
+        <div class="modal-header">
+          <h3>Feedback &amp; issue report</h3>
+          <button class="modal-close" onclick="closeModal('modal-feedback')">&times;</button>
+        </div>
+        <form onsubmit="submitFeedback(event)">
+          <div class="form-group">
+            <label>Type</label>
+            <select id="feedback-type" class="input-field">
+              <option value="Issue">Something needs fixing</option>
+              <option value="Idea">Feature idea</option>
+              <option value="Feedback">General feedback</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Your note <span class="required">*</span></label>
+            <textarea id="feedback-message" class="input-field feedback-textarea" maxlength="1000" placeholder="Tell us what happened or what would make Bewlet better…" required></textarea>
+            <div class="feedback-compose-meta"><span id="feedback-error" class="field-error"></span><span id="feedback-count">0 / 1000</span></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn-ghost" onclick="closeModal('modal-feedback')">Cancel</button>
+            <button type="submit" id="btn-send-feedback" class="btn-primary">Send feedback</button>
+          </div>
+        </form>
+        <div class="feedback-history-section">
+          <h4>What you’ve sent</h4>
+          <div id="feedback-history" class="feedback-history"></div>
+        </div>
       </div>
     </div>
 

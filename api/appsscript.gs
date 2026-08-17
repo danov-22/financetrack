@@ -16,24 +16,36 @@
  *     Columns: Type | Name
  *     Examples: Wallet | Personal
  *               Category | Food
+ *
+ *   Sheet 3: "Feedback"
+ *     Columns: ID | User ID | Type | Message | Page | Status | Created Time | Withdrawn Time
  */
 
 const SPREADSHEET_ID = SpreadsheetApp.getActiveSpreadsheet().getId();
 const TX_SHEET_NAME  = 'Transactions';
 const SET_SHEET_NAME = 'Settings';
+const FEEDBACK_SHEET_NAME = 'Feedback';
 
 // ─────────────────────────────────────────────
 // GET handler
 // ─────────────────────────────────────────────
 function doGet(e) {
-  const action = e.parameter.action;
+  const parameters = e && e.parameter ? e.parameter : {};
+  const action = parameters.action || 'health';
   let result;
 
   try {
-    if (action === 'getAll') {
+    if (action === 'health') {
+      result = {
+        success: true,
+        message: 'Bewlet API is running. Use the deployed web-app URL from the browser.',
+      };
+    } else if (action === 'getAll') {
       result = getAllTransactions();
     } else if (action === 'getSettings') {
       result = getSettings();
+    } else if (action === 'getFeedback') {
+      result = getFeedback(parameters.userId);
     } else {
       result = { success: false, error: 'Unknown action: ' + action };
     }
@@ -75,6 +87,12 @@ function doPost(e) {
       result = addSetting(body.type, body.name);
     } else if (action === 'deleteSetting') {
       result = deleteSetting(body.type, body.name);
+    } else if (action === 'saveFeedback') {
+      result = saveFeedback(body);
+    } else if (action === 'withdrawFeedback') {
+      result = withdrawFeedback(body.id, body.userId);
+    } else if (action === 'deleteFeedback') {
+      result = deleteFeedback(body.id, body.userId);
     } else {
       result = { success: false, error: 'Unknown action: ' + action };
     }
@@ -110,9 +128,74 @@ function getSheet(name) {
       sheet.appendRow(['Category','Health']);
       sheet.appendRow(['Category','Salary']);
       sheet.appendRow(['Category','Other']);
+    } else if (name === FEEDBACK_SHEET_NAME) {
+      sheet.appendRow(['ID','User ID','Type','Message','Page','Status','Created Time','Withdrawn Time']);
     }
   }
   return sheet;
+}
+
+// ─────────────────────────────────────────────
+// Feedback
+// ─────────────────────────────────────────────
+function getFeedback(userId) {
+  if (!userId) return { success: false, error: 'User ID is required.' };
+  const data = getSheet(FEEDBACK_SHEET_NAME).getDataRange().getValues();
+  const feedback = data.slice(1)
+    .filter(row => String(row[1]) === String(userId))
+    .map(row => ({
+      id: String(row[0] || ''),
+      userId: String(row[1] || ''),
+      type: String(row[2] || 'Feedback'),
+      message: String(row[3] || ''),
+      page: String(row[4] || ''),
+      status: String(row[5] || 'sent'),
+      createdTime: String(row[6] || ''),
+      withdrawnTime: String(row[7] || ''),
+    }));
+  return { success: true, data: feedback };
+}
+
+function saveFeedback(body) {
+  if (!body.id || !body.userId || !body.message) {
+    return { success: false, error: 'ID, user ID, and message are required.' };
+  }
+  const sheet = getSheet(FEEDBACK_SHEET_NAME);
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(body.id)) return { success: true, data: { id: body.id } };
+  }
+  sheet.appendRow([
+    body.id, body.userId, body.type || 'Feedback', body.message,
+    body.page || '', 'sent', body.createdTime || new Date().toISOString(), '',
+  ]);
+  return { success: true, data: { id: body.id } };
+}
+
+function withdrawFeedback(id, userId) {
+  const sheet = getSheet(FEEDBACK_SHEET_NAME);
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(id) && String(data[i][1]) === String(userId)) {
+      sheet.getRange(i + 1, 6, 1, 3).setValues([[
+        'withdrawn', data[i][6], new Date().toISOString(),
+      ]]);
+      return { success: true, data: { id } };
+    }
+  }
+  return { success: false, error: 'Feedback not found.' };
+}
+
+function deleteFeedback(id, userId) {
+  const sheet = getSheet(FEEDBACK_SHEET_NAME);
+  const data = sheet.getDataRange().getValues();
+  for (let i = data.length - 1; i >= 1; i--) {
+    if (String(data[i][0]) === String(id) && String(data[i][1]) === String(userId)) {
+      sheet.deleteRow(i + 1);
+      return { success: true, data: { id } };
+    }
+  }
+  return { success: false, error: 'Feedback not found.' };
 }
 
 function rowToTransaction(row) {

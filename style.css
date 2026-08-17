@@ -823,6 +823,35 @@ input, select, textarea { outline: none; }
 .currency-rate-status { margin: 12px 0 2px; }
 .rate-attribution { color: var(--text-3); font-size: .7rem; text-decoration: underline; }
 
+.theme-presets {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+.theme-preset {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 9px 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-2);
+  font-size: .7rem;
+}
+.theme-preset span { width: 24px; height: 24px; border-radius: 50%; background: var(--swatch); }
+.theme-preset.active { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+.custom-theme-row { display: grid; grid-template-columns: 46px minmax(0, 1fr) auto; gap: 8px; }
+.custom-theme-row input[type="color"] {
+  width: 46px;
+  height: 42px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  cursor: pointer;
+}
+
 .input-row {
   display: flex;
   gap: 8px;
@@ -1164,6 +1193,32 @@ input, select, textarea { outline: none; }
 
 .fab:active { transform: scale(0.95); }
 
+.feedback-fab {
+  right: 88px;
+  background: var(--surface);
+  color: var(--accent);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+}
+.feedback-fab:hover { background: var(--accent-light); color: var(--accent); }
+
+.feedback-textarea { min-height: 110px; resize: vertical; }
+.feedback-compose-meta { display: flex; justify-content: space-between; color: var(--text-3); font-size: .75rem; }
+.feedback-history-section { padding: 0 22px 22px; border-top: 1px solid var(--border); }
+.feedback-history-section h4 { padding: 16px 0 10px; font-size: .88rem; }
+.feedback-history { display: flex; flex-direction: column; gap: 8px; max-height: 230px; overflow-y: auto; }
+.feedback-empty { color: var(--text-3); font-size: .82rem; }
+.feedback-entry { padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); }
+.feedback-entry-head, .feedback-entry-foot { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.feedback-entry p { margin: 7px 0; color: var(--text); font-size: .84rem; overflow-wrap: anywhere; }
+.feedback-type { color: var(--accent); font-size: .72rem; font-weight: 700; text-transform: uppercase; }
+.feedback-status, .feedback-entry time { color: var(--text-3); font-size: .68rem; }
+.feedback-entry-foot button { color: var(--accent); font-size: .72rem; font-weight: 600; }
+.feedback-entry-actions { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.feedback-entry-actions .feedback-delete { color: var(--expense); }
+.feedback-entry.withdrawn p { text-decoration: line-through; opacity: .55; }
+.withdrawn-mark { color: var(--warning); font-size: .7rem; font-weight: 600; }
+
 /* ============================================================
    TOAST NOTIFICATIONS
    ============================================================ */
@@ -1193,9 +1248,13 @@ input, select, textarea { outline: none; }
   gap: 8px;
   pointer-events: all;
   animation: toastIn 0.3s ease;
-  white-space: nowrap;
-  max-width: 380px;
+  white-space: normal;
+  width: max-content;
+  max-width: min(380px, calc(100vw - 24px));
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
+.toast > span:last-child { min-width: 0; overflow-wrap: anywhere; }
 
 .toast.success { border-left: 3px solid var(--income); color: var(--text); }
 .toast.error { border-left: 3px solid var(--expense); color: var(--text); }
@@ -1461,6 +1520,9 @@ input, select, textarea { outline: none; }
   .monthly-summary-grid { grid-template-columns: 1fr; }
   #toast-container { left: 10px; right: 10px; transform: none; }
   .toast { white-space: normal; width: 100%; }
+  .theme-presets { grid-template-columns: repeat(3, 1fr); }
+  .custom-theme-row { grid-template-columns: 46px 1fr; }
+  .custom-theme-row .btn-primary { grid-column: 1 / -1; min-height: 42px; }
 }
 
 /* Sidebar overlay for mobile */
