@@ -4,7 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Bewlet</title>
-    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" sizes="any" />
+    <link rel="apple-touch-icon" href="favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -218,8 +219,6 @@
             </div>
             <select id="currency-select" class="currency-select">
               <option value="IDR">IDR</option>
-              <option value="USD">USD</option>
-              <option value="EUR">EUR</option>
             </select>
           </div>
         </header>
@@ -419,7 +418,7 @@
 
             <div class="settings-card">
               <h3>Currency</h3>
-              <p class="settings-desc">Default display currency.</p>
+              <p class="settings-desc">Default currency used for totals and reports.</p>
               <select
                 id="settings-currency"
                 class="input-field"
@@ -429,6 +428,14 @@
                 <option value="USD">USD — US Dollar</option>
                 <option value="EUR">EUR — Euro</option>
               </select>
+              <p class="settings-label">Quick currencies</p>
+              <div class="input-row currency-favorite-picker">
+                <select id="favorite-currency-add" class="input-field"></select>
+                <button class="btn-secondary" onclick="addFavoriteCurrency()">Add</button>
+              </div>
+              <div id="favorite-currencies" class="currency-chips"></div>
+              <p id="exchange-rate-status" class="settings-desc currency-rate-status"></p>
+              <a class="rate-attribution" href="https://www.exchangerate-api.com" target="_blank" rel="noopener">Rates by Exchange Rate API</a>
             </div>
 
             <div class="settings-card">

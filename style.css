@@ -554,6 +554,14 @@ input, select, textarea { outline: none; }
   font-size: 0.95rem;
   font-weight: 600;
   white-space: nowrap;
+  text-align: right;
+}
+
+.tx-amount small {
+  display: block;
+  color: var(--text-3);
+  font-size: .68rem;
+  font-weight: 500;
 }
 
 .tx-amount.income { color: var(--income); }
@@ -789,6 +797,31 @@ input, select, textarea { outline: none; }
   margin-bottom: 14px;
   line-height: 1.5;
 }
+
+.settings-label {
+  margin: 16px 0 6px;
+  color: var(--text-2);
+  font-size: .82rem;
+  font-weight: 600;
+}
+
+.currency-favorite-picker { margin-bottom: 10px; }
+.currency-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.currency-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-size: .85rem;
+  font-weight: 600;
+}
+.currency-chip button { color: var(--text-3); font-size: 1rem; line-height: 1; }
+.currency-chip button:disabled { opacity: .3; cursor: not-allowed; }
+.currency-rate-status { margin: 12px 0 2px; }
+.rate-attribution { color: var(--text-3); font-size: .7rem; text-decoration: underline; }
 
 .input-row {
   display: flex;
@@ -1246,6 +1279,8 @@ input, select, textarea { outline: none; }
    RESPONSIVE — TABLET 768px
    ============================================================ */
 @media (max-width: 1024px) {
+  .page { padding: 20px; }
+  .summary-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dashboard-row {
     grid-template-columns: 1fr;
   }
@@ -1331,25 +1366,43 @@ input, select, textarea { outline: none; }
     gap: 10px;
   }
   .page-actions { flex-wrap: wrap; width: 100%; }
+  .page-actions > * { flex: 1 1 auto; text-align: center; justify-content: center; }
+  .page-title { font-size: 1rem; }
+  .currency-select { max-width: 76px; padding: 7px 8px; }
+  .gas-banner { padding: 10px 14px; font-size: .82rem; }
+  .gas-banner button { width: 100%; min-height: 40px; }
 
   /* ── Summary cards: 2-col, more compact ── */
   .summary-cards { grid-template-columns: 1fr 1fr; gap: 10px; }
-  .summary-card { padding: 14px; }
-  .card-value { font-size: 1.3rem; }
+  .summary-card { padding: 14px; min-width: 0; }
+  .card-value { font-size: clamp(1.05rem, 5vw, 1.3rem); overflow-wrap: anywhere; }
+  .card-label { font-size: .68rem; }
+  .dashboard-panel { padding: 16px; }
+  .chart-wrapper { height: 210px; }
 
   /* ── Transaction items: bigger touch area ── */
   .tx-item { padding: 14px 12px; }
   .tx-icon { width: 40px; height: 40px; }
+  .tx-meta { flex-wrap: wrap; line-height: 1.25; }
+  .tx-actions { opacity: 1; }
+  .tx-action-btn { width: 36px; height: 36px; display: grid; place-items: center; }
 
   /* ── Forms ── */
   .form-row { grid-template-columns: 1fr; }
-  .filter-bar { flex-direction: column; }
+  .filter-bar { display: grid; grid-template-columns: 1fr 1fr; padding: 12px; }
   .filter-select, .filter-input { width: 100%; }
+  .filter-bar .btn-ghost { grid-column: 1 / -1; min-height: 42px; background: var(--surface-2); }
 
   /* ── Grids ── */
   .settings-grid { grid-template-columns: 1fr; }
   .wallets-grid { grid-template-columns: 1fr; }
   .date-range-quick { flex-wrap: wrap; }
+  .date-range-quick { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); }
+  .quick-date { padding: 8px 6px; }
+  .input-row { flex-direction: column; }
+  .input-row .btn-primary { min-height: 44px; }
+  .settings-card { padding: 18px; }
+  .monthly-summary-grid { grid-template-columns: 1fr 1fr; }
 
   /* ── Modals: slide up as bottom sheets ── */
   .modal-overlay {
@@ -1388,7 +1441,26 @@ input, select, textarea { outline: none; }
     flex-direction: column-reverse;
     gap: 8px;
   }
-  .modal-footer .btn { width: 100%; justify-content: center; }
+  .modal-footer button { width: 100%; min-height: 44px; justify-content: center; }
+}
+
+@media (max-width: 420px) {
+  .topbar { padding-inline: 10px; }
+  .page { padding-inline: 10px; }
+  .page-header h2 { font-size: 1.2rem; }
+  .summary-cards { gap: 8px; }
+  .summary-card { padding: 12px; }
+  .card-sub { font-size: .7rem; }
+  .dashboard-panel { margin-bottom: 12px; padding: 14px 12px; }
+  .filter-bar { grid-template-columns: 1fr; }
+  .filter-bar .btn-ghost { grid-column: 1; }
+  .tx-item { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 10px; }
+  .tx-amount { grid-column: 2; justify-self: start; }
+  .tx-actions { grid-column: 3; grid-row: 1 / span 2; flex-direction: column; }
+  .wallet-card-stats { flex-direction: column; gap: 6px; }
+  .monthly-summary-grid { grid-template-columns: 1fr; }
+  #toast-container { left: 10px; right: 10px; transform: none; }
+  .toast { white-space: normal; width: 100%; }
 }
 
 /* Sidebar overlay for mobile */

@@ -39,6 +39,9 @@ const STATE = {
   pendingQueue: [], // offline mutations waiting to sync
   gasUrl: "",
   currency: "IDR",
+  favoriteCurrencies: ["IDR", "USD", "EUR"],
+  exchangeRates: {},
+  exchangeRatesUpdated: null,
   theme: "light",
   currentPage: "dashboard",
   dashRange: "month",
@@ -82,6 +85,12 @@ function loadStateFromLS() {
   STATE.pendingQueue = LS.get("fin_pending", []);
   STATE.gasUrl = LS.get("fin_gas_url", "") || DEFAULT_GAS_URL;
   STATE.currency = LS.get("fin_currency", "IDR");
+  STATE.favoriteCurrencies = LS.get("fin_favorite_currencies", ["IDR", "USD", "EUR"]);
+  const cachedRates = LS.get("fin_exchange_rates", {});
+  if (cachedRates.base === STATE.currency) {
+    STATE.exchangeRates = cachedRates.rates || {};
+    STATE.exchangeRatesUpdated = cachedRates.updated || null;
+  }
   STATE.theme = LS.get("fin_theme", "light");
   STATE.lastSynced = LS.get("fin_last_synced", null);
 }
@@ -101,42 +110,156 @@ function persistPending() {
 function persistSettings() {
   LS.set("fin_gas_url", STATE.gasUrl);
   LS.set("fin_currency", STATE.currency);
+  LS.set("fin_favorite_currencies", STATE.favoriteCurrencies);
   LS.set("fin_theme", STATE.theme);
 }
 
 // ============================================================
 // 3. CURRENCY & FORMATTING
 // ============================================================
-const CURRENCY_CONFIG = {
-  IDR: { symbol: "Rp", locale: "id-ID", decimals: 0 },
-  USD: { symbol: "$", locale: "en-US", decimals: 2 },
-  EUR: { symbol: "€", locale: "de-DE", decimals: 2 },
+const FALLBACK_CURRENCIES = [
+  "AED", "ARS", "AUD", "BDT", "BGN", "BHD", "BRL", "CAD", "CHF", "CLP",
+  "CNY", "COP", "CZK", "DKK", "EGP", "EUR", "GBP", "GHS", "HKD", "HUF",
+  "IDR", "ILS", "INR", "ISK", "JPY", "KES", "KRW", "KWD", "LKR", "MAD",
+  "MXN", "MYR", "NGN", "NOK", "NPR", "NZD", "OMR", "PEN", "PHP", "PKR",
+  "PLN", "QAR", "RON", "RSD", "RUB", "SAR", "SEK", "SGD", "THB", "TRY",
+  "TWD", "UAH", "USD", "VND", "ZAR",
+];
+
+const CURRENCY_REGIONS = {
+  AED: "AE", ARS: "AR", AUD: "AU", BDT: "BD", BGN: "BG", BHD: "BH",
+  BRL: "BR", CAD: "CA", CHF: "CH", CLP: "CL", CNY: "CN", COP: "CO",
+  CZK: "CZ", DKK: "DK", EGP: "EG", EUR: "EU", GBP: "GB", GHS: "GH",
+  HKD: "HK", HUF: "HU", IDR: "ID", ILS: "IL", INR: "IN", ISK: "IS",
+  JPY: "JP", KES: "KE", KRW: "KR", KWD: "KW", LKR: "LK", MAD: "MA",
+  MXN: "MX", MYR: "MY", NGN: "NG", NOK: "NO", NPR: "NP", NZD: "NZ",
+  OMR: "OM", PEN: "PE", PHP: "PH", PKR: "PK", PLN: "PL", QAR: "QA",
+  RON: "RO", RSD: "RS", RUB: "RU", SAR: "SA", SEK: "SE", SGD: "SG",
+  THB: "TH", TRY: "TR", TWD: "TW", UAH: "UA", USD: "US", VND: "VN",
+  ZAR: "ZA",
 };
+
+function getCurrencyFlag(code) {
+  const region = CURRENCY_REGIONS[code];
+  if (!region) return "🌐";
+  return [...region].map((letter) =>
+    String.fromCodePoint(127397 + letter.charCodeAt(0))).join("");
+}
+
+function getSupportedCurrencies() {
+  try { return Intl.supportedValuesOf("currency"); }
+  catch { return FALLBACK_CURRENCIES; }
+}
+
+function getCurrencyName(code) {
+  try {
+    return new Intl.DisplayNames([navigator.language || "en"], { type: "currency" }).of(code);
+  } catch { return code; }
+}
+
+function populateCurrencySelects() {
+  const currencies = getSupportedCurrencies();
+  if (!currencies.includes(STATE.currency)) currencies.unshift(STATE.currency);
+  const quickCurrencies = [...new Set([STATE.currency, ...STATE.favoriteCurrencies])]
+    .filter((code) => currencies.includes(code));
+  const compactOptions = quickCurrencies.map((code) =>
+    `<option value="${code}">${getCurrencyFlag(code)} ${getCurrencySymbol(code)}</option>`).join("");
+  const allCompactOptions = currencies.map((code) =>
+    `<option value="${code}">${getCurrencyFlag(code)} ${getCurrencySymbol(code)} · ${code}</option>`).join("");
+  const namedOptions = currencies.map((code) =>
+    `<option value="${code}">${getCurrencyFlag(code)} ${getCurrencyName(code)}</option>`).join("");
+  const topSelect = document.getElementById("currency-select");
+  if (topSelect) topSelect.innerHTML = compactOptions;
+  ["tx-currency", "transfer-currency"].forEach((id) => {
+    const select = document.getElementById(id);
+    if (select) select.innerHTML = allCompactOptions;
+  });
+  const settingsSelect = document.getElementById("settings-currency");
+  if (settingsSelect) settingsSelect.innerHTML = namedOptions;
+  const favoriteAdd = document.getElementById("favorite-currency-add");
+  if (favoriteAdd) favoriteAdd.innerHTML = namedOptions;
+  renderFavoriteCurrencies();
+}
+
+function renderFavoriteCurrencies() {
+  const container = document.getElementById("favorite-currencies");
+  if (!container) return;
+  container.innerHTML = STATE.favoriteCurrencies.map((code) => `
+    <span class="currency-chip">${getCurrencyFlag(code)} ${getCurrencySymbol(code)}
+      <button onclick="removeFavoriteCurrency('${code}')" aria-label="Remove ${code}" ${code === STATE.currency ? "disabled" : ""}>×</button>
+    </span>`).join("");
+}
+
+function addFavoriteCurrency() {
+  const code = document.getElementById("favorite-currency-add")?.value;
+  if (!code || STATE.favoriteCurrencies.includes(code)) return;
+  STATE.favoriteCurrencies.push(code);
+  persistSettings();
+  populateCurrencySelects();
+  document.getElementById("currency-select").value = STATE.currency;
+}
+
+function removeFavoriteCurrency(code) {
+  if (code === STATE.currency) return;
+  STATE.favoriteCurrencies = STATE.favoriteCurrencies.filter((item) => item !== code);
+  persistSettings();
+  populateCurrencySelects();
+  document.getElementById("currency-select").value = STATE.currency;
+}
+
+function transactionAmount(tx) {
+  const amount = parseFloat(tx.amount) || 0;
+  const source = tx.currency || STATE.currency;
+  if (source === STATE.currency) return amount;
+  const rate = Number(STATE.exchangeRates[source]);
+  return rate > 0 ? amount / rate : amount;
+}
+
+async function updateExchangeRates(force = false) {
+  const status = document.getElementById("exchange-rate-status");
+  const age = Date.now() - (STATE.exchangeRatesUpdated || 0);
+  if (!force && Object.keys(STATE.exchangeRates).length && age < 12 * 60 * 60 * 1000) {
+    if (status) status.textContent = `Rates cached ${new Date(STATE.exchangeRatesUpdated).toLocaleString()}`;
+    return;
+  }
+  if (!navigator.onLine) {
+    if (status) status.textContent = "Offline — using the last cached exchange rates.";
+    return;
+  }
+  if (status) status.textContent = "Updating exchange rates…";
+  try {
+    const response = await fetch(`https://open.er-api.com/v6/latest/${encodeURIComponent(STATE.currency)}`);
+    if (!response.ok) throw new Error("Rate service unavailable");
+    const data = await response.json();
+    if (data.result !== "success" || !data.rates) throw new Error("Invalid rate response");
+    STATE.exchangeRates = data.rates;
+    STATE.exchangeRatesUpdated = Date.now();
+    LS.set("fin_exchange_rates", { base: STATE.currency, rates: data.rates, updated: STATE.exchangeRatesUpdated });
+    if (status) status.textContent = `Rates updated ${new Date().toLocaleString()}`;
+    refreshCurrentPage();
+  } catch {
+    if (status) status.textContent = "Could not update rates — totals use the latest cached rates.";
+  }
+}
 
 function formatAmount(amount, currency = null) {
   const cur = currency || STATE.currency;
-  const conf = CURRENCY_CONFIG[cur] || CURRENCY_CONFIG.IDR;
-  if (cur === "IDR") {
-    return (
-      "Rp" +
-      Number(amount).toLocaleString("id-ID", {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      })
-    );
+  try {
+    return new Intl.NumberFormat(navigator.language || "en-US", {
+      style: "currency", currency: cur, currencyDisplay: "narrowSymbol",
+    }).format(Number(amount) || 0);
+  } catch {
+    return `${cur} ${(Number(amount) || 0).toLocaleString()}`;
   }
-  return (
-    conf.symbol +
-    Number(amount).toLocaleString(conf.locale, {
-      minimumFractionDigits: conf.decimals,
-      maximumFractionDigits: conf.decimals,
-    })
-  );
 }
 
 function getCurrencySymbol(cur = null) {
   const c = cur || STATE.currency;
-  return (CURRENCY_CONFIG[c] || CURRENCY_CONFIG.IDR).symbol;
+  try {
+    return new Intl.NumberFormat(navigator.language || "en-US", {
+      style: "currency", currency: c, currencyDisplay: "narrowSymbol",
+    }).formatToParts(0).find((part) => part.type === "currency")?.value || c;
+  } catch { return c; }
 }
 
 function parseAmount(str) {
@@ -443,6 +566,8 @@ function renderTransactionsList() {
 
 function txItemHtml(tx) {
   const amt = formatAmount(tx.amount, tx.currency);
+  const isConverted = tx.currency && tx.currency !== STATE.currency;
+  const convertedAmt = isConverted ? formatAmount(transactionAmount(tx)) : "";
   const sign = tx.type === "income" ? "+" : "−";
   const cls = tx.type;
   const icon = tx.type === "income" ? "↑" : "↓";
@@ -461,7 +586,7 @@ function txItemHtml(tx) {
         ${tx.recurring ? `<span class="tx-badge">🔁</span>` : ""}
       </div>
     </div>
-    <div class="tx-amount ${cls}">${sign}${amt}</div>
+    <div class="tx-amount ${cls}">${sign}${amt}${isConverted ? `<small>≈ ${sign}${convertedAmt}</small>` : ""}</div>
     <div class="tx-actions">
       <button class="tx-action-btn" onclick="openEditTransaction('${tx.id}')" title="Edit">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -569,7 +694,7 @@ function getWalletBalance(walletName) {
   return STATE.transactions
     .filter((tx) => tx.wallet === walletName)
     .reduce((sum, tx) => {
-      const amt = parseFloat(tx.amount) || 0;
+      const amt = transactionAmount(tx);
       return tx.type === "income" ? sum + amt : sum - amt;
     }, 0);
 }
@@ -591,10 +716,10 @@ function renderWallets() {
       const balance = getWalletBalance(name);
       const income = STATE.transactions
         .filter((t) => t.wallet === name && t.type === "income")
-        .reduce((s, t) => s + (parseFloat(t.amount) || 0), 0);
+        .reduce((s, t) => s + transactionAmount(t), 0);
       const expense = STATE.transactions
         .filter((t) => t.wallet === name && t.type === "expense")
-        .reduce((s, t) => s + (parseFloat(t.amount) || 0), 0);
+        .reduce((s, t) => s + transactionAmount(t), 0);
       return `<div class="wallet-card">
       <div class="wallet-card-header">
         <span class="wallet-card-name">${escHtml(name)}</span>
@@ -737,10 +862,18 @@ function saveGASUrl() {
 }
 
 function saveCurrency(value) {
+  if (!getSupportedCurrencies().includes(value)) return;
   STATE.currency = value;
+  if (!STATE.favoriteCurrencies.includes(value)) STATE.favoriteCurrencies.unshift(value);
+  STATE.exchangeRates = {};
+  STATE.exchangeRatesUpdated = null;
   persistSettings();
+  populateCurrencySelects();
   document.getElementById("currency-select").value = value;
+  const settingsCurrency = document.getElementById("settings-currency");
+  if (settingsCurrency) settingsCurrency.value = value;
   refreshCurrentPage();
+  updateExchangeRates(true);
 }
 
 async function testConnection() {
@@ -829,10 +962,10 @@ function renderDashboard() {
 
   const income = periodTxs
     .filter((t) => t.type === "income")
-    .reduce((s, t) => s + (parseFloat(t.amount) || 0), 0);
+    .reduce((s, t) => s + transactionAmount(t), 0);
   const expenses = periodTxs
     .filter((t) => t.type === "expense")
-    .reduce((s, t) => s + (parseFloat(t.amount) || 0), 0);
+    .reduce((s, t) => s + transactionAmount(t), 0);
   const savings = income - expenses;
   const savingsRate = income > 0 ? Math.round((savings / income) * 100) : 0;
 
@@ -953,7 +1086,7 @@ function renderBalanceChart() {
   const dateMap = {};
   sorted.forEach((tx) => {
     const d = tx.date.slice(0, 10);
-    const amt = parseFloat(tx.amount) || 0;
+    const amt = transactionAmount(tx);
     dateMap[d] = (dateMap[d] || 0) + (tx.type === "income" ? amt : -amt);
   });
 
@@ -1185,10 +1318,10 @@ function renderReports() {
       }),
       income: txs
         .filter((t) => t.type === "income")
-        .reduce((s, t) => s + (parseFloat(t.amount) || 0), 0),
+        .reduce((s, t) => s + transactionAmount(t), 0),
       expenses: txs
         .filter((t) => t.type === "expense")
-        .reduce((s, t) => s + (parseFloat(t.amount) || 0), 0),
+        .reduce((s, t) => s + transactionAmount(t), 0),
     });
   }
   renderBarChart(monthlyData);
@@ -1203,7 +1336,7 @@ function renderReports() {
   const catMap = {};
   expenseTxs.forEach((tx) => {
     const cat = tx.category || "Uncategorized";
-    catMap[cat] = (catMap[cat] || 0) + (parseFloat(tx.amount) || 0);
+    catMap[cat] = (catMap[cat] || 0) + transactionAmount(tx);
   });
 
   const categoryData = Object.entries(catMap)
@@ -2043,6 +2176,8 @@ window.exportCSV = exportCSV;
 window.importCSV = importCSV;
 window.saveGASUrl = saveGASUrl;
 window.saveCurrency = saveCurrency;
+window.addFavoriteCurrency = addFavoriteCurrency;
+window.removeFavoriteCurrency = removeFavoriteCurrency;
 window.testConnection = testConnection;
 window.confirmReset = confirmReset;
 window.syncNow = syncNow;
@@ -2055,7 +2190,9 @@ function boot() {
   ensureDefaults();
   applyTheme(STATE.theme);
 
+  populateCurrencySelects();
   document.getElementById("currency-select").value = STATE.currency;
+  document.getElementById("settings-currency").value = STATE.currency;
 
   updateGasBanner();
   updateSyncDisplay();
@@ -2067,6 +2204,7 @@ function boot() {
 
   // Render initial page
   renderPage("dashboard");
+  updateExchangeRates();
 
   // Auto-sync on startup if online and GAS URL is set
   if (STATE.gasUrl && STATE.isOnline) {
