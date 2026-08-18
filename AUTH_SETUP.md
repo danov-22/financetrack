@@ -48,9 +48,9 @@ on conflict (user_id) do nothing;
 
 ## Routes
 
-- `/` — public homepage and Google registration
+- `/` — public homepage and Google registration (`index.html`)
 - `/app?mode=demo` — isolated demo; never persists changes or syncs finance data
-- `/app` — finance application (route enforcement is added with the approval backend phase)
+- `/app` — finance application served from `app.html` (route enforcement is added with the approval backend phase)
 
 ## Next implementation phase
 
