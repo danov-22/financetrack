@@ -399,6 +399,10 @@ function setSyncStatus(status, label) {
 }
 
 function updateSyncDisplay() {
+  if (IS_DEMO_MODE) {
+    setSyncStatus("", "Demo data");
+    return;
+  }
   if (!STATE.isOnline) {
     const pending = STATE.pendingQueue.length;
     setSyncStatus("offline", pending > 0 ? `${pending} pending` : "Offline");
@@ -429,6 +433,10 @@ function formatSyncTime(date) {
 }
 
 async function syncNow() {
+  if (IS_DEMO_MODE) {
+    showToast("Demo data resets automatically and is not synced.", "info");
+    return;
+  }
   if (!STATE.gasUrl) {
     showToast(
       "Set up your Google Apps Script URL in Settings first.",
@@ -967,7 +975,7 @@ async function testConnection() {
 
 function updateGasBanner() {
   const banner = document.getElementById("gas-banner");
-  if (banner) banner.classList.toggle("hidden", !!STATE.gasUrl);
+  if (banner) banner.classList.toggle("hidden", IS_DEMO_MODE || !!STATE.gasUrl);
 }
 
 function confirmReset() {
@@ -2386,6 +2394,9 @@ function applyDemoState() {
     return formatLocalISODate(value);
   };
   STATE.gasUrl = "";
+  STATE.pendingQueue = [];
+  STATE.lastSynced = null;
+  STATE.isSyncing = false;
   STATE.wallets = ["Everyday", "Savings", "Travel"];
   STATE.categories = ["Salary", "Food", "Transport", "Housing", "Health", "Leisure"];
   STATE.transactions = [

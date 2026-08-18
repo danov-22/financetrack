@@ -92,6 +92,8 @@ body {
 .demo-banner a { color: white; font-weight: 700; text-decoration: underline; }
 .demo-mode .sidebar { top: 38px; }
 .demo-mode .topbar { top: 38px; }
+.demo-mode .gas-banner,
+.demo-mode .sync-status { display: none !important; }
 
 a { text-decoration: none; color: inherit; }
 button, input, select, textarea { font-family: inherit; }
