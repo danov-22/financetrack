@@ -10,6 +10,7 @@
   --text-2: #6b7280;
   --text-3: #9ca3af;
   --accent: #4f46e5;
+  --accent-rgb: 79 70 229;
   --accent-hover: #4338ca;
   --accent-light: #eef2ff;
   --income: #10b981;
@@ -1209,7 +1210,7 @@ input, select, textarea { outline: none; }
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 16px rgba(79,70,229,.4);
+  box-shadow: 0 4px 16px rgb(var(--accent-rgb) / .4);
   z-index: 150;
   transition: all var(--transition);
 }
@@ -1217,7 +1218,7 @@ input, select, textarea { outline: none; }
 .fab:hover {
   background: var(--accent-hover);
   transform: scale(1.07);
-  box-shadow: 0 6px 20px rgba(79,70,229,.5);
+  box-shadow: 0 6px 20px rgb(var(--accent-rgb) / .5);
 }
 
 .fab:active { transform: scale(0.95); }

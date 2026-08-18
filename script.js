@@ -2074,7 +2074,10 @@ function applyAccentTheme() {
     ? STATE.customThemeColor
     : THEME_PRESETS[STATE.themePreset] || THEME_PRESETS.original;
   const root = document.documentElement;
+  const numericColor = parseInt(color.slice(1), 16);
+  const accentRgb = `${numericColor >> 16} ${(numericColor >> 8) & 0xff} ${numericColor & 0xff}`;
   root.style.setProperty("--accent", color);
+  root.style.setProperty("--accent-rgb", accentRgb);
   root.style.setProperty("--accent-hover", shadeHex(color, STATE.theme === "dark" ? 12 : -10));
   root.style.setProperty("--accent-light", `${color}${STATE.theme === "dark" ? "28" : "16"}`);
   document.querySelectorAll(".theme-preset").forEach((button) =>
