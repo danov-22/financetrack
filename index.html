@@ -448,7 +448,18 @@
 
             <div class="settings-card">
               <h3>Theme color</h3>
-              <p class="settings-desc">Choose a template or create your own accent color.</p>
+              <p class="settings-desc">Choose light or dark mode, then select an accent color.</p>
+              <div class="appearance-toggle" aria-label="Appearance mode">
+                <button id="appearance-light" onclick="setAppearanceMode('light')">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"/></svg>
+                  Light
+                </button>
+                <button id="appearance-dark" onclick="setAppearanceMode('dark')">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+                  Dark
+                </button>
+              </div>
+              <p class="settings-label">Template color</p>
               <div class="theme-presets" id="theme-presets">
                 <button class="theme-preset" data-preset="original" onclick="setThemePreset('original')"><span style="--swatch:#4f46e5"></span>Original</button>
                 <button class="theme-preset" data-preset="royal" onclick="setThemePreset('royal')"><span style="--swatch:#4338ca"></span>Royal</button>

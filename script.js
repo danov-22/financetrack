@@ -2114,6 +2114,15 @@ function applyTheme(theme) {
   STATE.theme = theme;
   persistSettings();
   applyAccentTheme();
+  document.getElementById("appearance-light")?.classList.toggle("active", theme === "light");
+  document.getElementById("appearance-dark")?.classList.toggle("active", theme === "dark");
+}
+
+function setAppearanceMode(theme) {
+  if (theme !== "light" && theme !== "dark") return;
+  applyTheme(theme);
+  if (STATE.currentPage === "dashboard") renderBalanceChart();
+  if (STATE.currentPage === "reports") renderReports();
 }
 
 function toggleTheme() {
@@ -2514,6 +2523,7 @@ window.undoFeedback = undoFeedback;
 window.deleteFeedbackRecord = deleteFeedbackRecord;
 window.setThemePreset = setThemePreset;
 window.saveCustomTheme = saveCustomTheme;
+window.setAppearanceMode = setAppearanceMode;
 window.handleFeedbackScreenshot = handleFeedbackScreenshot;
 window.removeFeedbackScreenshot = removeFeedbackScreenshot;
 

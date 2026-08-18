@@ -828,6 +828,31 @@ input, select, textarea { outline: none; }
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
+.appearance-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 14px;
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+.appearance-toggle button {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 7px;
+  color: var(--text-2);
+  font-size: .84rem;
+  font-weight: 600;
+}
+.appearance-toggle button.active {
+  color: var(--accent);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
 .theme-preset {
   display: flex;
   flex-direction: column;
