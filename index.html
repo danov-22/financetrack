@@ -450,11 +450,12 @@
               <h3>Theme color</h3>
               <p class="settings-desc">Choose a template or create your own accent color.</p>
               <div class="theme-presets" id="theme-presets">
-                <button class="theme-preset" data-preset="indigo" onclick="setThemePreset('indigo')"><span style="--swatch:#4f46e5"></span>Indigo</button>
-                <button class="theme-preset" data-preset="ocean" onclick="setThemePreset('ocean')"><span style="--swatch:#0284c7"></span>Ocean</button>
-                <button class="theme-preset" data-preset="emerald" onclick="setThemePreset('emerald')"><span style="--swatch:#059669"></span>Emerald</button>
-                <button class="theme-preset" data-preset="sunset" onclick="setThemePreset('sunset')"><span style="--swatch:#ea580c"></span>Sunset</button>
-                <button class="theme-preset" data-preset="rose" onclick="setThemePreset('rose')"><span style="--swatch:#e11d48"></span>Rose</button>
+                <button class="theme-preset" data-preset="original" onclick="setThemePreset('original')"><span style="--swatch:#4f46e5"></span>Original</button>
+                <button class="theme-preset" data-preset="royal" onclick="setThemePreset('royal')"><span style="--swatch:#4338ca"></span>Royal</button>
+                <button class="theme-preset" data-preset="ocean" onclick="setThemePreset('ocean')"><span style="--swatch:#1d4ed8"></span>Ocean</button>
+                <button class="theme-preset" data-preset="wealth" onclick="setThemePreset('wealth')"><span style="--swatch:#0f766e"></span>Wealth</button>
+                <button class="theme-preset" data-preset="gold" onclick="setThemePreset('gold')"><span style="--swatch:#b45309"></span>Gold</button>
+                <button class="theme-preset" data-preset="berry" onclick="setThemePreset('berry')"><span style="--swatch:#be123c"></span>Berry</button>
               </div>
               <p class="settings-label">Custom color</p>
               <div class="custom-theme-row">
@@ -758,6 +759,15 @@
             <label>Your note <span class="required">*</span></label>
             <textarea id="feedback-message" class="input-field feedback-textarea" maxlength="1000" placeholder="Tell us what happened or what would make Bewlet better…" required></textarea>
             <div class="feedback-compose-meta"><span id="feedback-error" class="field-error"></span><span id="feedback-count">0 / 1000</span></div>
+          </div>
+          <div class="form-group">
+            <label>Screenshot <span class="optional-label">Optional</span></label>
+            <label class="feedback-upload">
+              <input id="feedback-screenshot" type="file" accept="image/png,image/jpeg,image/webp" onchange="handleFeedbackScreenshot(event)" />
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M17 8l-5-5-5 5M12 3v12"/></svg>
+              <span>Upload or share a screenshot</span>
+            </label>
+            <div id="feedback-screenshot-preview" class="feedback-screenshot-preview hidden"></div>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn-ghost" onclick="closeModal('modal-feedback')">Cancel</button>

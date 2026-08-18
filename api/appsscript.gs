@@ -18,7 +18,7 @@
  *               Category | Food
  *
  *   Sheet 3: "Feedback"
- *     Columns: ID | User ID | Type | Message | Page | Status | Created Time | Withdrawn Time
+ *     Columns: ID | User ID | Type | Message | Page | Status | Created Time | Withdrawn Time | Attachment URL
  */
 
 const SPREADSHEET_ID = SpreadsheetApp.getActiveSpreadsheet().getId();
@@ -129,7 +129,7 @@ function getSheet(name) {
       sheet.appendRow(['Category','Salary']);
       sheet.appendRow(['Category','Other']);
     } else if (name === FEEDBACK_SHEET_NAME) {
-      sheet.appendRow(['ID','User ID','Type','Message','Page','Status','Created Time','Withdrawn Time']);
+      sheet.appendRow(['ID','User ID','Type','Message','Page','Status','Created Time','Withdrawn Time','Attachment URL']);
     }
   }
   return sheet;
@@ -152,6 +152,7 @@ function getFeedback(userId) {
       status: String(row[5] || 'sent'),
       createdTime: String(row[6] || ''),
       withdrawnTime: String(row[7] || ''),
+      attachmentUrl: String(row[8] || ''),
     }));
   return { success: true, data: feedback };
 }
@@ -165,11 +166,22 @@ function saveFeedback(body) {
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][0]) === String(body.id)) return { success: true, data: { id: body.id } };
   }
+  let attachmentUrl = '';
+  if (body.attachmentData) {
+    const match = String(body.attachmentData).match(/^data:([^;]+);base64,(.+)$/);
+    if (!match) return { success: false, error: 'Invalid screenshot data.' };
+    const folders = DriveApp.getFoldersByName('Bewlet Feedback Attachments');
+    const folder = folders.hasNext() ? folders.next() : DriveApp.createFolder('Bewlet Feedback Attachments');
+    const safeName = String(body.attachmentName || ('feedback-' + body.id + '.jpg')).replace(/[^a-zA-Z0-9._-]/g, '_');
+    const blob = Utilities.newBlob(Utilities.base64Decode(match[2]), match[1], safeName);
+    attachmentUrl = folder.createFile(blob).getUrl();
+  }
+  if (sheet.getLastColumn() < 9) sheet.getRange(1, 9).setValue('Attachment URL');
   sheet.appendRow([
     body.id, body.userId, body.type || 'Feedback', body.message,
-    body.page || '', 'sent', body.createdTime || new Date().toISOString(), '',
+    body.page || '', 'sent', body.createdTime || new Date().toISOString(), '', attachmentUrl,
   ]);
-  return { success: true, data: { id: body.id } };
+  return { success: true, data: { id: body.id, attachmentUrl } };
 }
 
 function withdrawFeedback(id, userId) {
@@ -191,6 +203,11 @@ function deleteFeedback(id, userId) {
   const data = sheet.getDataRange().getValues();
   for (let i = data.length - 1; i >= 1; i--) {
     if (String(data[i][0]) === String(id) && String(data[i][1]) === String(userId)) {
+      const attachmentUrl = String(data[i][8] || '');
+      const fileIdMatch = attachmentUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+      if (fileIdMatch) {
+        try { DriveApp.getFileById(fileIdMatch[1]).setTrashed(true); } catch (err) {}
+      }
       sheet.deleteRow(i + 1);
       return { success: true, data: { id } };
     }
@@ -199,9 +216,13 @@ function deleteFeedback(id, userId) {
 }
 
 function rowToTransaction(row) {
+  const rawDate = row[1];
+  const normalizedDate = Object.prototype.toString.call(rawDate) === '[object Date]' && !isNaN(rawDate)
+    ? Utilities.formatDate(rawDate, Session.getScriptTimeZone(), 'yyyy-MM-dd')
+    : String(rawDate || '');
   return {
     id:          String(row[0] || ''),
-    date:        String(row[1] || ''),
+    date:        normalizedDate,
     wallet:      String(row[2] || ''),
     type:        String(row[3] || ''),
     category:    String(row[4] || ''),

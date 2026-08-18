@@ -45,7 +45,7 @@ const STATE = {
   exchangeRates: {},
   exchangeRatesUpdated: null,
   theme: "light",
-  themePreset: "indigo",
+  themePreset: "original",
   customThemeColor: "#7c3aed",
   currentPage: "dashboard",
   dashRange: "month",
@@ -83,7 +83,7 @@ const LS = {
 };
 
 function loadStateFromLS() {
-  STATE.transactions = LS.get("fin_transactions", []);
+  STATE.transactions = LS.get("fin_transactions", []).map(normalizeTransactionDate);
   STATE.wallets = LS.get("fin_wallets", []);
   STATE.categories = LS.get("fin_categories", []);
   STATE.pendingQueue = LS.get("fin_pending", []);
@@ -99,7 +99,8 @@ function loadStateFromLS() {
     STATE.exchangeRatesUpdated = cachedRates.updated || null;
   }
   STATE.theme = LS.get("fin_theme", "light");
-  STATE.themePreset = LS.get("fin_theme_preset", "indigo");
+  STATE.themePreset = LS.get("fin_theme_preset", "original");
+  STATE.themePreset = ({ indigo: "royal", emerald: "wealth", sunset: "gold", rose: "berry" })[STATE.themePreset] || STATE.themePreset;
   STATE.customThemeColor = LS.get("fin_custom_theme_color", "#7c3aed");
   STATE.lastSynced = LS.get("fin_last_synced", null);
 }
@@ -286,6 +287,23 @@ function parseAmount(str) {
   );
 }
 
+function normalizeDateValue(value) {
+  if (!value) return "";
+  const text = String(value);
+  const iso = text.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return iso[0];
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return text;
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function normalizeTransactionDate(transaction) {
+  return { ...transaction, date: normalizeDateValue(transaction.date) };
+}
+
 // ============================================================
 // 4. GOOGLE SHEETS API
 // ============================================================
@@ -434,7 +452,7 @@ async function syncNow() {
     ]);
 
     if (txRes.success) {
-      STATE.transactions = txRes.data || [];
+      STATE.transactions = (txRes.data || []).map(normalizeTransactionDate);
       persistTransactions();
     }
     if (settingsRes.success) {
@@ -500,7 +518,14 @@ function generateId() {
 }
 
 function getTodayISO() {
-  return new Date().toISOString().slice(0, 10);
+  return formatLocalISODate(new Date());
+}
+
+function formatLocalISODate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 async function saveTransaction(txData) {
@@ -982,8 +1007,8 @@ function getDateRangeBounds(range) {
   }
 
   return {
-    from: from.toISOString().slice(0, 10),
-    to: to.toISOString().slice(0, 10),
+    from: formatLocalISODate(from),
+    to: formatLocalISODate(to),
   };
 }
 
@@ -1340,8 +1365,8 @@ function renderReports() {
     const d = new Date(year, month - i, 1);
     const m = d.getMonth();
     const y = d.getFullYear();
-    const from = new Date(y, m, 1).toISOString().slice(0, 10);
-    const to = new Date(y, m + 1, 0).toISOString().slice(0, 10);
+    const from = formatLocalISODate(new Date(y, m, 1));
+    const to = formatLocalISODate(new Date(y, m + 1, 0));
     const txs = STATE.transactions.filter(
       (tx) => tx.date >= from && tx.date <= to,
     );
@@ -1361,8 +1386,8 @@ function renderReports() {
   renderBarChart(monthlyData);
 
   // Category doughnut (selected month)
-  const from = new Date(year, month, 1).toISOString().slice(0, 10);
-  const to = new Date(year, month + 1, 0).toISOString().slice(0, 10);
+  const from = formatLocalISODate(new Date(year, month, 1));
+  const to = formatLocalISODate(new Date(year, month + 1, 0));
   const expenseTxs = STATE.transactions.filter(
     (tx) => tx.type === "expense" && tx.date >= from && tx.date <= to,
   );
@@ -1450,7 +1475,7 @@ function getNextRecurringDate(fromDate, freq) {
   else if (freq === "weekly") d.setDate(d.getDate() + 7);
   else if (freq === "monthly") d.setMonth(d.getMonth() + 1);
   else if (freq === "yearly") d.setFullYear(d.getFullYear() + 1);
-  return d.toISOString().slice(0, 10);
+  return formatLocalISODate(d);
 }
 
 // ============================================================
@@ -2027,11 +2052,12 @@ function populateFilterOptions() {
 // 18. THEME
 // ============================================================
 const THEME_PRESETS = {
-  indigo: "#4f46e5",
-  ocean: "#0284c7",
-  emerald: "#059669",
-  sunset: "#ea580c",
-  rose: "#e11d48",
+  original: "#4f46e5",
+  royal: "#4338ca",
+  ocean: "#1d4ed8",
+  wealth: "#0f766e",
+  gold: "#b45309",
+  berry: "#be123c",
 };
 
 function shadeHex(hex, percent) {
@@ -2046,7 +2072,7 @@ function shadeHex(hex, percent) {
 function applyAccentTheme() {
   const color = STATE.themePreset === "custom"
     ? STATE.customThemeColor
-    : THEME_PRESETS[STATE.themePreset] || THEME_PRESETS.indigo;
+    : THEME_PRESETS[STATE.themePreset] || THEME_PRESETS.original;
   const root = document.documentElement;
   root.style.setProperty("--accent", color);
   root.style.setProperty("--accent-hover", shadeHex(color, STATE.theme === "dark" ? 12 : -10));
@@ -2114,6 +2140,62 @@ function openMobileSidebar() {
 // ============================================================
 // FEEDBACK
 // ============================================================
+let pendingFeedbackScreenshot = null;
+
+function compressFeedbackImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Could not read image"));
+    reader.onload = () => {
+      const image = new Image();
+      image.onerror = () => reject(new Error("Unsupported image"));
+      image.onload = () => {
+        const maxDimension = 1600;
+        const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(image.width * scale);
+        canvas.height = Math.round(image.height * scale);
+        canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+        resolve({
+          data: canvas.toDataURL("image/jpeg", 0.82),
+          name: file.name.replace(/\.[^.]+$/, "") + ".jpg",
+        });
+      };
+      image.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleFeedbackScreenshot(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  const preview = document.getElementById("feedback-screenshot-preview");
+  if (file.size > 12 * 1024 * 1024) {
+    showToast("Please choose a screenshot smaller than 12 MB.", "warning");
+    event.target.value = "";
+    return;
+  }
+  try {
+    pendingFeedbackScreenshot = await compressFeedbackImage(file);
+    preview.classList.remove("hidden");
+    preview.innerHTML = `<img src="${pendingFeedbackScreenshot.data}" alt="Screenshot preview"><div><span>${escHtml(file.name)}</span><button type="button" onclick="removeFeedbackScreenshot()">Remove</button></div>`;
+  } catch {
+    showToast("That screenshot could not be processed.", "error");
+  }
+}
+
+function removeFeedbackScreenshot() {
+  pendingFeedbackScreenshot = null;
+  const input = document.getElementById("feedback-screenshot");
+  const preview = document.getElementById("feedback-screenshot-preview");
+  if (input) input.value = "";
+  if (preview) {
+    preview.innerHTML = "";
+    preview.classList.add("hidden");
+  }
+}
+
 function openFeedbackModal() {
   document.getElementById("feedback-error").textContent = "";
   renderFeedbackHistory();
@@ -2137,6 +2219,7 @@ function renderFeedbackHistory() {
         <span class="feedback-status">${withdrawn ? "Withdrawn" : item.status === "sent" ? "Sent" : "Saved locally"}</span>
       </div>
       <p>${escHtml(item.message)}</p>
+      ${item.attachmentUrl ? `<a class="feedback-attachment-link" href="${escHtml(item.attachmentUrl)}" target="_blank" rel="noopener">View attached screenshot</a>` : ""}
       <div class="feedback-entry-foot">
         <time>${new Date(item.createdTime).toLocaleString()}</time>
         <div class="feedback-entry-actions">
@@ -2156,6 +2239,10 @@ async function submitFeedback(event) {
     document.getElementById("feedback-error").textContent = "Please enter your feedback.";
     return;
   }
+  if (pendingFeedbackScreenshot && (!STATE.gasUrl || !STATE.isOnline)) {
+    showToast("Connect to Google Sheets and go online to share a screenshot.", "warning");
+    return;
+  }
   const feedback = {
     id: generateId(),
     userId: STATE.installationId,
@@ -2165,18 +2252,27 @@ async function submitFeedback(event) {
     status: "local",
     createdTime: new Date().toISOString(),
     withdrawnTime: "",
+    attachmentUrl: "",
   };
   STATE.feedback.push(feedback);
   persistFeedback();
   messageInput.value = "";
   document.getElementById("feedback-count").textContent = "0 / 1000";
+  const screenshot = pendingFeedbackScreenshot;
+  if (!screenshot) removeFeedbackScreenshot();
   renderFeedbackHistory();
 
   if (STATE.gasUrl && STATE.isOnline) {
     try {
-      const response = await apiSaveFeedback(feedback);
+      const response = await apiSaveFeedback({
+        ...feedback,
+        attachmentData: screenshot?.data || "",
+        attachmentName: screenshot?.name || "",
+      });
       if (!response.success) throw new Error(response.error || "Feedback was not accepted");
       feedback.status = "sent";
+      feedback.attachmentUrl = response.data?.attachmentUrl || "";
+      removeFeedbackScreenshot();
       persistFeedback();
       renderFeedbackHistory();
     } catch {}
@@ -2418,6 +2514,8 @@ window.undoFeedback = undoFeedback;
 window.deleteFeedbackRecord = deleteFeedbackRecord;
 window.setThemePreset = setThemePreset;
 window.saveCustomTheme = saveCustomTheme;
+window.handleFeedbackScreenshot = handleFeedbackScreenshot;
+window.removeFeedbackScreenshot = removeFeedbackScreenshot;
 
 // ============================================================
 // BOOT
