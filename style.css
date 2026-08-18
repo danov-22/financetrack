@@ -75,6 +75,24 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+.demo-banner {
+  position: sticky;
+  top: 0;
+  z-index: 500;
+  min-height: 38px;
+  padding: 7px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  color: white;
+  background: var(--accent);
+  font-size: .78rem;
+}
+.demo-banner a { color: white; font-weight: 700; text-decoration: underline; }
+.demo-mode .sidebar { top: 38px; }
+.demo-mode .topbar { top: 38px; }
+
 a { text-decoration: none; color: inherit; }
 button, input, select, textarea { font-family: inherit; }
 button { cursor: pointer; border: none; background: none; }

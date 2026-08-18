@@ -4,6 +4,8 @@
 const DEFAULT_GAS_URL =
   "https://script.google.com/macros/s/AKfycbzX-lrTbUtEPWQ8WcH2F-YJgB6o39TTy2J_e-KfyiXByHbsJpEazHrvOnYcQczTkyRq/exec"; // ← paste your URL between the quotes
 
+const IS_DEMO_MODE = new URLSearchParams(location.search).get("mode") === "demo";
+
 /* ============================================================
    PERSONAL FINANCE DASHBOARD — script.js
    ============================================================
@@ -71,11 +73,13 @@ const LS = {
     }
   },
   set(key, value) {
+    if (IS_DEMO_MODE && key.startsWith("fin_")) return;
     try {
       localStorage.setItem(key, JSON.stringify(value));
     } catch {}
   },
   remove(key) {
+    if (IS_DEMO_MODE && key.startsWith("fin_")) return;
     try {
       localStorage.removeItem(key);
     } catch {}
@@ -2374,6 +2378,31 @@ function ensureDefaults() {
   }
 }
 
+function applyDemoState() {
+  const today = new Date();
+  const date = (daysAgo) => {
+    const value = new Date(today);
+    value.setDate(value.getDate() - daysAgo);
+    return formatLocalISODate(value);
+  };
+  STATE.gasUrl = "";
+  STATE.wallets = ["Everyday", "Savings", "Travel"];
+  STATE.categories = ["Salary", "Food", "Transport", "Housing", "Health", "Leisure"];
+  STATE.transactions = [
+    { id:"demo1", date:date(17), wallet:"Everyday", type:"income", category:"Salary", description:"Monthly salary", amount:8500000, currency:"IDR", createdTime:new Date().toISOString() },
+    { id:"demo2", date:date(14), wallet:"Everyday", type:"expense", category:"Housing", description:"Rent", amount:2400000, currency:"IDR", createdTime:new Date().toISOString() },
+    { id:"demo3", date:date(10), wallet:"Everyday", type:"expense", category:"Food", description:"Groceries", amount:725000, currency:"IDR", createdTime:new Date().toISOString() },
+    { id:"demo4", date:date(7), wallet:"Travel", type:"expense", category:"Leisure", description:"Travel booking", amount:95, currency:"USD", createdTime:new Date().toISOString() },
+    { id:"demo5", date:date(4), wallet:"Everyday", type:"expense", category:"Transport", description:"Fuel and parking", amount:390000, currency:"IDR", createdTime:new Date().toISOString() },
+    { id:"demo6", date:date(2), wallet:"Savings", type:"income", category:"Salary", description:"Freelance project", amount:2100000, currency:"IDR", createdTime:new Date().toISOString() },
+  ];
+  const banner = document.createElement("div");
+  banner.className = "demo-banner";
+  banner.innerHTML = '<span><strong>Demo mode</strong> — changes reset when you leave.</span><a href="/">Exit demo</a>';
+  document.body.prepend(banner);
+  document.body.classList.add("demo-mode");
+}
+
 function initEventListeners() {
   // Sidebar nav
   document.querySelectorAll(".nav-item, .bottom-nav-item").forEach((item) => {
@@ -2535,6 +2564,7 @@ window.removeFeedbackScreenshot = removeFeedbackScreenshot;
 // ============================================================
 function boot() {
   loadStateFromLS();
+  if (IS_DEMO_MODE) applyDemoState();
   ensureDefaults();
   applyTheme(STATE.theme);
 
@@ -2556,7 +2586,7 @@ function boot() {
   syncFeedbackHistory();
 
   // Auto-sync on startup if online and GAS URL is set
-  if (STATE.gasUrl && STATE.isOnline) {
+  if (!IS_DEMO_MODE && STATE.gasUrl && STATE.isOnline) {
     setTimeout(syncNow, 1200);
   }
 }
