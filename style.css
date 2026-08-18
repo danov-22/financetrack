@@ -951,6 +951,11 @@ input, select, textarea { outline: none; }
 }
 .connection-status.ok { color: var(--income); }
 .connection-status.err { color: var(--expense); }
+.managed-storage-status { display:flex;align-items:center;gap:12px;padding:13px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-2); }
+.managed-storage-status>span { width:30px;height:30px;display:grid;place-items:center;border-radius:50%;color:var(--income);background:var(--income-light);font-weight:800; }
+.managed-storage-status div { display:flex;flex-direction:column;min-width:0; }
+.managed-storage-status strong { font-size:.85rem; }
+.managed-storage-status small { color:var(--text-3);font-size:.72rem; }
 
 /* ============================================================
    BUTTONS

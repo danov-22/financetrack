@@ -1,8 +1,9 @@
 // ============================================================
 // CONFIGURATION — paste your Apps Script Web App URL here
 // ============================================================
-const DEFAULT_GAS_URL =
-  "https://script.google.com/macros/s/AKfycbzX-lrTbUtEPWQ8WcH2F-YJgB6o39TTy2J_e-KfyiXByHbsJpEazHrvOnYcQczTkyRq/exec"; // ← paste your URL between the quotes
+// Finance synchronization is provided by the authenticated Bewlet backend.
+// Never embed a shared Apps Script or user credential in the public client.
+const DEFAULT_GAS_URL = "";
 
 const IS_DEMO_MODE = new URLSearchParams(location.search).get("mode") === "demo";
 
@@ -975,7 +976,7 @@ async function testConnection() {
 
 function updateGasBanner() {
   const banner = document.getElementById("gas-banner");
-  if (banner) banner.classList.toggle("hidden", IS_DEMO_MODE || !!STATE.gasUrl);
+  if (banner) banner.classList.add("hidden");
 }
 
 function confirmReset() {

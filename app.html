@@ -6,6 +6,7 @@
     <title>Bewlet</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml" sizes="any" />
     <link rel="apple-touch-icon" href="favicon.svg" />
+    <link rel="manifest" href="manifest.webmanifest" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -397,23 +398,9 @@
 
           <div class="settings-grid">
             <div class="settings-card">
-              <h3>Google Sheets Connection</h3>
-              <p class="settings-desc">
-                Paste your Google Apps Script Web App URL to enable cloud sync.
-              </p>
-              <div class="input-row">
-                <input
-                  type="text"
-                  id="gas-url-input"
-                  class="input-field"
-                  placeholder="https://script.google.com/macros/s/..."
-                />
-                <button class="btn-primary" onclick="saveGASUrl()">Save</button>
-              </div>
-              <button class="btn-ghost btn-sm" onclick="testConnection()">
-                Test Connection
-              </button>
-              <div id="connection-status" class="connection-status"></div>
+              <h3>Google Sheet storage</h3>
+              <p class="settings-desc">Bewlet securely manages the connection to the private finance spreadsheet in your Google Drive. No API URL or Apps Script setup is required.</p>
+              <div class="managed-storage-status"><span>✓</span><div><strong>Managed by Bewlet</strong><small>Your financial records remain in your own Google account.</small></div></div>
             </div>
 
             <div class="settings-card">
@@ -978,5 +965,6 @@
     </div>
 
     <script type="module" src="main.js"></script>
+    <script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");</script>
   </body>
 </html>

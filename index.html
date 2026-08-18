@@ -6,6 +6,7 @@
     <meta name="theme-color" content="#4f46e5" />
     <title>Bewlet — Your money, clearly organized</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml" sizes="any" />
+    <link rel="manifest" href="manifest.webmanifest" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -53,6 +54,27 @@
         </div>
       </section>
 
+      <section class="section difference-section">
+        <div class="difference-copy">
+          <span class="eyebrow">WHAT MAKES BEWLET DIFFERENT</span>
+          <h2>Your finance app should move with you—not lock you to one device.</h2>
+          <p>Bewlet is a browser-first personal finance app. Sign in with your Google account, open it from any modern browser, and continue on your phone, tablet, or computer. No app-store download is required.</p>
+          <p>Want it to feel like an app? Install Bewlet directly from your browser and place it on your home screen. You can record and review data offline, then synchronize when your connection returns.</p>
+        </div>
+        <div class="difference-list">
+          <article><b>01</b><div><h3>One sign-in, any device</h3><p>Use the same approved account from mobile, tablet, or desktop without purchasing separate versions.</p></div></article>
+          <article><b>02</b><div><h3>Your spreadsheet, your records</h3><p>Bewlet creates a private Google Sheet in your Drive. You retain direct access to your financial records.</p></div></article>
+          <article><b>03</b><div><h3>Online and offline</h3><p>Keep tracking when the connection drops. Pending changes synchronize after you return online.</p></div></article>
+          <article><b>04</b><div><h3>Make it feel personal</h3><p>Choose light or dark mode, six curated finance themes, or create a custom accent color.</p></div></article>
+          <article><b>05</b><div><h3>Core updates for life</h3><p>Your one-time lifetime license includes future core improvements and maintenance patches for the supported life of Bewlet.</p></div></article>
+        </div>
+      </section>
+
+      <section class="section browser-callout">
+        <div><span class="eyebrow">NO APP STORE REQUIRED</span><h2>Open. Sign in. Start tracking.</h2><p>Use Bewlet in your browser or install it to your home screen for an app-like experience.</p></div>
+        <button class="button primary" data-login>Register with Google</button>
+      </section>
+
       <section id="pricing" class="section pricing-section">
         <div class="section-heading"><span>Founder lifetime access</span><h2>Pay once. Keep every core update.</h2></div>
         <div class="pricing-grid">
@@ -77,5 +99,6 @@
       </div>
     </div>
     <script type="module" src="auth.js"></script>
+    <script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");</script>
   </body>
 </html>

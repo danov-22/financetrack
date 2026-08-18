@@ -1,0 +1,13 @@
+{
+  "name": "Bewlet Personal Finance",
+  "short_name": "Bewlet",
+  "description": "Browser-first personal finance tracking with user-owned Google Sheet storage.",
+  "start_url": "/app",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f6fa",
+  "theme_color": "#4f46e5",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
