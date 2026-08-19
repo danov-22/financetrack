@@ -1,4 +1,4 @@
-const CACHE_NAME = "bewlet-shell-v2";
+const CACHE_NAME = "bewlet-shell-v3";
 const CHART_URL = "https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js";
 const APP_SHELL = [
   "/", "/index.html", "/landing.css", "/auth.js", "/favicon.svg",
@@ -42,5 +42,20 @@ self.addEventListener("fetch", (event) => {
         }
         return caches.match("/index.html");
       }))
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = event.notification.data?.url || "/app";
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
+      const existing = windows.find((client) => "focus" in client);
+      if (existing) {
+        existing.navigate(target);
+        return existing.focus();
+      }
+      return clients.openWindow(target);
+    })
   );
 });

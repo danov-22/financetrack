@@ -510,6 +510,16 @@
             </div>
 
             <div class="settings-card">
+              <h3>Planned transaction reminders</h3>
+              <p class="settings-desc">Get notified about upcoming planned income and expenses when Bewlet is open or reopened.</p>
+              <div class="reminder-settings-row">
+                <label>Remind me<select id="reminder-days" class="input-field" onchange="saveReminderDays(this.value)"><option value="1">1 day before</option><option value="3">3 days before</option><option value="7">7 days before</option><option value="14">14 days before</option></select></label>
+                <button id="enable-reminders" class="btn-primary" onclick="enablePlannedReminders()">Enable notifications</button>
+              </div>
+              <p id="reminder-permission-status" class="settings-desc reminder-status"></p>
+            </div>
+
+            <div class="settings-card">
               <h3>Categories</h3>
               <div id="settings-categories-list" class="settings-list"></div>
               <button
@@ -762,6 +772,13 @@
               />
               Recurring transaction
             </label>
+          </div>
+          <div class="form-group planned-transaction-option">
+            <label class="checkbox-label">
+              <input type="checkbox" id="tx-planned" />
+              Plan this transaction for later
+            </label>
+            <p class="form-help">It appears in the calendar but does not affect balances until checked as completed.</p>
           </div>
           <div id="recurring-options" class="hidden">
             <div class="form-group">

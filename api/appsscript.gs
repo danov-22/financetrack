@@ -10,7 +10,7 @@
  *
  * Sheet structure:
  *   Sheet 1: "Transactions"
- *     Columns: ID | Date | Wallet | Type | Category | Description | Amount | Currency | Created Time
+ *     Columns: ID | Date | Wallet | Type | Category | Description | Amount | Currency | Created Time | Status
  *
  *   Sheet 2: "Settings"
  *     Columns: Type | Name
@@ -114,7 +114,7 @@ function getSheet(name) {
   if (!sheet) {
     sheet = ss.insertSheet(name);
     if (name === TX_SHEET_NAME) {
-      sheet.appendRow(['ID','Date','Wallet','Type','Category','Description','Amount','Currency','Created Time']);
+      sheet.appendRow(['ID','Date','Wallet','Type','Category','Description','Amount','Currency','Created Time','Status']);
     } else if (name === SET_SHEET_NAME) {
       sheet.appendRow(['Type','Name']);
       // Default wallets and categories
@@ -230,6 +230,7 @@ function rowToTransaction(row) {
     amount:      parseFloat(row[6]) || 0,
     currency:    String(row[7] || 'IDR'),
     createdTime: String(row[8] || ''),
+    status:      String(row[9] || 'completed'),
   };
 }
 
@@ -250,6 +251,7 @@ function addTransaction(body) {
   const id    = body.id || generateIdGAS();
   const now   = body.createdTime || new Date().toISOString();
 
+  if (sheet.getLastColumn() < 10) sheet.getRange(1, 10).setValue('Status');
   sheet.appendRow([
     id,
     body.date        || '',
@@ -260,6 +262,7 @@ function addTransaction(body) {
     parseFloat(body.amount) || 0,
     body.currency    || 'IDR',
     now,
+    body.status     || 'completed',
   ]);
 
   return { success: true, data: { id } };
@@ -271,7 +274,8 @@ function updateTransaction(body) {
 
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][0]) === String(body.id)) {
-      sheet.getRange(i + 1, 1, 1, 9).setValues([[
+      if (sheet.getLastColumn() < 10) sheet.getRange(1, 10).setValue('Status');
+      sheet.getRange(i + 1, 1, 1, 10).setValues([[
         body.id,
         body.date        || data[i][1],
         body.wallet      || data[i][2],
@@ -281,6 +285,7 @@ function updateTransaction(body) {
         parseFloat(body.amount) || data[i][6],
         body.currency    || data[i][7],
         data[i][8],
+        body.status     || data[i][9] || 'completed',
       ]]);
       return { success: true, data: { id: body.id } };
     }

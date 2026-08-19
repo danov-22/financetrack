@@ -54,6 +54,7 @@ const STATE = {
   dashRange: "month",
   calendarMonth: "",
   calendarSelectedDate: "",
+  reminderDays: 3,
   isOnline: navigator.onLine,
   lastSynced: null, // timestamp
   isSyncing: false,
@@ -109,6 +110,7 @@ function loadStateFromLS() {
   STATE.themePreset = LS.get("fin_theme_preset", "original");
   STATE.themePreset = ({ indigo: "royal", emerald: "wealth", sunset: "gold", rose: "berry" })[STATE.themePreset] || STATE.themePreset;
   STATE.customThemeColor = LS.get("fin_custom_theme_color", "#7c3aed");
+  STATE.reminderDays = Number(LS.get("fin_reminder_days", 3)) || 3;
   STATE.lastSynced = LS.get("fin_last_synced", null);
 }
 
@@ -134,6 +136,7 @@ function persistSettings() {
   LS.set("fin_theme", STATE.theme);
   LS.set("fin_theme_preset", STATE.themePreset);
   LS.set("fin_custom_theme_color", STATE.customThemeColor);
+  LS.set("fin_reminder_days", STATE.reminderDays);
 }
 
 // ============================================================
@@ -230,6 +233,7 @@ function removeFavoriteCurrency(code) {
 }
 
 function transactionAmount(tx) {
+  if (tx.status === "planned") return 0;
   const amount = parseFloat(tx.amount) || 0;
   const source = tx.currency || STATE.currency;
   if (source === STATE.currency) return amount;
@@ -688,6 +692,7 @@ function renderCalendar() {
     const isoDate = formatLocalISODate(cellDate);
     const transactions = getCalendarTransactions(isoDate);
     const totals = getCalendarDayTotals(transactions);
+    const plannedCount = transactions.filter((transaction) => transaction.status === "planned").length;
     const outside = cellDate.getMonth() !== monthIndex;
     cells.push(`<button class="calendar-cell${outside ? " outside" : ""}${isoDate === today ? " today" : ""}${isoDate === STATE.calendarSelectedDate ? " selected" : ""}" onclick="selectCalendarDate('${isoDate}')" aria-label="${cellDate.toLocaleDateString()}">
       <span class="calendar-day-number">${cellDate.getDate()}</span>
@@ -696,7 +701,7 @@ function renderCalendar() {
         ${totals.income ? `<i class="income">+${formatCalendarCompact(totals.income)}</i>` : ""}
         ${totals.expense ? `<i class="expense">−${formatCalendarCompact(totals.expense)}</i>` : ""}
       </span>
-      ${transactions.length ? `<span class="calendar-dots">${totals.income ? '<i class="income"></i>' : ""}${totals.expense ? '<i class="expense"></i>' : ""}</span>` : ""}
+      ${transactions.length ? `<span class="calendar-dots">${totals.income ? '<i class="income"></i>' : ""}${totals.expense ? '<i class="expense"></i>' : ""}${plannedCount ? '<i class="planned"></i>' : ""}</span>` : ""}
     </button>`);
   }
   grid.innerHTML = cells.join("");
@@ -751,7 +756,9 @@ function openQuickTransaction() {
 
 function txItemHtml(tx) {
   const amt = formatAmount(tx.amount, tx.currency);
-  const isConverted = tx.currency && tx.currency !== STATE.currency;
+  const isPlanned = tx.status === "planned";
+  const isOverdue = isPlanned && normalizeDateValue(tx.date) < getTodayISO();
+  const isConverted = !isPlanned && tx.currency && tx.currency !== STATE.currency;
   const convertedAmt = isConverted ? formatAmount(transactionAmount(tx)) : "";
   const sign = tx.type === "income" ? "+" : "−";
   const cls = tx.type;
@@ -759,7 +766,7 @@ function txItemHtml(tx) {
   const desc = tx.description || tx.category || tx.type;
   const dateStr = formatDateShort(tx.date);
 
-  return `<div class="tx-item" ondblclick="openEditTransaction('${tx.id}')">
+  return `<div class="tx-item${isPlanned ? " planned" : ""}${isOverdue ? " overdue" : ""}" ondblclick="openEditTransaction('${tx.id}')">
     <div class="tx-icon ${cls}">${icon}</div>
     <div class="tx-info">
       <div class="tx-desc">${escHtml(desc)}</div>
@@ -768,11 +775,13 @@ function txItemHtml(tx) {
         ${tx.wallet ? `<span class="tx-badge">${escHtml(tx.wallet)}</span>` : ""}
         ${tx.category ? `<span class="tx-badge">${escHtml(tx.category)}</span>` : ""}
         ${tx.currency && tx.currency !== STATE.currency ? `<span class="tx-badge">${tx.currency}</span>` : ""}
+        ${isPlanned ? `<span class="tx-badge planned-badge">${isOverdue ? "Overdue plan" : "Planned"}</span>` : ""}
         ${tx.recurring ? `<span class="tx-badge">🔁</span>` : ""}
       </div>
     </div>
-    <div class="tx-amount ${cls}">${sign}${amt}${isConverted ? `<small>≈ ${sign}${convertedAmt}</small>` : ""}</div>
+    <div class="tx-amount ${cls}">${isPlanned ? "Planned " : sign}${amt}${isConverted ? `<small>≈ ${sign}${convertedAmt}</small>` : ""}</div>
     <div class="tx-actions">
+      ${isPlanned ? `<button class="tx-action-btn complete" onclick="event.stopPropagation(); completePlannedTransaction('${tx.id}')" title="Mark completed" aria-label="Mark completed">✓</button>` : ""}
       <button class="tx-action-btn" onclick="openEditTransaction('${tx.id}')" title="Edit">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       </button>
@@ -1036,6 +1045,86 @@ function renderSettingsLists() {
 
   const settingsCurrency = document.getElementById("settings-currency");
   if (settingsCurrency) settingsCurrency.value = STATE.currency;
+  const reminderDays = document.getElementById("reminder-days");
+  if (reminderDays) reminderDays.value = String(STATE.reminderDays);
+  updateReminderPermissionStatus();
+}
+
+function updateReminderPermissionStatus() {
+  const status = document.getElementById("reminder-permission-status");
+  const button = document.getElementById("enable-reminders");
+  if (!status || !button) return;
+  if (!("Notification" in window)) {
+    status.textContent = "This browser does not support system notifications. In-app reminders will still appear.";
+    button.disabled = true;
+    return;
+  }
+  const labels = {
+    granted: "System notifications are enabled.",
+    denied: "Notifications are blocked in your browser settings. In-app reminders remain active.",
+    default: "Enable notifications to receive system alerts while Bewlet is available.",
+  };
+  status.textContent = labels[Notification.permission];
+  button.textContent = Notification.permission === "granted" ? "Notifications enabled" : "Enable notifications";
+  button.disabled = Notification.permission === "granted";
+}
+
+function saveReminderDays(value) {
+  STATE.reminderDays = Number(value) || 3;
+  persistSettings();
+  checkUpcomingPlannedTransactions(true);
+}
+
+async function enablePlannedReminders() {
+  if (!("Notification" in window)) return;
+  const permission = await Notification.requestPermission();
+  updateReminderPermissionStatus();
+  if (permission === "granted") {
+    showToast("Planned transaction notifications enabled.", "success");
+    checkUpcomingPlannedTransactions(true);
+  }
+}
+
+async function showPlannedSystemNotification(title, body, date) {
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  try {
+    const registration = await navigator.serviceWorker?.ready;
+    if (registration) {
+      await registration.showNotification(title, {
+        body,
+        icon: "/favicon.svg",
+        badge: "/favicon.svg",
+        tag: `bewlet-planned-${date}`,
+        data: { url: `/app?calendarDate=${date}` },
+      });
+    } else new Notification(title, { body, icon: "/favicon.svg" });
+  } catch {}
+}
+
+function checkUpcomingPlannedTransactions(force = false) {
+  const today = getTodayISO();
+  const endDate = new Date(`${today}T00:00:00`);
+  endDate.setDate(endDate.getDate() + STATE.reminderDays);
+  const until = formatLocalISODate(endDate);
+  const planned = STATE.transactions.filter((transaction) => transaction.status === "planned");
+  const upcoming = planned.filter((transaction) => transaction.date >= today && transaction.date <= until);
+  const overdue = planned.filter((transaction) => transaction.date < today);
+  const shown = LS.get("fin_planned_reminders_shown", {});
+  const key = `${today}-${STATE.reminderDays}`;
+  if (!force && shown[key]) return;
+
+  if (upcoming.length) {
+    const next = [...upcoming].sort((a, b) => a.date.localeCompare(b.date))[0];
+    const description = next.description || next.category || next.type;
+    const message = `${upcoming.length} upcoming planned transaction${upcoming.length === 1 ? "" : "s"}. Next: ${description} on ${formatDateShort(next.date)}.`;
+    showToast(message, "info", 6500);
+    showPlannedSystemNotification("Upcoming Bewlet transaction", message, next.date);
+  }
+  if (overdue.length) {
+    showToast(`${overdue.length} planned transaction${overdue.length === 1 ? " is" : "s are"} overdue. Complete or delete them from the calendar.`, "warning", 6500);
+  }
+  shown[key] = Date.now();
+  LS.set("fin_planned_reminders_shown", shown);
 }
 
 function saveGASUrl() {
@@ -1623,6 +1712,7 @@ function exportCSV() {
     "Description",
     "Amount",
     "Currency",
+    "Status",
     "Created Time",
   ];
   const rows = txs.map((tx) => [
@@ -1634,6 +1724,7 @@ function exportCSV() {
     tx.description || "",
     tx.amount,
     tx.currency || STATE.currency,
+    tx.status || "completed",
     tx.createdTime || "",
   ]);
 
@@ -1674,6 +1765,7 @@ function importCSV(event) {
         description: header.indexOf("description"),
         amount: header.indexOf("amount"),
         currency: header.indexOf("currency"),
+        status: header.indexOf("status"),
         createdTime: header.indexOf("created time"),
       };
 
@@ -1699,6 +1791,7 @@ function importCSV(event) {
           description: get("description"),
           amount,
           currency: get("currency") || STATE.currency,
+          status: get("status") === "planned" ? "planned" : "completed",
           createdTime: get("createdTime") || new Date().toISOString(),
         };
 
@@ -1851,6 +1944,7 @@ function openTransactionModal(tx = null, presetDate = null) {
   document.getElementById("tx-date").value = tx?.date || presetDate || getTodayISO();
   document.getElementById("tx-description").value = tx?.description || "";
   document.getElementById("tx-recurring").checked = tx?.recurring || false;
+  document.getElementById("tx-planned").checked = tx?.status === "planned";
   document
     .getElementById("recurring-options")
     .classList.toggle("hidden", !tx?.recurring);
@@ -1928,6 +2022,7 @@ async function submitTransaction(event) {
   const category = document.getElementById("tx-category").value;
   const recurring = document.getElementById("tx-recurring").checked;
   const recurringFreq = document.getElementById("tx-recurring-freq").value;
+  const isPlanned = document.getElementById("tx-planned").checked;
   const type = getCurrentTxType();
 
   const txData = {
@@ -1941,6 +2036,10 @@ async function submitTransaction(event) {
     currency,
     recurring,
     recurringFreq: recurring ? recurringFreq : undefined,
+    status: isPlanned ? "planned" : "completed",
+    completedTime: isPlanned ? "" : (id
+      ? STATE.transactions.find((t) => t.id === id)?.completedTime || new Date().toISOString()
+      : new Date().toISOString()),
     createdTime: id
       ? STATE.transactions.find((t) => t.id === id)?.createdTime ||
         new Date().toISOString()
@@ -1957,6 +2056,17 @@ async function submitTransaction(event) {
 
   btn.textContent = "Save";
   btn.disabled = false;
+}
+
+async function completePlannedTransaction(id) {
+  const transaction = STATE.transactions.find((item) => item.id === id);
+  if (!transaction || transaction.status !== "planned") return;
+  await saveTransaction({
+    ...transaction,
+    status: "completed",
+    completedTime: new Date().toISOString(),
+  });
+  showToast(`${transaction.type === "income" ? "Income" : "Expense"} marked as completed.`, "success");
 }
 
 function openWalletModal(editName = null) {
@@ -2658,6 +2768,7 @@ window.openQuickTransaction = openQuickTransaction;
 window.selectCalendarDate = selectCalendarDate;
 window.changeCalendarMonth = changeCalendarMonth;
 window.goCalendarToday = goCalendarToday;
+window.completePlannedTransaction = completePlannedTransaction;
 window.openEditTransaction = openEditTransaction;
 window.openWalletModal = openWalletModal;
 window.openCategoryModal = openCategoryModal;
@@ -2688,6 +2799,8 @@ window.undoFeedback = undoFeedback;
 window.deleteFeedbackRecord = deleteFeedbackRecord;
 window.setThemePreset = setThemePreset;
 window.saveCustomTheme = saveCustomTheme;
+window.saveReminderDays = saveReminderDays;
+window.enablePlannedReminders = enablePlannedReminders;
 window.setAppearanceMode = setAppearanceMode;
 window.handleFeedbackScreenshot = handleFeedbackScreenshot;
 window.removeFeedbackScreenshot = removeFeedbackScreenshot;
@@ -2717,6 +2830,14 @@ function boot() {
   renderPage("dashboard");
   updateExchangeRates();
   syncFeedbackHistory();
+  checkUpcomingPlannedTransactions();
+
+  const calendarDate = new URLSearchParams(location.search).get("calendarDate");
+  if (calendarDate && /^\d{4}-\d{2}-\d{2}$/.test(calendarDate)) {
+    STATE.calendarSelectedDate = calendarDate;
+    STATE.calendarMonth = calendarDate.slice(0, 7);
+    navigate("calendar");
+  }
 
   // Auto-sync on startup if online and GAS URL is set
   if (!IS_DEMO_MODE && STATE.gasUrl && STATE.isOnline) {

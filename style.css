@@ -596,6 +596,11 @@ input, select, textarea { outline: none; }
 }
 
 .tx-item:hover .tx-actions { opacity: 1; }
+.tx-item.planned { border-style:dashed;border-color:color-mix(in srgb,var(--accent) 36%,var(--border)); }
+.tx-item.planned .tx-amount { color:var(--text-2); }
+.tx-item.overdue { border-color:var(--warning); }
+.planned-badge { color:var(--accent);background:var(--accent-light); }
+.tx-action-btn.complete { color:var(--income);background:var(--income-light);font-size:.9rem;font-weight:800; }
 
 .tx-action-btn {
   padding: 5px;
@@ -991,6 +996,11 @@ input, select, textarea { outline: none; }
 .managed-storage-status div { display:flex;flex-direction:column;min-width:0; }
 .managed-storage-status strong { font-size:.85rem; }
 .managed-storage-status small { color:var(--text-3);font-size:.72rem; }
+.reminder-settings-row { display:flex;align-items:end;gap:9px; }
+.reminder-settings-row label { flex:1;color:var(--text-2);font-size:.78rem;font-weight:600; }
+.reminder-settings-row select { margin-top:6px; }
+.reminder-settings-row button { min-height:40px; }
+.reminder-status { margin:9px 0 0; }
 
 /* ============================================================
    BUTTONS
@@ -1119,6 +1129,8 @@ input, select, textarea { outline: none; }
   color: var(--text-2);
   margin-bottom: 6px;
 }
+.form-help { margin-top:5px;color:var(--text-3);font-size:.72rem;line-height:1.4; }
+.planned-transaction-option { padding:10px;border:1px dashed var(--border);border-radius:var(--radius-sm); }
 
 .form-row {
   display: grid;
@@ -1521,7 +1533,8 @@ input, select, textarea { outline: none; }
   .calendar-cell-values { display:none; }
   .calendar-dots { position:absolute;left:5px;bottom:6px;display:flex;gap:3px; }
   .calendar-dots i { width:5px;height:5px;border-radius:50%;background:var(--income); }
-  .calendar-dots i.expense { background:var(--expense); }
+.calendar-dots i.expense { background:var(--expense); }
+  .calendar-dots i.planned { background:var(--accent); }
   .bottom-nav-item.active::before {
     content: '';
     position: absolute;
@@ -1585,6 +1598,7 @@ input, select, textarea { outline: none; }
   .date-range-quick { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); }
   .quick-date { padding: 8px 6px; }
   .input-row { flex-direction: column; }
+  .reminder-settings-row { flex-direction:column;align-items:stretch; }
   .input-row .btn-primary { min-height: 44px; }
   .settings-card { padding: 18px; }
   .monthly-summary-grid { grid-template-columns: 1fr 1fr; }
