@@ -52,6 +52,8 @@ const STATE = {
   customThemeColor: "#7c3aed",
   currentPage: "dashboard",
   dashRange: "month",
+  calendarMonth: "",
+  calendarSelectedDate: "",
   isOnline: navigator.onLine,
   lastSynced: null, // timestamp
   isSyncing: false,
@@ -634,6 +636,117 @@ function renderTransactionsList() {
   }
 
   list.innerHTML = txs.map((tx) => txItemHtml(tx)).join("");
+}
+
+// ============================================================
+// CALENDAR
+// ============================================================
+function getCalendarTransactions(date) {
+  return STATE.transactions
+    .filter((transaction) => normalizeDateValue(transaction.date) === date)
+    .sort((a, b) => (b.createdTime || "").localeCompare(a.createdTime || ""));
+}
+
+function getCalendarDayTotals(transactions) {
+  const income = transactions
+    .filter((transaction) => transaction.type === "income")
+    .reduce((sum, transaction) => sum + transactionAmount(transaction), 0);
+  const expense = transactions
+    .filter((transaction) => transaction.type === "expense")
+    .reduce((sum, transaction) => sum + transactionAmount(transaction), 0);
+  return { income, expense, net: income - expense };
+}
+
+function formatCalendarCompact(amount) {
+  if (!amount) return "";
+  try {
+    return new Intl.NumberFormat(navigator.language || "en", {
+      notation: "compact", maximumFractionDigits: 1,
+    }).format(amount);
+  } catch { return Math.round(amount).toLocaleString(); }
+}
+
+function renderCalendar() {
+  const grid = document.getElementById("calendar-grid");
+  if (!grid) return;
+  if (!STATE.calendarMonth) STATE.calendarMonth = getTodayISO().slice(0, 7);
+  if (!STATE.calendarSelectedDate) STATE.calendarSelectedDate = getTodayISO();
+
+  const [year, monthNumber] = STATE.calendarMonth.split("-").map(Number);
+  const monthIndex = monthNumber - 1;
+  const monthStart = new Date(year, monthIndex, 1);
+  const gridStart = new Date(year, monthIndex, 1 - monthStart.getDay());
+  document.getElementById("calendar-month-label").textContent = monthStart.toLocaleDateString(undefined, {
+    month: "long", year: "numeric",
+  });
+
+  const today = getTodayISO();
+  const cells = [];
+  for (let index = 0; index < 42; index++) {
+    const cellDate = new Date(gridStart);
+    cellDate.setDate(gridStart.getDate() + index);
+    const isoDate = formatLocalISODate(cellDate);
+    const transactions = getCalendarTransactions(isoDate);
+    const totals = getCalendarDayTotals(transactions);
+    const outside = cellDate.getMonth() !== monthIndex;
+    cells.push(`<button class="calendar-cell${outside ? " outside" : ""}${isoDate === today ? " today" : ""}${isoDate === STATE.calendarSelectedDate ? " selected" : ""}" onclick="selectCalendarDate('${isoDate}')" aria-label="${cellDate.toLocaleDateString()}">
+      <span class="calendar-day-number">${cellDate.getDate()}</span>
+      ${transactions.length ? `<span class="calendar-cell-count">${transactions.length}</span>` : ""}
+      <span class="calendar-cell-values">
+        ${totals.income ? `<i class="income">+${formatCalendarCompact(totals.income)}</i>` : ""}
+        ${totals.expense ? `<i class="expense">−${formatCalendarCompact(totals.expense)}</i>` : ""}
+      </span>
+      ${transactions.length ? `<span class="calendar-dots">${totals.income ? '<i class="income"></i>' : ""}${totals.expense ? '<i class="expense"></i>' : ""}</span>` : ""}
+    </button>`);
+  }
+  grid.innerHTML = cells.join("");
+  renderCalendarSelectedDay();
+}
+
+function renderCalendarSelectedDay() {
+  const date = STATE.calendarSelectedDate || getTodayISO();
+  const transactions = getCalendarTransactions(date);
+  const totals = getCalendarDayTotals(transactions);
+  const selectedDate = new Date(`${date}T00:00:00`);
+  setEl("calendar-selected-label", selectedDate.toLocaleDateString(undefined, {
+    weekday: "long", month: "long", day: "numeric",
+  }));
+  setEl("calendar-day-income", formatAmount(totals.income));
+  setEl("calendar-day-expense", formatAmount(totals.expense));
+  setEl("calendar-day-net", formatAmount(totals.net));
+  const list = document.getElementById("calendar-day-transactions");
+  if (list) list.innerHTML = transactions.length
+    ? transactions.map((transaction) => txItemHtml(transaction)).join("")
+    : emptyStateHtml("No transactions", "Tap Add to record something on this day.");
+}
+
+function selectCalendarDate(date) {
+  STATE.calendarSelectedDate = date;
+  STATE.calendarMonth = date.slice(0, 7);
+  renderCalendar();
+}
+
+function changeCalendarMonth(offset) {
+  const [year, month] = STATE.calendarMonth.split("-").map(Number);
+  const next = new Date(year, month - 1 + offset, 1);
+  STATE.calendarMonth = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}`;
+  STATE.calendarSelectedDate = `${STATE.calendarMonth}-01`;
+  renderCalendar();
+}
+
+function goCalendarToday() {
+  STATE.calendarSelectedDate = getTodayISO();
+  STATE.calendarMonth = STATE.calendarSelectedDate.slice(0, 7);
+  renderCalendar();
+}
+
+function openTransactionForDate(date = STATE.calendarSelectedDate) {
+  openTransactionModal(null, date || getTodayISO());
+}
+
+function openQuickTransaction() {
+  if (STATE.currentPage === "calendar") openTransactionForDate();
+  else openTransactionModal();
 }
 
 function txItemHtml(tx) {
@@ -1727,7 +1840,7 @@ function populateCategoryOptions(selectId, currentValue = "") {
   sel.innerHTML = `<option value="">Select category</option>${opts}`;
 }
 
-function openTransactionModal(tx = null) {
+function openTransactionModal(tx = null, presetDate = null) {
   const isEdit = !!tx;
   document.getElementById("modal-transaction-title").textContent = isEdit
     ? "Edit Transaction"
@@ -1735,7 +1848,7 @@ function openTransactionModal(tx = null) {
   document.getElementById("tx-id").value = tx?.id || "";
   document.getElementById("tx-amount").value = tx?.amount || "";
   document.getElementById("tx-currency").value = tx?.currency || STATE.currency;
-  document.getElementById("tx-date").value = tx?.date || getTodayISO();
+  document.getElementById("tx-date").value = tx?.date || presetDate || getTodayISO();
   document.getElementById("tx-description").value = tx?.description || "";
   document.getElementById("tx-recurring").checked = tx?.recurring || false;
   document
@@ -2010,6 +2123,7 @@ function navigate(page) {
     dashboard: "Dashboard",
     wallets: "Wallets",
     transactions: "Transactions",
+    calendar: "Calendar",
     reports: "Reports",
     settings: "Settings",
   };
@@ -2030,6 +2144,8 @@ function renderPage(page) {
     renderTransactionsList();
   } else if (page === "reports") {
     renderReports();
+  } else if (page === "calendar") {
+    renderCalendar();
   } else if (page === "settings") {
     renderSettingsLists();
   }
@@ -2537,6 +2653,11 @@ function initEventListeners() {
 // Global exports for HTML onclick handlers
 window.navigate = navigate;
 window.openTransactionModal = openTransactionModal;
+window.openTransactionForDate = openTransactionForDate;
+window.openQuickTransaction = openQuickTransaction;
+window.selectCalendarDate = selectCalendarDate;
+window.changeCalendarMonth = changeCalendarMonth;
+window.goCalendarToday = goCalendarToday;
 window.openEditTransaction = openEditTransaction;
 window.openWalletModal = openWalletModal;
 window.openCategoryModal = openCategoryModal;
