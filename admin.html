@@ -1,0 +1,7 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><meta name="theme-color" content="#4f46e5"/><title>Bewlet Admin</title><link rel="icon" href="favicon.svg"/><link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/><link rel="stylesheet" href="admin.css"/></head>
+<body><header><a href="/" class="brand"><img src="favicon.svg" alt=""/>Bewlet Admin</a><nav><a href="/app">Open Bewlet</a><button id="admin-signout">Sign out</button></nav></header>
+<main><section class="admin-hero"><div><span>ADMIN CONTROL</span><h1>Account approvals</h1><p>Review registrations and payment proofs without opening Supabase.</p></div><div class="admin-count"><strong id="pending-count">—</strong><span>waiting</span></div></section>
+<section class="admin-toolbar"><input id="admin-search" type="search" placeholder="Search name or email…"/><select id="admin-filter"><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="suspended">Suspended</option><option value="all">All accounts</option></select><button id="admin-refresh">Refresh</button></section>
+<div id="admin-status" role="status"></div><section id="admin-list" class="admin-list"></section></main>
+<script type="module" src="admin.js"></script></body></html>

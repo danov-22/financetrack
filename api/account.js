@@ -41,6 +41,11 @@ module.exports = async function handler(request, response) {
       if (!(await isAdmin(session.token))) return send(response, 403, { error: "Administrator access required" });
       const result = await supabase("/rest/v1/rpc/review_bewlet_account", { method: "POST", body: JSON.stringify({ target_user: body.userId, decision: body.decision, reason: body.reason || null }) }, session.token);
       const reviewed = Array.isArray(result) ? result[0] : result;
+      const paymentStatus = body.decision === "approved" ? "accepted" : body.decision === "rejected" ? "rejected" : null;
+      if (paymentStatus) {
+        const pending = await supabase(`/rest/v1/payment_submissions?user_id=eq.${encodeURIComponent(body.userId)}&status=eq.pending&select=id&order=submitted_at.desc&limit=1`);
+        if (pending?.[0]) await supabase(`/rest/v1/payment_submissions?id=eq.${pending[0].id}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ status: paymentStatus, reviewed_at: new Date().toISOString(), rejection_reason: body.reason || null }) });
+      }
       await notifyDecision(reviewed, body.decision, body.reason);
       return send(response, 200, { profile: reviewed });
     }

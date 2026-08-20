@@ -2,6 +2,7 @@ const modal = document.getElementById("auth-modal");
 const statusEl = document.getElementById("auth-status");
 let config = null;
 let pendingRegistration = null;
+const escapeHtml = (value) => String(value || "").replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]);
 
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
@@ -22,9 +23,42 @@ async function loadConfig() {
   try {
     const response = await fetch("/api/public-config");
     config = await response.json();
+    renderPaymentInstructions();
   } catch {
     config = {};
   }
+}
+
+function renderPaymentInstructions() {
+  const region = document.getElementById("registration-region")?.value || "ID";
+  const payment = config?.payments?.[region] || {};
+  const container = document.getElementById("payment-instructions");
+  if (!container) return;
+  if (!payment.accountNumber) {
+    container.className = "payment-instructions not-ready";
+    container.innerHTML = "<strong>Payment details are being prepared</strong><span>Do not transfer money until the payment account appears here. You may still sign in if you already have an approved account.</span>";
+    return;
+  }
+  container.className = "payment-instructions";
+  container.innerHTML = `<strong>${region === "ID" ? "Transfer Rp175,000 to" : "Pay US$19 using"} ${escapeHtml(payment.bankName || "the account below")}</strong><span class="account-number">${escapeHtml(payment.accountNumber)}</span><span>Account name: ${escapeHtml(payment.accountName || "Bewlet")}</span>${payment.instructions ? `<span>${escapeHtml(payment.instructions)}</span>` : ""}<span>After signing in, upload your payment screenshot. Approval is ${escapeHtml(config.approvalTimeText)}.</span>`;
+}
+
+async function signOutLanding() {
+  const token = localStorage.getItem("bewlet_supabase_access_token");
+  if (token && config?.supabaseUrl) await fetch(`${config.supabaseUrl}/auth/v1/logout`, { method: "POST", headers: { apikey: config.supabasePublishableKey, Authorization: `Bearer ${token}` } }).catch(() => {});
+  localStorage.removeItem("bewlet_supabase_access_token");
+  localStorage.removeItem("bewlet_supabase_refresh_token");
+  location.replace("/");
+}
+
+function showAdminChoice() {
+  document.getElementById("auth-title").textContent = "Welcome back";
+  document.getElementById("auth-message").textContent = "This Gmail account has both Bewlet user and administrator access.";
+  document.getElementById("registration-region").closest("label").hidden = true;
+  document.getElementById("payment-instructions").hidden = true;
+  document.getElementById("google-login").hidden = true;
+  document.getElementById("admin-choice-panel").hidden = false;
+  setStatus("");
 }
 
 async function startGoogleLogin() {
@@ -68,11 +102,21 @@ async function handleAuthReturn() {
     if (refreshToken) localStorage.setItem("bewlet_supabase_refresh_token", refreshToken);
     if (profile?.status !== "approved") {
       pendingRegistration = { accessToken, user, region };
-      document.getElementById("payment-proof-panel").hidden = false;
+      const paymentResponse = await fetch(`${config.supabaseUrl}/rest/v1/payment_submissions?user_id=eq.${encodeURIComponent(user.id)}&select=status&order=submitted_at.desc&limit=1`, { headers: { apikey: config.supabasePublishableKey, Authorization: `Bearer ${accessToken}` } });
+      const payments = paymentResponse.ok ? await paymentResponse.json() : [];
+      document.getElementById("payment-proof-panel").hidden = Boolean(payments[0]?.status === "pending" || payments[0]?.status === "accepted");
+      document.getElementById("google-login").hidden = true;
+      document.getElementById("registration-region").closest("label").hidden = true;
       fetch("/api/account", { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify({ action: "notify-registration" }) }).catch(() => {});
+    }
+    if (profile?.status === "approved") {
+      const accountResponse = await fetch("/api/account", { headers: { Authorization: `Bearer ${accessToken}` } });
+      const account = accountResponse.ok ? await accountResponse.json() : null;
+      if (account?.admin) return showAdminChoice();
     }
     if (profile?.status === "approved") location.replace("/app");
     else setStatus("Registration received. Your account is pending approval; we’ll notify you when access is ready.");
+    if (profile?.status !== "approved") setStatus(`Registration received. ${document.getElementById("payment-proof-panel").hidden ? "Your payment proof is waiting for review." : "Upload your payment proof below."} Approval is ${config.approvalTimeText}. We’ll notify you when access is ready.`);
   } catch (error) {
     setStatus(error.message, true);
   }
@@ -92,7 +136,7 @@ async function submitPaymentProof() {
     const isIndonesia = pendingRegistration.region === "ID";
     const submission = await fetch(`${config.supabaseUrl}/rest/v1/payment_submissions`, { method: "POST", headers: { apikey: config.supabasePublishableKey, Authorization: `Bearer ${pendingRegistration.accessToken}`, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify({ user_id: pendingRegistration.user.id, storage_path: path, amount_minor: isIndonesia ? 175000 : 1900, currency: isIndonesia ? "IDR" : "USD" }) });
     if (!submission.ok) throw new Error((await submission.json()).message || "Could not register payment proof");
-    setStatus("Payment proof submitted. Your registration is ready for administrator review.");
+    setStatus(`Payment proof submitted. Your registration is ready for review and is ${config.approvalTimeText}.`);
     document.getElementById("payment-proof-panel").hidden = true;
   } catch (error) { setStatus(error.message, true); }
   finally { button.disabled = false; }
@@ -102,6 +146,8 @@ document.querySelectorAll("[data-login]").forEach((button) => button.addEventLis
 document.getElementById("auth-close").addEventListener("click", closeAuth);
 document.getElementById("google-login").addEventListener("click", startGoogleLogin);
 document.getElementById("payment-proof-submit").addEventListener("click", submitPaymentProof);
+document.getElementById("registration-region").addEventListener("change", renderPaymentInstructions);
+document.getElementById("landing-sign-out").addEventListener("click", signOutLanding);
 modal.addEventListener("click", (event) => { if (event.target === modal) closeAuth(); });
 
 await loadConfig();

@@ -42,6 +42,7 @@ Also configure:
 - `TOKEN_ENCRYPTION_KEY` (a randomly generated secret of at least 32 characters)
 - `FEEDBACK_APPS_SCRIPT_URL` (the owner-only feedback endpoint)
 - `RESEND_API_KEY` and `APP_FROM_EMAIL` (optional registration and approval email notifications)
+- `APPROVAL_TIME_TEXT` and the `PAYMENT_ID_*` / `PAYMENT_INTL_*` variables from `.env.example` (public payment instructions shown during registration)
 
 ## 4. Bootstrap the owner account
 
@@ -80,6 +81,7 @@ Run the complete current `supabase_schema.sql` again. It is idempotent and adds 
 
 1. A new Gmail user signs in and receives `pending` status.
 2. The owner receives an optional email notification and reviews the account in Settings.
+   The same controls are also available on the dedicated `/admin` page. An administrator is offered a choice between Bewlet and Admin Control after sign-in.
 3. After approval, the user signs in and connects Google Drive.
 4. Bewlet creates `Bewlet Finance Data` in that user’s Drive.
 5. Transactions, settings, lists, budgets, goals, and navigation preferences synchronize with revision conflict checks.

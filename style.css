@@ -221,6 +221,8 @@ input, select, textarea { outline: none; }
   font-weight: 500;
 }
 .theme-toggle-btn:hover { background: var(--surface-2); color: var(--text); }
+.sidebar-signout { margin-top:7px;color:var(--expense); }
+.sidebar.collapsed .sidebar-signout span { display:none; }
 
 [data-theme="light"] .icon-moon { display: block; }
 [data-theme="light"] .icon-sun { display: none; }
