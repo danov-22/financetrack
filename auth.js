@@ -83,6 +83,37 @@ async function startGoogleLogin() {
   location.assign(authorizeUrl.toString());
 }
 
+async function refreshLandingSession() {
+  const refreshToken = localStorage.getItem("bewlet_supabase_refresh_token");
+  if (!refreshToken || !config?.supabaseUrl) return null;
+  const response = await fetch(`${config.supabaseUrl}/auth/v1/token?grant_type=refresh_token`, {
+    method: "POST",
+    headers: { apikey: config.supabasePublishableKey, "Content-Type": "application/json" },
+    body: JSON.stringify({ refresh_token: refreshToken }),
+  });
+  if (!response.ok) return null;
+  const session = await response.json();
+  localStorage.setItem("bewlet_supabase_access_token", session.access_token);
+  if (session.refresh_token) localStorage.setItem("bewlet_supabase_refresh_token", session.refresh_token);
+  return session.access_token;
+}
+
+async function restoreRequestedSession() {
+  const requested = new URLSearchParams(location.search).get("login");
+  if (requested !== "required") return false;
+  let accessToken = localStorage.getItem("bewlet_supabase_access_token");
+  let response = accessToken ? await fetch("/api/account", { headers: { Authorization: `Bearer ${accessToken}` } }) : null;
+  if (!response || response.status === 401) {
+    accessToken = await refreshLandingSession();
+    response = accessToken ? await fetch("/api/account", { headers: { Authorization: `Bearer ${accessToken}` } }) : null;
+  }
+  if (!response?.ok) return false;
+  const account = await response.json();
+  if (account.admin) { openAuth(); showAdminChoice(); return true; }
+  if (account.profile?.status === "approved") { location.replace("/app"); return true; }
+  return false;
+}
+
 async function handleAuthReturn() {
   const hash = new URLSearchParams(location.hash.slice(1));
   const accessToken = hash.get("access_token");
@@ -109,6 +140,11 @@ async function handleAuthReturn() {
     const [profile] = await profileResponse.json();
     localStorage.setItem("bewlet_supabase_access_token", accessToken);
     if (refreshToken) localStorage.setItem("bewlet_supabase_refresh_token", refreshToken);
+    const accountResponse = await fetch("/api/account", { headers: { Authorization: `Bearer ${accessToken}` } });
+    if (accountResponse.ok) {
+      const account = await accountResponse.json();
+      if (account.admin) return showAdminChoice();
+    }
     if (profile?.status !== "approved") {
       pendingRegistration = { accessToken, user, region };
       const paymentInfoResponse = await fetch("/api/payment-info", { headers: { Authorization: `Bearer ${accessToken}` } });
@@ -124,11 +160,6 @@ async function handleAuthReturn() {
       document.getElementById("google-login").hidden = true;
       document.getElementById("registration-region").closest("label").hidden = true;
       fetch("/api/account", { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify({ action: "notify-registration" }) }).catch(() => {});
-    }
-    if (profile?.status === "approved") {
-      const accountResponse = await fetch("/api/account", { headers: { Authorization: `Bearer ${accessToken}` } });
-      const account = accountResponse.ok ? await accountResponse.json() : null;
-      if (account?.admin) return showAdminChoice();
     }
     if (profile?.status === "approved") location.replace("/app");
     else setStatus("Registration received. Your account is pending approval; we’ll notify you when access is ready.");
@@ -168,6 +199,7 @@ modal.addEventListener("click", (event) => { if (event.target === modal) closeAu
 
 await loadConfig();
 await handleAuthReturn();
+await restoreRequestedSession();
 
 const pageStatus = new URLSearchParams(location.search);
 if (pageStatus.get("status")) { openAuth(); setStatus(`Your Bewlet account is ${pageStatus.get("status")}. Sign in again after its status changes.`); }
