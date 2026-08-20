@@ -1464,6 +1464,9 @@ input, select, textarea { outline: none; }
    MISC UTILITIES
    ============================================================ */
 .hidden { display: none !important; }
+.page-swipe-in-right { animation:pageSwipeInRight .24s ease-out; }.page-swipe-in-left { animation:pageSwipeInLeft .24s ease-out; }
+@keyframes pageSwipeInRight { from { opacity:.55;transform:translateX(24px); } to { opacity:1;transform:translateX(0); } }
+@keyframes pageSwipeInLeft { from { opacity:.55;transform:translateX(-24px); } to { opacity:1;transform:translateX(0); } }
 
 .badge {
   display: inline-flex;

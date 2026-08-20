@@ -2602,6 +2602,38 @@ function initSidebarSwipeGestures() {
   }, { passive: true });
 }
 
+function initQuickPageSwipeGestures() {
+  let startX = 0, startY = 0, tracking = false;
+  document.addEventListener("touchstart", (event) => {
+    if (window.innerWidth > 768 || event.touches.length !== 1) return;
+    if (document.getElementById("sidebar")?.classList.contains("mobile-open")) return;
+    if (document.querySelector(".modal-overlay.open")) return;
+    const target = event.target;
+    if (!target.closest("main") || target.closest("button,a,input,select,textarea,label,canvas,.list-toolbar,.filter-bar,.calendar-grid,.nav-customizer")) return;
+    const touch = event.touches[0];
+    if (touch.clientX <= 28) return;
+    startX = touch.clientX; startY = touch.clientY; tracking = true;
+  }, { passive: true });
+  document.addEventListener("touchend", (event) => {
+    if (!tracking || !event.changedTouches.length) return;
+    tracking = false;
+    const touch = event.changedTouches[0];
+    const dx = touch.clientX - startX, dy = touch.clientY - startY;
+    if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.35) return;
+    const pages = STATE.bottomNavPages;
+    if (pages.length < 2) return;
+    const current = pages.indexOf(STATE.currentPage);
+    const nextIndex = current < 0 ? (dx < 0 ? 0 : pages.length - 1) : current + (dx < 0 ? 1 : -1);
+    if (nextIndex < 0 || nextIndex >= pages.length) return;
+    const page = pages[nextIndex];
+    navigate(page);
+    const activePage = document.getElementById(`page-${page}`);
+    const animationClass = dx < 0 ? "page-swipe-in-right" : "page-swipe-in-left";
+    activePage?.classList.add(animationClass);
+    setTimeout(() => activePage?.classList.remove(animationClass), 260);
+  }, { passive: true });
+}
+
 // ============================================================
 // FEEDBACK
 // ============================================================
@@ -3066,6 +3098,7 @@ function boot() {
   renderBottomNavigation();
   initEventListeners();
   initSidebarSwipeGestures();
+  initQuickPageSwipeGestures();
 
   // Check recurring on startup
   checkRecurringTransactions();
