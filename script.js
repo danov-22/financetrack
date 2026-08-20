@@ -67,6 +67,9 @@ const STATE = {
   bottomNavPages: ["dashboard", "lists", "transactions", "calendar", "reports", "settings"],
   isOnline: navigator.onLine,
   lastSynced: null, // timestamp
+  syncRevision: "",
+  cloudDirty: false,
+  isHydrating: true,
   isSyncing: false,
   // chart instances
   balanceChartInst: null,
@@ -111,7 +114,7 @@ function loadStateFromLS() {
   STATE.goals = LS.get("fin_goals", []);
   STATE.installationId = LS.get("fin_installation_id", "") || generateId();
   LS.set("fin_installation_id", STATE.installationId);
-  STATE.gasUrl = LS.get("fin_gas_url", "") || DEFAULT_GAS_URL;
+  STATE.gasUrl = window.BEWLET_AUTH ? "managed" : (LS.get("fin_gas_url", "") || DEFAULT_GAS_URL);
   STATE.currency = LS.get("fin_currency", "IDR");
   STATE.favoriteCurrencies = LS.get("fin_favorite_currencies", ["IDR", "USD", "EUR"]);
   const cachedRates = LS.get("fin_exchange_rates", {});
@@ -128,16 +131,30 @@ function loadStateFromLS() {
   if (Array.isArray(savedBottomNav)) STATE.bottomNavPages = savedBottomNav.filter((page) => BOTTOM_NAV_PAGES[page]).slice(0, 6);
   if (STATE.bottomNavPages.length < 2) STATE.bottomNavPages = ["dashboard", "calendar"];
   STATE.lastSynced = LS.get("fin_last_synced", null);
+  STATE.syncRevision = LS.get("fin_sync_revision", "") || "";
+  STATE.cloudDirty = Boolean(LS.get("fin_cloud_dirty", false));
+}
+
+let _managedSyncTimer = null;
+function markCloudDirty() {
+  if (window.BEWLET_AUTH && !STATE.isHydrating) {
+    STATE.cloudDirty = true; LS.set("fin_cloud_dirty", true);
+    clearTimeout(_managedSyncTimer);
+    if (navigator.onLine) _managedSyncTimer = setTimeout(() => { if (!STATE.isSyncing && STATE.cloudDirty) syncNow(); }, 1400);
+  }
 }
 
 function persistTransactions() {
   LS.set("fin_transactions", STATE.transactions);
+  markCloudDirty();
 }
 function persistWallets() {
   LS.set("fin_wallets", STATE.wallets);
+  markCloudDirty();
 }
 function persistCategories() {
   LS.set("fin_categories", STATE.categories);
+  markCloudDirty();
 }
 function persistPending() {
   LS.set("fin_pending", STATE.pendingQueue);
@@ -145,9 +162,9 @@ function persistPending() {
 function persistFeedback() {
   LS.set("fin_feedback", STATE.feedback);
 }
-function persistListItems() { LS.set("fin_list_items", STATE.listItems); }
-function persistBudgets() { LS.set("fin_budgets", STATE.budgets); }
-function persistGoals() { LS.set("fin_goals", STATE.goals); }
+function persistListItems() { LS.set("fin_list_items", STATE.listItems); markCloudDirty(); }
+function persistBudgets() { LS.set("fin_budgets", STATE.budgets); markCloudDirty(); }
+function persistGoals() { LS.set("fin_goals", STATE.goals); markCloudDirty(); }
 function persistSettings() {
   LS.set("fin_gas_url", STATE.gasUrl);
   LS.set("fin_currency", STATE.currency);
@@ -157,6 +174,7 @@ function persistSettings() {
   LS.set("fin_custom_theme_color", STATE.customThemeColor);
   LS.set("fin_reminder_days", STATE.reminderDays);
   LS.set("fin_bottom_nav_pages", STATE.bottomNavPages);
+  markCloudDirty();
 }
 
 // ============================================================
@@ -340,6 +358,59 @@ function normalizeTransactionDate(transaction) {
 // ============================================================
 // 4. GOOGLE SHEETS API
 // ============================================================
+function isManagedSync() { return Boolean(window.BEWLET_AUTH && window.bewletAuthFetch); }
+function buildManagedSnapshot() {
+  return {
+    transactions: STATE.transactions, wallets: STATE.wallets, categories: STATE.categories,
+    listItems: STATE.listItems, budgets: STATE.budgets, goals: STATE.goals,
+    settings: { currency: STATE.currency, favoriteCurrencies: STATE.favoriteCurrencies, theme: STATE.theme, themePreset: STATE.themePreset, customThemeColor: STATE.customThemeColor, reminderDays: STATE.reminderDays, bottomNavPages: STATE.bottomNavPages },
+  };
+}
+function applyManagedSnapshot(snapshot) {
+  STATE.isHydrating = true;
+  STATE.transactions = (snapshot.transactions || []).map(normalizeTransactionDate);
+  STATE.wallets = snapshot.wallets?.length ? snapshot.wallets : STATE.wallets;
+  STATE.categories = snapshot.categories?.length ? snapshot.categories : STATE.categories;
+  STATE.listItems = snapshot.listItems || [];
+  STATE.budgets = snapshot.budgets || [];
+  STATE.goals = snapshot.goals || [];
+  const settings = snapshot.settings || {};
+  if (settings.currency) STATE.currency = settings.currency;
+  if (settings.favoriteCurrencies) STATE.favoriteCurrencies = settings.favoriteCurrencies;
+  if (settings.theme) STATE.theme = settings.theme;
+  if (settings.themePreset) STATE.themePreset = settings.themePreset;
+  if (settings.customThemeColor) STATE.customThemeColor = settings.customThemeColor;
+  if (settings.reminderDays) STATE.reminderDays = Number(settings.reminderDays);
+  if (settings.bottomNavPages?.length >= 2) STATE.bottomNavPages = settings.bottomNavPages;
+  STATE.syncRevision = snapshot.revision || STATE.syncRevision;
+  persistTransactions(); persistWallets(); persistCategories(); persistListItems(); persistBudgets(); persistGoals(); persistSettings();
+  LS.set("fin_sync_revision", STATE.syncRevision);
+  populateCurrencySelects();
+  if (document.getElementById("currency-select")) document.getElementById("currency-select").value = STATE.currency;
+  applyTheme(STATE.theme);
+  renderBottomNavigation();
+  STATE.cloudDirty = false; LS.set("fin_cloud_dirty", false); STATE.isHydrating = false;
+}
+async function managedPull() {
+  const response = await window.bewletAuthFetch("/api/sync");
+  const data = await response.json();
+  if (!response.ok) throw Object.assign(new Error(data.error || "Sync pull failed"), { code: data.code });
+  if (!data.snapshot.revision && (STATE.transactions.length || STATE.wallets.length || STATE.categories.length)) return managedPush(true);
+  applyManagedSnapshot(data.snapshot);
+  return data;
+}
+async function managedPush(force = false) {
+  clearTimeout(_managedSyncTimer);
+  const response = await window.bewletAuthFetch("/api/sync", { method: "POST", body: JSON.stringify({ action: "push", snapshot: buildManagedSnapshot(), expectedRevision: STATE.syncRevision, force }) });
+  const data = await response.json();
+  if (!response.ok) throw Object.assign(new Error(data.error || "Sync push failed"), { code: data.code, server: data.server });
+  STATE.syncRevision = data.revision;
+  LS.set("fin_sync_revision", data.revision);
+  STATE.cloudDirty = false;
+  LS.set("fin_cloud_dirty", false);
+  return { success: true, data };
+}
+
 async function gasRequest(params) {
   if (!STATE.gasUrl) throw new Error("GAS URL not configured");
   const url = STATE.gasUrl;
@@ -365,26 +436,32 @@ async function gasRequest(params) {
 }
 
 async function apiGetAll() {
+  if (isManagedSync()) { const result = await managedPull(); return { success: true, data: result.snapshot?.transactions || STATE.transactions }; }
   return gasRequest({ method: "GET", query: { action: "getAll" } });
 }
 
 async function apiGetSettings() {
+  if (isManagedSync()) return { success: true, data: { wallets: STATE.wallets, categories: STATE.categories } };
   return gasRequest({ method: "GET", query: { action: "getSettings" } });
 }
 
 async function apiAdd(tx) {
+  if (isManagedSync()) return managedPush();
   return gasRequest({ method: "POST", body: { action: "add", ...tx } });
 }
 
 async function apiUpdate(tx) {
+  if (isManagedSync()) return managedPush();
   return gasRequest({ method: "POST", body: { action: "update", ...tx } });
 }
 
 async function apiDelete(id) {
+  if (isManagedSync()) return managedPush();
   return gasRequest({ method: "POST", body: { action: "delete", id } });
 }
 
 async function apiAddSetting(type, name) {
+  if (isManagedSync()) return managedPush();
   return gasRequest({
     method: "POST",
     body: { action: "addSetting", type, name },
@@ -392,6 +469,7 @@ async function apiAddSetting(type, name) {
 }
 
 async function apiDeleteSetting(type, name) {
+  if (isManagedSync()) return managedPush();
   return gasRequest({
     method: "POST",
     body: { action: "deleteSetting", type, name },
@@ -399,18 +477,22 @@ async function apiDeleteSetting(type, name) {
 }
 
 async function apiGetFeedback() {
+  if (isManagedSync()) { const response = await window.bewletAuthFetch("/api/feedback"); return response.json(); }
   return gasRequest({ method: "GET", query: { action: "getFeedback", userId: STATE.installationId } });
 }
 
 async function apiSaveFeedback(feedback) {
+  if (isManagedSync()) { const response = await window.bewletAuthFetch("/api/feedback", { method: "POST", body: JSON.stringify({ action: "saveFeedback", ...feedback }) }); return response.json(); }
   return gasRequest({ method: "POST", body: { action: "saveFeedback", ...feedback } });
 }
 
 async function apiWithdrawFeedback(id) {
+  if (isManagedSync()) { const response = await window.bewletAuthFetch("/api/feedback", { method: "POST", body: JSON.stringify({ action: "withdrawFeedback", id }) }); return response.json(); }
   return gasRequest({ method: "POST", body: { action: "withdrawFeedback", id, userId: STATE.installationId } });
 }
 
 async function apiDeleteFeedback(id) {
+  if (isManagedSync()) { const response = await window.bewletAuthFetch("/api/feedback", { method: "POST", body: JSON.stringify({ action: "deleteFeedback", id }) }); return response.json(); }
   return gasRequest({ method: "POST", body: { action: "deleteFeedback", id, userId: STATE.installationId } });
 }
 
@@ -479,6 +561,20 @@ async function syncNow() {
     return;
   }
 
+  if (isManagedSync()) {
+    STATE.isSyncing = true; updateSyncDisplay();
+    try {
+      if (STATE.cloudDirty || STATE.pendingQueue.length) await managedPush(); else await managedPull();
+      STATE.pendingQueue = []; persistPending();
+      STATE.lastSynced = Date.now(); LS.set("fin_last_synced", STATE.lastSynced);
+      showToast("Google Sheet synchronized.", "success"); refreshCurrentPage();
+    } catch (error) {
+      if (error.code === "sync_conflict") { window._bewletSyncConflict = error.server; openModal("modal-sync-conflict"); }
+      else showToast(error.code === "google_not_connected" ? "Connect Google Drive in Settings to start synchronization." : `Sync failed: ${error.message}`, "error", 6000);
+    } finally { STATE.isSyncing = false; updateSyncDisplay(); }
+    return;
+  }
+
   STATE.isSyncing = true;
   updateSyncDisplay();
 
@@ -514,6 +610,19 @@ async function syncNow() {
     STATE.isSyncing = false;
     updateSyncDisplay();
   }
+}
+
+async function resolveSyncConflict(choice) {
+  const server = window._bewletSyncConflict;
+  if (!server) return closeModal("modal-sync-conflict");
+  exportAllData();
+  try {
+    if (choice === "cloud") applyManagedSnapshot(server);
+    else await managedPush(true);
+    STATE.pendingQueue = []; persistPending(); closeModal("modal-sync-conflict"); window._bewletSyncConflict = null;
+    STATE.lastSynced = Date.now(); LS.set("fin_last_synced", STATE.lastSynced); refreshCurrentPage(); updateSyncDisplay();
+    showToast(choice === "cloud" ? "Google Sheet version restored. Your former local version was downloaded." : "This device’s version replaced the cloud copy. A cloud backup was created first.", "success", 6000);
+  } catch (error) { showToast(`Could not resolve conflict: ${error.message}`, "error"); }
 }
 
 async function drainPendingQueue() {
@@ -1194,7 +1303,41 @@ function renderSettingsLists() {
   if (reminderDays) reminderDays.value = String(STATE.reminderDays);
   updateReminderPermissionStatus();
   renderBottomNavSettings();
+  renderAccountManagement();
 }
+
+async function accountApi(path = "", options = {}) {
+  if (!window.bewletAuthFetch) throw new Error("Account session is unavailable");
+  const response = await window.bewletAuthFetch(`/api/account${path}`, options);
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || "Account request failed");
+  return data;
+}
+async function renderAccountManagement() {
+  if (!window.BEWLET_AUTH) return;
+  try {
+    const account = await accountApi();
+    window.BEWLET_AUTH.account = account;
+    const summary = document.getElementById("account-summary");
+    if (summary) summary.innerHTML = `<span>✓</span><div><strong>${escHtml(account.profile.display_name || account.user.email)}</strong><small>${escHtml(account.user.email)} · ${escHtml(account.profile.license_type || "Approved access")}</small></div>`;
+    const drive = document.getElementById("google-drive-status");
+    if (drive) { drive.className = `account-connection${account.google ? " connected" : ""}`; drive.textContent = account.google ? `Google Drive connected as ${account.google.google_email || account.user.email}.` : "Google Drive is not connected. Connect it to create your private Bewlet spreadsheet."; }
+    const connect = document.getElementById("connect-google-drive");
+    if (connect) connect.textContent = account.google ? "Reconnect Google Drive" : "Connect Google Drive";
+    const history = document.getElementById("backup-history");
+    if (history) history.innerHTML = account.backups?.length ? account.backups.map((backup) => `<div class="backup-item"><div><strong>${new Date(backup.created_at).toLocaleString()}</strong><small>${Math.max(1, Math.round(Number(backup.byte_size || 0) / 1024))} KB · Stored in your Drive</small></div><button class="btn-secondary btn-sm" onclick="restoreCloudBackup('${backup.id}')">Restore</button></div>`).join("") : '<p class="settings-desc">No cloud backups yet.</p>';
+    document.getElementById("admin-approval-card")?.classList.toggle("hidden", !account.admin);
+    if (account.admin) renderAdminAccounts();
+  } catch (error) { showToast(error.message, "error"); }
+}
+async function connectGoogleDrive() { try { const response = await window.bewletAuthFetch("/api/google-oauth", { method: "POST", body: "{}" }); const data = await response.json(); if (!response.ok) throw new Error(data.error); location.assign(data.url); } catch (error) { showToast(error.message, "error"); } }
+function signOutBewlet() { localStorage.removeItem("bewlet_supabase_access_token"); localStorage.removeItem("bewlet_supabase_refresh_token"); location.replace("/"); }
+async function createCloudBackup() { try { const response = await window.bewletAuthFetch("/api/sync", { method: "POST", body: JSON.stringify({ action: "backup" }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error); showToast("Backup saved to your Google Drive.", "success"); renderAccountManagement(); } catch (error) { showToast(error.message, "error"); } }
+async function restoreCloudBackup(backupId) { if (!confirm("Restore this backup? Bewlet will first back up your current cloud data.")) return; try { const response = await window.bewletAuthFetch("/api/sync", { method: "POST", body: JSON.stringify({ action: "restore", backupId }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error); applyManagedSnapshot({ ...data.snapshot, revision: data.revision }); showToast("Backup restored successfully.", "success"); refreshCurrentPage(); } catch (error) { showToast(error.message, "error"); } }
+function exportAllData() { const payload = { format: "bewlet-export", version: 1, exportedAt: new Date().toISOString(), account: window.BEWLET_AUTH ? { email: window.BEWLET_AUTH.account?.user?.email } : null, data: buildManagedSnapshot() }; const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `bewlet-export-${getTodayISO()}.json`; link.click(); URL.revokeObjectURL(link.href); showToast("Complete data export downloaded.", "success"); }
+async function deleteBewletAccount() { const phrase = prompt('This is permanent. Type "DELETE MY BEWLET ACCOUNT" to continue.'); if (phrase !== "DELETE MY BEWLET ACCOUNT") { if (phrase !== null) showToast("Account deletion cancelled: phrase did not match.", "warning"); return; } try { await accountApi("", { method: "POST", body: JSON.stringify({ action: "delete-account", confirmation: phrase, keepDriveFiles: document.getElementById("keep-drive-files")?.checked !== false }) }); Object.keys(localStorage).filter((key) => key.startsWith("fin_") || key.startsWith("bewlet_")).forEach((key) => localStorage.removeItem(key)); location.replace("/?account=deleted"); } catch (error) { showToast(error.message, "error"); } }
+async function renderAdminAccounts() { try { const data = await accountApi("?action=admin-list"); const list = document.getElementById("admin-account-list"); if (!list) return; const pending = data.profiles.filter((profile) => profile.status === "pending"); list.innerHTML = pending.length ? pending.map((profile) => `<div class="admin-account-item"><div><strong>${escHtml(profile.display_name || profile.email)}</strong><small>${escHtml(profile.email)} · ${profile.pricing_region} · ${new Date(profile.created_at).toLocaleDateString()}</small>${profile.payment?.signed_url ? `<a href="${escHtml(profile.payment.signed_url)}" target="_blank" rel="noopener">View payment proof · ${profile.payment.currency} ${Number(profile.payment.amount_minor).toLocaleString()}</a>` : '<small>No payment proof submitted</small>'}</div><div class="admin-account-actions"><button onclick="reviewAccount('${profile.id}','approved')">Approve</button><button onclick="reviewAccount('${profile.id}','rejected')">Reject</button></div></div>`).join("") : '<p class="settings-desc">No registrations are waiting for approval.</p>'; } catch (error) { showToast(error.message, "error"); } }
+async function reviewAccount(userId, decision) { const reason = decision === "rejected" ? (prompt("Reason for rejection (shown in their status):") || "Registration not approved") : ""; try { await accountApi("", { method: "POST", body: JSON.stringify({ action: "review", userId, decision, reason }) }); showToast(`Account ${decision}.`, "success"); renderAdminAccounts(); } catch (error) { showToast(error.message, "error"); } }
 
 function renderBottomNavigation() {
   const nav = document.querySelector(".bottom-nav");
@@ -3061,6 +3204,14 @@ window.deleteGoal = deleteGoal;
 window.openRecurringBillModal = openRecurringBillModal;
 window.toggleBottomNavPage = toggleBottomNavPage;
 window.moveBottomNavPage = moveBottomNavPage;
+window.connectGoogleDrive = connectGoogleDrive;
+window.signOutBewlet = signOutBewlet;
+window.createCloudBackup = createCloudBackup;
+window.restoreCloudBackup = restoreCloudBackup;
+window.exportAllData = exportAllData;
+window.deleteBewletAccount = deleteBewletAccount;
+window.reviewAccount = reviewAccount;
+window.resolveSyncConflict = resolveSyncConflict;
 window.completePlannedTransaction = completePlannedTransaction;
 window.openEditTransaction = openEditTransaction;
 window.openWalletModal = openWalletModal;
@@ -3129,15 +3280,20 @@ function boot() {
   checkUpcomingPlannedTransactions();
   setTimeout(checkBudgetAlerts, 400);
 
+  const googleResult = new URLSearchParams(location.search).get("google");
+  if (googleResult === "connected") { showToast("Google Drive connected. Creating your Bewlet spreadsheet…", "success", 5000); history.replaceState(null, "", "/app"); setTimeout(syncNow, 500); }
+  if (googleResult === "error") { showToast(new URLSearchParams(location.search).get("message") || "Google Drive connection failed.", "error", 6000); history.replaceState(null, "", "/app"); }
+
   const calendarDate = new URLSearchParams(location.search).get("calendarDate");
   if (calendarDate && /^\d{4}-\d{2}-\d{2}$/.test(calendarDate)) {
     STATE.calendarSelectedDate = calendarDate;
     STATE.calendarMonth = calendarDate.slice(0, 7);
     navigate("calendar");
   }
+  STATE.isHydrating = false;
 
   // Auto-sync on startup if online and GAS URL is set
-  if (!IS_DEMO_MODE && STATE.gasUrl && STATE.isOnline) {
+  if (!IS_DEMO_MODE && STATE.gasUrl && STATE.isOnline && window.BEWLET_AUTH?.account?.google) {
     setTimeout(syncNow, 1200);
   }
 }

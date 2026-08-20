@@ -1,6 +1,7 @@
 const modal = document.getElementById("auth-modal");
 const statusEl = document.getElementById("auth-status");
 let config = null;
+let pendingRegistration = null;
 
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
@@ -65,6 +66,11 @@ async function handleAuthReturn() {
     const [profile] = await profileResponse.json();
     localStorage.setItem("bewlet_supabase_access_token", accessToken);
     if (refreshToken) localStorage.setItem("bewlet_supabase_refresh_token", refreshToken);
+    if (profile?.status !== "approved") {
+      pendingRegistration = { accessToken, user, region };
+      document.getElementById("payment-proof-panel").hidden = false;
+      fetch("/api/account", { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify({ action: "notify-registration" }) }).catch(() => {});
+    }
     if (profile?.status === "approved") location.replace("/app");
     else setStatus("Registration received. Your account is pending approval; we’ll notify you when access is ready.");
   } catch (error) {
@@ -72,10 +78,36 @@ async function handleAuthReturn() {
   }
 }
 
+async function submitPaymentProof() {
+  const file = document.getElementById("payment-proof-file").files[0];
+  if (!pendingRegistration || !file) return setStatus("Choose a payment screenshot first.", true);
+  if (file.size > 5 * 1024 * 1024) return setStatus("The screenshot must be 5 MB or smaller.", true);
+  const button = document.getElementById("payment-proof-submit");
+  button.disabled = true; setStatus("Uploading your private payment proof…");
+  try {
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const path = `${pendingRegistration.user.id}/${Date.now()}-${safeName}`;
+    const upload = await fetch(`${config.supabaseUrl}/storage/v1/object/payment-proofs/${path}`, { method: "POST", headers: { apikey: config.supabasePublishableKey, Authorization: `Bearer ${pendingRegistration.accessToken}`, "Content-Type": file.type, "x-upsert": "false" }, body: file });
+    if (!upload.ok) throw new Error((await upload.json()).message || "Upload failed");
+    const isIndonesia = pendingRegistration.region === "ID";
+    const submission = await fetch(`${config.supabaseUrl}/rest/v1/payment_submissions`, { method: "POST", headers: { apikey: config.supabasePublishableKey, Authorization: `Bearer ${pendingRegistration.accessToken}`, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify({ user_id: pendingRegistration.user.id, storage_path: path, amount_minor: isIndonesia ? 175000 : 1900, currency: isIndonesia ? "IDR" : "USD" }) });
+    if (!submission.ok) throw new Error((await submission.json()).message || "Could not register payment proof");
+    setStatus("Payment proof submitted. Your registration is ready for administrator review.");
+    document.getElementById("payment-proof-panel").hidden = true;
+  } catch (error) { setStatus(error.message, true); }
+  finally { button.disabled = false; }
+}
+
 document.querySelectorAll("[data-login]").forEach((button) => button.addEventListener("click", openAuth));
 document.getElementById("auth-close").addEventListener("click", closeAuth);
 document.getElementById("google-login").addEventListener("click", startGoogleLogin);
+document.getElementById("payment-proof-submit").addEventListener("click", submitPaymentProof);
 modal.addEventListener("click", (event) => { if (event.target === modal) closeAuth(); });
 
 await loadConfig();
 await handleAuthReturn();
+
+const pageStatus = new URLSearchParams(location.search);
+if (pageStatus.get("status")) { openAuth(); setStatus(`Your Bewlet account is ${pageStatus.get("status")}. Sign in again after its status changes.`); }
+if (pageStatus.get("login") === "required") { openAuth(); setStatus("Sign in with your approved Gmail account to continue."); }
+if (pageStatus.get("account") === "deleted") { openAuth(); setStatus("Your Bewlet account has been deleted."); }

@@ -29,11 +29,19 @@ Add these project environment variables:
 - `SUPABASE_URL`
 - `SUPABASE_PUBLISHABLE_KEY`
 - `SUPABASE_SECRET_KEY` (server-only; never expose through `public-config.js`)
+- `SUPABASE_SERVICE_ROLE_KEY` (server-only legacy JWT used for PostgREST/Auth admin operations)
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
 - `ADMIN_EMAIL`
 
 Redeploy after adding the variables.
+
+Also configure:
+
+- `APP_ORIGIN` (`https://bewlet.vercel.app` in production)
+- `TOKEN_ENCRYPTION_KEY` (a randomly generated secret of at least 32 characters)
+- `FEEDBACK_APPS_SCRIPT_URL` (the owner-only feedback endpoint)
+- `RESEND_API_KEY` and `APP_FROM_EMAIL` (optional registration and approval email notifications)
 
 ## 4. Bootstrap the owner account
 
@@ -44,6 +52,10 @@ Redeploy after adding the variables.
 insert into private.admin_users (user_id)
 select id from auth.users where email = 'YOUR_ADMIN_EMAIL'
 on conflict (user_id) do nothing;
+
+update public.profiles
+set status = 'approved', license_type = 'lifetime', approved_at = now()
+where email = 'YOUR_ADMIN_EMAIL';
 ```
 
 ## Routes
@@ -52,11 +64,31 @@ on conflict (user_id) do nothing;
 - `/app?mode=demo` — isolated demo; never persists changes or syncs finance data
 - `/app` — finance application served from `app.html` (route enforcement is added with the approval backend phase)
 
+## Private Google Sheet synchronization
+
+In the same Google Cloud project, enable the Google Sheets API and Google Drive API. Add this exact OAuth redirect URI to the Web application client:
+
+- `https://bewlet.vercel.app/api/google-oauth`
+
+Bewlet requests `drive.file`, not unrestricted Drive access. It can create and manage its own spreadsheet and backup JSON files, while unrelated Drive files remain outside its access.
+
+Run the complete current `supabase_schema.sql` again. It is idempotent and adds encrypted Google-connection storage, backup metadata, admin approval functions, and registration-notification tracking.
+
+`TOKEN_ENCRYPTION_KEY` must remain stable. Changing it invalidates stored Google refresh tokens and requires users to reconnect Drive.
+
+## Account and data lifecycle
+
+1. A new Gmail user signs in and receives `pending` status.
+2. The owner receives an optional email notification and reviews the account in Settings.
+3. After approval, the user signs in and connects Google Drive.
+4. Bewlet creates `Bewlet Finance Data` in that user’s Drive.
+5. Transactions, settings, lists, budgets, goals, and navigation preferences synchronize with revision conflict checks.
+6. Before replacing non-empty cloud data, Bewlet creates at most one automatic backup per day.
+7. Users can create manual backups, restore, download a complete JSON export, or permanently delete their account.
+
+Before public sales, complete Google OAuth verification and test approval, rejection, token refresh, offline edits, conflicts, restore, export, and deletion with non-owner accounts.
+
 ## Next implementation phase
 
 - Private payment-proof upload UI
-- Admin approval/rejection dashboard
-- Atomic founder-license allocation
-- Approval email notification
-- Server-side route/session enforcement
-- Post-approval Google Drive/Sheets authorization and automatic spreadsheet creation
+- Atomic founder-license allocation tied to verified payment

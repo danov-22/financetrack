@@ -20,6 +20,7 @@ create table if not exists public.profiles (
 );
 
 create index if not exists profiles_status_created_idx on public.profiles (status, created_at desc);
+alter table public.profiles add column if not exists registration_notified_at timestamptz;
 create index if not exists profiles_region_license_idx on public.profiles (pricing_region, license_type);
 
 create table if not exists public.payment_submissions (
@@ -170,3 +171,81 @@ using (
 -- After your first Google login, bootstrap the owner once in the SQL editor:
 -- insert into private.admin_users (user_id)
 -- select id from auth.users where email = 'YOUR_ADMIN_EMAIL';
+-- update public.profiles set status = 'approved', license_type = 'lifetime', approved_at = now()
+-- where email = 'YOUR_ADMIN_EMAIL';
+
+-- Account synchronization and data-safety phase.
+-- OAuth refresh tokens are encrypted by the Vercel API before they enter this table.
+create table if not exists public.google_connections (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  encrypted_refresh_token text not null,
+  google_email text,
+  scope text,
+  connected_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.data_backups (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  drive_file_id text not null,
+  spreadsheet_revision text,
+  byte_size bigint not null default 0,
+  created_at timestamptz not null default now()
+);
+create index if not exists data_backups_user_created_idx on public.data_backups (user_id, created_at desc);
+
+alter table public.google_connections enable row level security;
+alter table public.data_backups enable row level security;
+revoke all on public.google_connections from anon, authenticated;
+revoke all on public.data_backups from anon, authenticated;
+
+drop policy if exists "users read own backup metadata" on public.data_backups;
+create policy "users read own backup metadata" on public.data_backups
+for select to authenticated using ((select auth.uid()) = user_id);
+grant select on public.data_backups to authenticated;
+
+create or replace function public.review_bewlet_account(target_user uuid, decision text, reason text default null)
+returns public.profiles
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  reviewed public.profiles;
+  account_region text;
+  current_license text;
+  slot_capacity integer;
+  slot_claimed integer;
+begin
+  if not private.is_admin() then raise exception 'Administrator access required'; end if;
+  if decision not in ('approved', 'rejected', 'suspended') then raise exception 'Invalid decision'; end if;
+  select pricing_region, license_type into account_region, current_license from public.profiles where id = target_user for update;
+  if decision = 'approved' and current_license is null then
+    select capacity, claimed into slot_capacity, slot_claimed from public.founder_slots where region = account_region for update;
+    if slot_claimed < slot_capacity then
+      update public.founder_slots set claimed = claimed + 1, updated_at = now() where region = account_region;
+      current_license := 'founder_lifetime';
+    else
+      current_license := 'lifetime';
+    end if;
+  end if;
+  update public.profiles set
+    status = decision,
+    approved_at = case when decision = 'approved' then now() else approved_at end,
+    approved_by = case when decision = 'approved' then auth.uid() else approved_by end,
+    rejection_reason = case when decision = 'approved' then null else reason end,
+    license_type = case when decision = 'approved' then current_license else license_type end,
+    updated_at = now()
+  where id = target_user returning * into reviewed;
+  if reviewed.id is null then raise exception 'Account not found'; end if;
+  return reviewed;
+end;
+$$;
+revoke all on function public.review_bewlet_account(uuid, text, text) from public;
+grant execute on function public.review_bewlet_account(uuid, text, text) to authenticated;
+
+create or replace function public.is_bewlet_admin()
+returns boolean language sql stable security definer set search_path = '' as $$ select private.is_admin(); $$;
+revoke all on function public.is_bewlet_admin() from public;
+grant execute on function public.is_bewlet_admin() to authenticated;
