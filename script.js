@@ -1524,6 +1524,22 @@ function getChartGridColor() {
   );
 }
 
+function getChartAccentColor() {
+  return getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#4f46e5";
+}
+
+function chartColorWithAlpha(color, alpha) {
+  const hex = color.replace("#", "");
+  if (/^[0-9a-f]{3}$/i.test(hex)) {
+    const [r, g, b] = [...hex].map((value) => parseInt(value + value, 16));
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+  if (/^[0-9a-f]{6}$/i.test(hex)) {
+    return `rgba(${parseInt(hex.slice(0, 2), 16)},${parseInt(hex.slice(2, 4), 16)},${parseInt(hex.slice(4, 6), 16)},${alpha})`;
+  }
+  return color;
+}
+
 function destroyChart(instance) {
   if (instance) {
     try {
@@ -1564,6 +1580,7 @@ function renderBalanceChart() {
 
   const textColor = getChartTextColor();
   const gridColor = getChartGridColor();
+  const accentColor = getChartAccentColor();
 
   STATE.balanceChartInst = new Chart(ctx, {
     type: "line",
@@ -1573,8 +1590,10 @@ function renderBalanceChart() {
         {
           label: "Balance",
           data,
-          borderColor: "#4f46e5",
-          backgroundColor: "rgba(79,70,229,0.1)",
+          borderColor: accentColor,
+          backgroundColor: chartColorWithAlpha(accentColor, 0.12),
+          pointBackgroundColor: accentColor,
+          pointBorderColor: accentColor,
           fill: true,
           tension: 0.4,
           pointRadius: data.length > 30 ? 0 : 3,
@@ -1622,13 +1641,13 @@ function renderBarChart(monthlyData) {
         {
           label: "Income",
           data: monthlyData.map((m) => m.income),
-          backgroundColor: "rgba(16,185,129,0.75)",
+          backgroundColor: CHART_COLORS[1],
           borderRadius: 6,
         },
         {
           label: "Expenses",
           data: monthlyData.map((m) => m.expenses),
-          backgroundColor: "rgba(239,68,68,0.75)",
+          backgroundColor: CHART_COLORS[2],
           borderRadius: 6,
         },
       ],
