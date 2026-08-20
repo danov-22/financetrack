@@ -2,6 +2,7 @@ const modal = document.getElementById("auth-modal");
 const statusEl = document.getElementById("auth-status");
 let config = null;
 let pendingRegistration = null;
+let paymentDetails = null;
 const escapeHtml = (value) => String(value || "").replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]);
 
 function setStatus(message, isError = false) {
@@ -12,11 +13,13 @@ function setStatus(message, isError = false) {
 function openAuth() {
   modal.classList.add("open");
   modal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("auth-open");
 }
 
 function closeAuth() {
   modal.classList.remove("open");
   modal.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("auth-open");
 }
 
 async function loadConfig() {
@@ -31,16 +34,22 @@ async function loadConfig() {
 
 function renderPaymentInstructions() {
   const region = document.getElementById("registration-region")?.value || "ID";
-  const payment = config?.payments?.[region] || {};
   const container = document.getElementById("payment-instructions");
   if (!container) return;
+  if (!pendingRegistration) {
+    const price = region === "ID" ? "Rp175,000" : "US$19";
+    container.className = "payment-instructions sign-in-first";
+    container.innerHTML = `<strong>Lifetime access: ${price}</strong><span>Sign in with Gmail first to securely view the payment destination and upload your proof.</span>`;
+    return;
+  }
+  const payment = paymentDetails || {};
   if (!payment.accountNumber) {
     container.className = "payment-instructions not-ready";
     container.innerHTML = "<strong>Payment details are being prepared</strong><span>Do not transfer money until the payment account appears here. You may still sign in if you already have an approved account.</span>";
     return;
   }
   container.className = "payment-instructions";
-  container.innerHTML = `<strong>${region === "ID" ? "Transfer Rp175,000 to" : "Pay US$19 using"} ${escapeHtml(payment.bankName || "the account below")}</strong><span class="account-number">${escapeHtml(payment.accountNumber)}</span><span>Account name: ${escapeHtml(payment.accountName || "Bewlet")}</span>${payment.instructions ? `<span>${escapeHtml(payment.instructions)}</span>` : ""}<span>After signing in, upload your payment screenshot. Approval is ${escapeHtml(config.approvalTimeText)}.</span>`;
+  container.innerHTML = `<strong>${region === "ID" ? "Transfer" : "Pay"} ${escapeHtml(payment.amountLabel)} ${region === "ID" ? "to" : "using"} ${escapeHtml(payment.bankName || "the account below")}</strong><span class="account-number">${escapeHtml(payment.accountNumber)}</span><span>Account name: ${escapeHtml(payment.accountName || "Bewlet")}</span>${payment.instructions ? `<span>${escapeHtml(payment.instructions)}</span>` : ""}<span>Upload your payment screenshot below. Approval is ${escapeHtml(config.approvalTimeText)}.</span>`;
 }
 
 async function signOutLanding() {
@@ -102,6 +111,13 @@ async function handleAuthReturn() {
     if (refreshToken) localStorage.setItem("bewlet_supabase_refresh_token", refreshToken);
     if (profile?.status !== "approved") {
       pendingRegistration = { accessToken, user, region };
+      const paymentInfoResponse = await fetch("/api/payment-info", { headers: { Authorization: `Bearer ${accessToken}` } });
+      if (paymentInfoResponse.ok) {
+        const paymentInfo = await paymentInfoResponse.json();
+        paymentDetails = paymentInfo.payment;
+        if (paymentInfo.approvalTimeText) config.approvalTimeText = paymentInfo.approvalTimeText;
+      }
+      renderPaymentInstructions();
       const paymentResponse = await fetch(`${config.supabaseUrl}/rest/v1/payment_submissions?user_id=eq.${encodeURIComponent(user.id)}&select=status&order=submitted_at.desc&limit=1`, { headers: { apikey: config.supabasePublishableKey, Authorization: `Bearer ${accessToken}` } });
       const payments = paymentResponse.ok ? await paymentResponse.json() : [];
       document.getElementById("payment-proof-panel").hidden = Boolean(payments[0]?.status === "pending" || payments[0]?.status === "accepted");
