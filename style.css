@@ -832,6 +832,11 @@ input, select, textarea { outline: none; }
 .planning-card p { margin-top:8px;color:var(--text-3);font-size:.75rem; }.planning-card .alert-text { color:var(--expense);font-weight:700; }
 .progress-track { height:8px;overflow:hidden;border-radius:999px;background:var(--border); }.progress-track span { display:block;height:100%;border-radius:inherit;background:var(--accent);transition:width .25s ease; }.progress-track span.warning { background:#f59e0b; }.progress-track span.over { background:var(--expense); }
 .trust-list { margin:0 0 14px 18px;color:var(--text-2);font-size:.8rem;line-height:1.55; }.trust-list li { margin-bottom:8px; }.trust-note { padding:10px;border-radius:8px;background:var(--surface-2); }
+.nav-customizer { display:flex;flex-direction:column;gap:7px; }
+.nav-customizer-item { min-height:44px;display:grid;grid-template-columns:22px minmax(0,1fr) auto;align-items:center;gap:8px;padding:7px 9px;border:1px solid var(--border);border-radius:9px;background:var(--surface-2);opacity:.62; }
+.nav-customizer-item.selected { opacity:1;border-color:var(--accent-light);background:var(--surface); }.nav-customizer-item.dragging { opacity:.35; }
+.nav-drag { color:var(--text-3);font-size:.9rem;cursor:grab; }.nav-customizer-item label { display:flex;align-items:center;gap:9px;font-size:.82rem;font-weight:600;cursor:pointer; }.nav-customizer-item input { accent-color:var(--accent); }
+.nav-order-actions { display:flex;gap:4px; }.nav-order-actions button { width:30px;height:30px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text-2); }.nav-order-actions button:disabled { opacity:.25; }
 
 .month-summary-item {
   background: var(--surface-2);
@@ -1445,6 +1450,7 @@ input, select, textarea { outline: none; }
   gap: 3px;
   padding: 6px 0;
   flex: 1;
+  max-width: 96px;
   color: var(--text-3);
   font-size: 0.65rem;
   font-weight: 500;

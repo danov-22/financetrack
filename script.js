@@ -35,6 +35,11 @@ const IS_DEMO_MODE = new URLSearchParams(location.search).get("mode") === "demo"
 // ============================================================
 // 1. APP STATE
 // ============================================================
+const BOTTOM_NAV_PAGES = {
+  dashboard: "Home", wallets: "Wallets", transactions: "Transactions", calendar: "Calendar",
+  lists: "Lists", planning: "Planning", reports: "Reports", settings: "Settings",
+};
+
 const STATE = {
   transactions: [],
   wallets: [],
@@ -59,6 +64,7 @@ const STATE = {
   calendarMonth: "",
   calendarSelectedDate: "",
   reminderDays: 3,
+  bottomNavPages: ["dashboard", "lists", "transactions", "calendar", "reports", "settings"],
   isOnline: navigator.onLine,
   lastSynced: null, // timestamp
   isSyncing: false,
@@ -118,6 +124,9 @@ function loadStateFromLS() {
   STATE.themePreset = ({ indigo: "royal", emerald: "wealth", sunset: "gold", rose: "berry" })[STATE.themePreset] || STATE.themePreset;
   STATE.customThemeColor = LS.get("fin_custom_theme_color", "#7c3aed");
   STATE.reminderDays = Number(LS.get("fin_reminder_days", 3)) || 3;
+  const savedBottomNav = LS.get("fin_bottom_nav_pages", null);
+  if (Array.isArray(savedBottomNav)) STATE.bottomNavPages = savedBottomNav.filter((page) => BOTTOM_NAV_PAGES[page]).slice(0, 6);
+  if (STATE.bottomNavPages.length < 2) STATE.bottomNavPages = ["dashboard", "calendar"];
   STATE.lastSynced = LS.get("fin_last_synced", null);
 }
 
@@ -147,6 +156,7 @@ function persistSettings() {
   LS.set("fin_theme_preset", STATE.themePreset);
   LS.set("fin_custom_theme_color", STATE.customThemeColor);
   LS.set("fin_reminder_days", STATE.reminderDays);
+  LS.set("fin_bottom_nav_pages", STATE.bottomNavPages);
 }
 
 // ============================================================
@@ -1183,7 +1193,44 @@ function renderSettingsLists() {
   const reminderDays = document.getElementById("reminder-days");
   if (reminderDays) reminderDays.value = String(STATE.reminderDays);
   updateReminderPermissionStatus();
+  renderBottomNavSettings();
 }
+
+function renderBottomNavigation() {
+  const nav = document.querySelector(".bottom-nav");
+  if (!nav) return;
+  nav.innerHTML = STATE.bottomNavPages.map((page) => {
+    const icon = document.querySelector(`.sidebar-nav .nav-item[data-page="${page}"] svg`)?.outerHTML || "";
+    return `<a href="#" class="bottom-nav-item${STATE.currentPage === page ? " active" : ""}" data-page="${page}">${icon}<span>${BOTTOM_NAV_PAGES[page]}</span></a>`;
+  }).join("");
+  nav.querySelectorAll(".bottom-nav-item").forEach((item) => item.addEventListener("click", (event) => { event.preventDefault(); navigate(item.dataset.page); }));
+}
+
+function renderBottomNavSettings() {
+  const container = document.getElementById("bottom-nav-settings");
+  if (!container) return;
+  const ordered = [...STATE.bottomNavPages, ...Object.keys(BOTTOM_NAV_PAGES).filter((page) => !STATE.bottomNavPages.includes(page))];
+  container.innerHTML = ordered.map((page) => { const selected = STATE.bottomNavPages.includes(page); const position = STATE.bottomNavPages.indexOf(page); return `<div class="nav-customizer-item${selected ? " selected" : ""}" draggable="${selected}" data-nav-page="${page}"><span class="nav-drag" aria-hidden="true">☰</span><label><input type="checkbox" ${selected ? "checked" : ""} onchange="toggleBottomNavPage('${page}', this.checked)"/><span>${BOTTOM_NAV_PAGES[page]}</span></label><div class="nav-order-actions">${selected ? `<button onclick="moveBottomNavPage('${page}',-1)" ${position === 0 ? "disabled" : ""} aria-label="Move ${BOTTOM_NAV_PAGES[page]} left">←</button><button onclick="moveBottomNavPage('${page}',1)" ${position === STATE.bottomNavPages.length - 1 ? "disabled" : ""} aria-label="Move ${BOTTOM_NAV_PAGES[page]} right">→</button>` : ""}</div></div>`; }).join("");
+  let dragged = "";
+  container.querySelectorAll(".nav-customizer-item.selected").forEach((item) => {
+    item.addEventListener("dragstart", () => { dragged = item.dataset.navPage; item.classList.add("dragging"); });
+    item.addEventListener("dragend", () => item.classList.remove("dragging"));
+    item.addEventListener("dragover", (event) => event.preventDefault());
+    item.addEventListener("drop", (event) => { event.preventDefault(); const target = item.dataset.navPage; if (!dragged || dragged === target) return; const from = STATE.bottomNavPages.indexOf(dragged); const to = STATE.bottomNavPages.indexOf(target); STATE.bottomNavPages.splice(from, 1); STATE.bottomNavPages.splice(to, 0, dragged); persistSettings(); renderBottomNavigation(); renderBottomNavSettings(); });
+  });
+}
+
+function toggleBottomNavPage(page, checked) {
+  if (checked && !STATE.bottomNavPages.includes(page)) {
+    if (STATE.bottomNavPages.length >= 6) { showToast("Choose up to 6 quick-access pages.", "warning"); renderBottomNavSettings(); return; }
+    STATE.bottomNavPages.push(page);
+  } else if (!checked && STATE.bottomNavPages.includes(page)) {
+    if (STATE.bottomNavPages.length <= 2) { showToast("Keep at least 2 quick-access pages.", "warning"); renderBottomNavSettings(); return; }
+    STATE.bottomNavPages = STATE.bottomNavPages.filter((item) => item !== page);
+  }
+  persistSettings(); renderBottomNavigation(); renderBottomNavSettings();
+}
+function moveBottomNavPage(page, direction) { const index = STATE.bottomNavPages.indexOf(page); const target = index + Number(direction); if (index < 0 || target < 0 || target >= STATE.bottomNavPages.length) return; [STATE.bottomNavPages[index], STATE.bottomNavPages[target]] = [STATE.bottomNavPages[target], STATE.bottomNavPages[index]]; persistSettings(); renderBottomNavigation(); renderBottomNavSettings(); }
 
 function updateReminderPermissionStatus() {
   const status = document.getElementById("reminder-permission-status");
@@ -2532,6 +2579,29 @@ function openMobileSidebar() {
   overlay?.classList.add("active");
 }
 
+function initSidebarSwipeGestures() {
+  let startX = 0, startY = 0, tracking = false, mode = "";
+  document.addEventListener("touchstart", (event) => {
+    if (window.innerWidth > 768 || event.touches.length !== 1) return;
+    const touch = event.touches[0];
+    const open = document.getElementById("sidebar")?.classList.contains("mobile-open");
+    if (!open && touch.clientX <= 28) mode = "open";
+    else if (open && event.target.closest("#sidebar")) mode = "close";
+    else return;
+    startX = touch.clientX; startY = touch.clientY; tracking = true;
+  }, { passive: true });
+  document.addEventListener("touchend", (event) => {
+    if (!tracking || !event.changedTouches.length) return;
+    const touch = event.changedTouches[0];
+    const dx = touch.clientX - startX, dy = touch.clientY - startY;
+    tracking = false;
+    if (Math.abs(dx) < 65 || Math.abs(dx) < Math.abs(dy) * 1.25) return;
+    if (mode === "open" && dx > 0) openMobileSidebar();
+    if (mode === "close" && dx < 0) closeMobileSidebar();
+    mode = "";
+  }, { passive: true });
+}
+
 // ============================================================
 // FEEDBACK
 // ============================================================
@@ -2938,6 +3008,8 @@ window.openGoalModal = openGoalModal;
 window.submitGoal = submitGoal;
 window.deleteGoal = deleteGoal;
 window.openRecurringBillModal = openRecurringBillModal;
+window.toggleBottomNavPage = toggleBottomNavPage;
+window.moveBottomNavPage = moveBottomNavPage;
 window.completePlannedTransaction = completePlannedTransaction;
 window.openEditTransaction = openEditTransaction;
 window.openWalletModal = openWalletModal;
@@ -2991,7 +3063,9 @@ function boot() {
   updateGasBanner();
   updateSyncDisplay();
   initReportSelects();
+  renderBottomNavigation();
   initEventListeners();
+  initSidebarSwipeGestures();
 
   // Check recurring on startup
   checkRecurringTransactions();
