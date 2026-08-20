@@ -120,6 +120,10 @@
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2" /></svg>
             <span>Buy &amp; Pay</span>
           </a>
+          <a href="#" class="nav-item" data-page="planning">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2" /></svg>
+            <span>Planning</span>
+          </a>
           <a href="#" class="nav-item" data-page="reports">
             <svg
               width="20"
@@ -341,6 +345,7 @@
           </div>
 
           <div class="filter-bar">
+            <div class="filter-search"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="filter-search" class="filter-input" type="search" placeholder="Search description, category, wallet…" /></div>
             <select id="filter-wallet" class="filter-select">
               <option value="">All Wallets</option>
             </select>
@@ -364,6 +369,11 @@
               class="filter-input"
               placeholder="To"
             />
+            <select id="filter-status" class="filter-select"><option value="">Any Status</option><option value="completed">Completed</option><option value="planned">Planned</option><option value="recurring">Recurring</option></select>
+            <select id="filter-currency" class="filter-select"><option value="">Any Currency</option></select>
+            <input id="filter-min-amount" class="filter-input" type="number" min="0" step="any" placeholder="Min amount" />
+            <input id="filter-max-amount" class="filter-input" type="number" min="0" step="any" placeholder="Max amount" />
+            <select id="filter-sort" class="filter-select"><option value="date-desc">Newest first</option><option value="date-asc">Oldest first</option><option value="amount-desc">Highest amount</option><option value="amount-asc">Lowest amount</option></select>
             <button class="btn-ghost" onclick="clearFilters()">Clear</button>
           </div>
 
@@ -418,6 +428,13 @@
             <button class="list-filter active" data-list-filter="open" onclick="setListFilter('open')">Open</button><button class="list-filter" data-list-filter="all" onclick="setListFilter('all')">All</button><button class="list-filter" data-list-filter="buy" onclick="setListFilter('buy')">To buy</button><button class="list-filter" data-list-filter="pay" onclick="setListFilter('pay')">To pay</button><button class="list-filter" data-list-filter="completed" onclick="setListFilter('completed')">Completed</button>
           </div>
           <div id="buy-pay-list" class="buy-pay-list"></div>
+        </section>
+
+        <section id="page-planning" class="page">
+          <div class="page-header"><div><h2>Financial Planning</h2><p class="page-description">Set spending limits, build savings funds, and keep recurring bills visible.</p></div></div>
+          <div class="planning-section"><div class="panel-header"><div><h3>Monthly category budgets</h3><p class="page-description">Bewlet warns you as spending approaches or passes each limit.</p></div><button class="btn-primary" onclick="openBudgetModal()">+ Add budget</button></div><div id="budgets-grid" class="planning-grid"></div></div>
+          <div class="planning-section"><div class="panel-header"><div><h3>Savings goals &amp; sinking funds</h3><p class="page-description">Track progress toward planned purchases, emergencies, or annual expenses.</p></div><button class="btn-primary" onclick="openGoalModal()">+ Add goal</button></div><div id="goals-grid" class="planning-grid"></div></div>
+          <div class="planning-section"><div class="panel-header"><div><h3>Recurring bills &amp; subscriptions</h3><p class="page-description">These use Bewlet’s recurring transactions and are included in your financial records.</p></div><button class="btn-primary" onclick="openRecurringBillModal()">+ Add recurring bill</button></div><div id="recurring-bills-list" class="buy-pay-list"></div></div>
         </section>
 
         <!-- REPORTS PAGE -->
@@ -557,6 +574,12 @@
                   Reset All Data
                 </button>
               </div>
+            </div>
+            <div class="settings-card data-trust-card">
+              <h3>Privacy, ownership &amp; offline use</h3>
+              <p class="settings-desc"><strong>You own your financial data.</strong> Bewlet does not sell transaction information or use it for advertising.</p>
+              <ul class="trust-list"><li><strong>On this device:</strong> changes are saved locally so the app can continue working offline.</li><li><strong>When connected:</strong> pending changes are synchronized after internet access returns.</li><li><strong>Your Google Sheet:</strong> once account sync is released, each user’s finance records will be stored in their own Google Drive—not the owner’s finance sheet.</li><li><strong>Bewlet access:</strong> only feedback and issue reports are sent to Bewlet’s support storage.</li></ul>
+              <p class="settings-desc trust-note">Closing or refreshing while offline will not intentionally discard saved local changes. Do not clear browser storage before synchronization is complete.</p>
             </div>
           </div>
         </section>
@@ -1025,15 +1048,19 @@
     <div id="modal-list-item" class="modal-overlay" onclick="closeModalOutside(event, 'modal-list-item')">
       <div class="modal"><div class="modal-header"><h3 id="modal-list-item-title">Add list item</h3><button class="modal-close" onclick="closeModal('modal-list-item')">&times;</button></div>
         <form onsubmit="submitListItem(event)"><input type="hidden" id="list-item-id" />
-          <div class="form-row"><div class="form-group"><label for="list-item-kind">List</label><select id="list-item-kind"><option value="buy">To buy</option><option value="pay">To pay</option></select></div><div class="form-group"><label for="list-item-title">Item</label><input id="list-item-title" maxlength="100" required placeholder="Groceries, internet bill…" /></div></div>
-          <div class="form-row"><div class="form-group"><label for="list-item-amount">Expected amount <span class="optional">optional</span></label><input id="list-item-amount" type="number" min="0" step="any" inputmode="decimal" /></div><div class="form-group"><label for="list-item-currency">Currency</label><select id="list-item-currency"></select></div></div>
-          <div class="form-group"><label for="list-item-date">Due date <span class="optional">optional</span></label><input id="list-item-date" type="date" /></div>
+          <div class="form-tabs"><button type="button" class="form-tab active" data-list-kind="buy" onclick="setListKind('buy')">To buy</button><button type="button" class="form-tab" data-list-kind="pay" onclick="setListKind('pay')">To pay</button></div><input id="list-item-kind" type="hidden" value="buy" />
+          <div class="form-group"><label for="list-item-title">Item <span class="required">*</span></label><input class="input-field" id="list-item-title" maxlength="100" required placeholder="Groceries, internet bill…" /></div>
+          <div class="form-row"><div class="form-group"><label for="list-item-amount">Expected amount <span class="optional">optional</span></label><div class="input-with-currency"><span id="list-currency-symbol" class="currency-symbol">Rp</span><input class="input-field" id="list-item-amount" type="number" min="0" step="any" inputmode="decimal" placeholder="0" /></div></div><div class="form-group"><label for="list-item-currency">Currency</label><select class="input-field" id="list-item-currency" onchange="updateListCurrencySymbol()"></select></div></div>
+          <div class="form-group"><label for="list-item-date">Due date <span class="optional">optional</span></label><input class="input-field" id="list-item-date" type="date" /></div>
           <label class="checkbox-label"><input id="list-item-calendar" type="checkbox" /> Show this item on the calendar</label>
-          <div class="form-group"><label for="list-item-notes">Notes <span class="optional">optional</span></label><textarea id="list-item-notes" rows="3" maxlength="300"></textarea></div>
+          <div class="form-group"><label for="list-item-notes">Notes <span class="optional">optional</span></label><textarea class="input-field" id="list-item-notes" rows="3" maxlength="300"></textarea></div>
           <div class="modal-footer"><button type="button" class="btn-ghost" onclick="closeModal('modal-list-item')">Cancel</button><button type="submit" class="btn-primary">Save item</button></div>
         </form>
       </div>
     </div>
+
+    <div id="modal-budget" class="modal-overlay" onclick="closeModalOutside(event, 'modal-budget')"><div class="modal"><div class="modal-header"><h3 id="modal-budget-title">Add monthly budget</h3><button class="modal-close" onclick="closeModal('modal-budget')">&times;</button></div><form onsubmit="submitBudget(event)"><input id="budget-id" type="hidden"/><div class="form-group"><label>Category <span class="required">*</span></label><select id="budget-category" class="input-field" required></select></div><div class="form-group"><label>Monthly limit <span class="required">*</span></label><div class="input-with-currency"><span class="currency-symbol budget-currency-symbol">Rp</span><input id="budget-limit" class="input-field" type="number" min="1" step="any" required/></div></div><div class="form-group"><label>Alert me at</label><select id="budget-alert" class="input-field"><option value="50">50%</option><option value="75">75%</option><option value="80" selected>80%</option><option value="90">90%</option><option value="100">100%</option></select></div><div class="modal-footer"><button type="button" class="btn-ghost" onclick="closeModal('modal-budget')">Cancel</button><button class="btn-primary" type="submit">Save budget</button></div></form></div></div>
+    <div id="modal-goal" class="modal-overlay" onclick="closeModalOutside(event, 'modal-goal')"><div class="modal"><div class="modal-header"><h3 id="modal-goal-title">Add savings goal</h3><button class="modal-close" onclick="closeModal('modal-goal')">&times;</button></div><form onsubmit="submitGoal(event)"><input id="goal-id" type="hidden"/><div class="form-group"><label>Goal name <span class="required">*</span></label><input id="goal-name" class="input-field" maxlength="100" required placeholder="Emergency fund"/></div><div class="form-row"><div class="form-group"><label>Target amount <span class="required">*</span></label><input id="goal-target" class="input-field" type="number" min="1" step="any" required/></div><div class="form-group"><label>Saved so far</label><input id="goal-current" class="input-field" type="number" min="0" step="any" value="0"/></div></div><div class="form-row"><div class="form-group"><label>Type</label><select id="goal-type" class="input-field"><option value="goal">Savings goal</option><option value="sinking">Sinking fund</option></select></div><div class="form-group"><label>Target date <span class="optional">optional</span></label><input id="goal-date" class="input-field" type="date"/></div></div><div class="modal-footer"><button type="button" class="btn-ghost" onclick="closeModal('modal-goal')">Cancel</button><button class="btn-primary" type="submit">Save goal</button></div></form></div></div>
 
     <!-- Confirm Delete Modal -->
     <div

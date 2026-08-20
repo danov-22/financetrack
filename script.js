@@ -43,6 +43,8 @@ const STATE = {
   feedback: [],
   listItems: [],
   listFilter: "open",
+  budgets: [],
+  goals: [],
   installationId: "",
   gasUrl: "",
   currency: "IDR",
@@ -99,6 +101,8 @@ function loadStateFromLS() {
   STATE.pendingQueue = LS.get("fin_pending", []);
   STATE.feedback = LS.get("fin_feedback", []);
   STATE.listItems = LS.get("fin_list_items", []);
+  STATE.budgets = LS.get("fin_budgets", []);
+  STATE.goals = LS.get("fin_goals", []);
   STATE.installationId = LS.get("fin_installation_id", "") || generateId();
   LS.set("fin_installation_id", STATE.installationId);
   STATE.gasUrl = LS.get("fin_gas_url", "") || DEFAULT_GAS_URL;
@@ -133,6 +137,8 @@ function persistFeedback() {
   LS.set("fin_feedback", STATE.feedback);
 }
 function persistListItems() { LS.set("fin_list_items", STATE.listItems); }
+function persistBudgets() { LS.set("fin_budgets", STATE.budgets); }
+function persistGoals() { LS.set("fin_goals", STATE.goals); }
 function persistSettings() {
   LS.set("fin_gas_url", STATE.gasUrl);
   LS.set("fin_currency", STATE.currency);
@@ -207,6 +213,8 @@ function populateCurrencySelects() {
   if (settingsSelect) settingsSelect.innerHTML = namedOptions;
   const favoriteAdd = document.getElementById("favorite-currency-add");
   if (favoriteAdd) favoriteAdd.innerHTML = namedOptions;
+  const filterCurrency = document.getElementById("filter-currency");
+  if (filterCurrency) filterCurrency.innerHTML = `<option value="">Any Currency</option>${allCompactOptions}`;
   renderFavoriteCurrencies();
 }
 
@@ -582,6 +590,7 @@ async function saveTransaction(txData) {
 
   updateSyncDisplay();
   refreshCurrentPage();
+  checkBudgetAlerts();
 }
 
 async function deleteTransaction(id) {
@@ -610,21 +619,34 @@ function getFilteredTransactions() {
   const category = document.getElementById("filter-category")?.value || "";
   const dateFrom = document.getElementById("filter-date-from")?.value || "";
   const dateTo = document.getElementById("filter-date-to")?.value || "";
+  const search = document.getElementById("filter-search")?.value.trim().toLowerCase() || "";
+  const status = document.getElementById("filter-status")?.value || "";
+  const currency = document.getElementById("filter-currency")?.value || "";
+  const minAmount = Number(document.getElementById("filter-min-amount")?.value) || 0;
+  const maxAmount = Number(document.getElementById("filter-max-amount")?.value) || Infinity;
+  const sort = document.getElementById("filter-sort")?.value || "date-desc";
 
-  return STATE.transactions
+  const transactions = STATE.transactions
     .filter((tx) => {
       if (wallet && tx.wallet !== wallet) return false;
       if (type && tx.type !== type) return false;
       if (category && tx.category !== category) return false;
       if (dateFrom && tx.date < dateFrom) return false;
       if (dateTo && tx.date > dateTo) return false;
+      if (search && ![tx.description, tx.category, tx.wallet, tx.currency, tx.type].some((value) => String(value || "").toLowerCase().includes(search))) return false;
+      if (status === "planned" && tx.status !== "planned") return false;
+      if (status === "completed" && tx.status === "planned") return false;
+      if (status === "recurring" && !tx.recurring) return false;
+      if (currency && (tx.currency || STATE.currency) !== currency) return false;
+      if (Number(tx.amount) < minAmount || Number(tx.amount) > maxAmount) return false;
       return true;
-    })
-    .sort(
-      (a, b) =>
-        new Date(b.date) - new Date(a.date) ||
-        b.createdTime?.localeCompare(a.createdTime),
-    );
+    });
+  return transactions.sort((a, b) => {
+    if (sort === "date-asc") return new Date(a.date) - new Date(b.date);
+    if (sort === "amount-desc") return transactionAmount(b) - transactionAmount(a);
+    if (sort === "amount-asc") return transactionAmount(a) - transactionAmount(b);
+    return new Date(b.date) - new Date(a.date) || b.createdTime?.localeCompare(a.createdTime);
+  });
 }
 
 function renderTransactionsList() {
@@ -768,17 +790,20 @@ function renderLists() {
 }
 
 function setListFilter(filter) { STATE.listFilter = filter; renderLists(); }
+function setListKind(kind) { document.getElementById("list-item-kind").value = kind; document.querySelectorAll("[data-list-kind]").forEach((tab) => tab.classList.toggle("active", tab.dataset.listKind === kind)); }
+function updateListCurrencySymbol() { const code = document.getElementById("list-item-currency")?.value || STATE.currency; setEl("list-currency-symbol", getCurrencySymbol(code)); }
 function openListItemModal(id = "") {
   const item = STATE.listItems.find((entry) => entry.id === id);
   setEl("modal-list-item-title", item ? "Edit list item" : "Add list item");
   document.getElementById("list-item-id").value = item?.id || "";
-  document.getElementById("list-item-kind").value = item?.kind || "buy";
+  setListKind(item?.kind || "buy");
   document.getElementById("list-item-title").value = item?.title || "";
   document.getElementById("list-item-amount").value = item?.amount || "";
   document.getElementById("list-item-currency").value = item?.currency || STATE.currency;
   document.getElementById("list-item-date").value = item?.dueDate || "";
   document.getElementById("list-item-calendar").checked = Boolean(item?.showOnCalendar);
   document.getElementById("list-item-notes").value = item?.notes || "";
+  updateListCurrencySymbol();
   openModal("modal-list-item");
 }
 function submitListItem(event) {
@@ -792,6 +817,48 @@ function submitListItem(event) {
 }
 function toggleListItem(id) { const item = STATE.listItems.find((entry) => entry.id === id); if (!item) return; item.completed = !item.completed; item.completedTime = item.completed ? new Date().toISOString() : ""; persistListItems(); refreshCurrentPage(); }
 function deleteListItem(id) { STATE.listItems = STATE.listItems.filter((entry) => entry.id !== id); persistListItems(); refreshCurrentPage(); showToast("List item deleted.", "info"); }
+
+// ============================================================
+// BUDGETS, GOALS & RECURRING BILLS
+// ============================================================
+function currentMonthExpenseForCategory(category) {
+  const month = getTodayISO().slice(0, 7);
+  return STATE.transactions.filter((tx) => tx.type === "expense" && tx.status !== "planned" && tx.category === category && normalizeDateValue(tx.date).startsWith(month)).reduce((sum, tx) => sum + transactionAmount(tx), 0);
+}
+function progressBarHtml(value, max, warningAt = 80) {
+  const percent = max > 0 ? Math.min(100, value / max * 100) : 0;
+  const state = value > max ? "over" : percent >= warningAt ? "warning" : "";
+  return `<div class="progress-track"><span class="${state}" style="width:${percent}%"></span></div>`;
+}
+function checkBudgetAlerts() {
+  const month = getTodayISO().slice(0, 7);
+  STATE.budgets.forEach((budget) => {
+    const spent = currentMonthExpenseForCategory(budget.category);
+    const percent = Number(budget.limit) ? Math.round(spent / Number(budget.limit) * 100) : 0;
+    if (percent < Number(budget.alertAt || 80)) return;
+    const level = percent >= 100 ? "over" : "warning";
+    const alertKey = `fin_budget_alert_${month}_${budget.id}_${level}`;
+    if (LS.get(alertKey, false)) return;
+    showToast(percent >= 100 ? `${budget.category} is over budget by ${formatAmount(spent - budget.limit)}.` : `${budget.category} has reached ${percent}% of its monthly budget.`, percent >= 100 ? "error" : "warning", 5500);
+    LS.set(alertKey, true);
+  });
+}
+function renderPlanning() {
+  const budgetGrid = document.getElementById("budgets-grid");
+  if (!budgetGrid) return;
+  budgetGrid.innerHTML = STATE.budgets.length ? STATE.budgets.map((budget) => { const spent = currentMonthExpenseForCategory(budget.category); const remaining = Number(budget.limit) - spent; const percent = Number(budget.limit) ? Math.round(spent / Number(budget.limit) * 100) : 0; return `<article class="planning-card"><div class="planning-card-head"><span class="list-kind">${escHtml(budget.category)}</span><div><button onclick="openBudgetModal('${budget.id}')">Edit</button><button onclick="deleteBudget('${budget.id}')">Delete</button></div></div><h4>${formatAmount(spent)} <small>of ${formatAmount(budget.limit)}</small></h4>${progressBarHtml(spent, budget.limit, budget.alertAt)}<p class="${remaining < 0 ? "alert-text" : ""}">${remaining >= 0 ? `${formatAmount(remaining)} remaining · ${percent}% used` : `${formatAmount(Math.abs(remaining))} over budget`}</p></article>`; }).join("") : emptyStateHtml("No budgets yet", "Add a category budget to receive remaining-budget alerts.");
+  const goalGrid = document.getElementById("goals-grid");
+  goalGrid.innerHTML = STATE.goals.length ? STATE.goals.map((goal) => { const percent = Number(goal.target) ? Math.round(Number(goal.current) / Number(goal.target) * 100) : 0; return `<article class="planning-card"><div class="planning-card-head"><span class="list-kind">${goal.type === "sinking" ? "Sinking fund" : "Savings goal"}</span><div><button onclick="openGoalModal('${goal.id}')">Update</button><button onclick="deleteGoal('${goal.id}')">Delete</button></div></div><h4>${escHtml(goal.name)}</h4>${progressBarHtml(goal.current, goal.target)}<p>${formatAmount(goal.current)} of ${formatAmount(goal.target)} · ${Math.min(100, percent)}%${goal.targetDate ? ` · Due ${formatDateShort(goal.targetDate)}` : ""}</p></article>`; }).join("") : emptyStateHtml("No savings goals yet", "Create a goal or sinking fund and update it as you save.");
+  const recurring = STATE.transactions.filter((tx) => tx.recurring);
+  document.getElementById("recurring-bills-list").innerHTML = recurring.length ? recurring.map((tx) => `<article class="list-item"><div class="tx-icon ${tx.type}">${tx.type === "income" ? "↑" : "↓"}</div><div class="list-item-main"><div><span class="list-kind ${tx.type === "expense" ? "pay" : ""}">${escHtml(tx.recurringFreq || "monthly")}</span><strong>${escHtml(tx.description || tx.category || "Recurring transaction")}</strong></div><p>${formatAmount(tx.amount, tx.currency)} · Starts ${formatDateShort(tx.date)}</p></div><div class="list-item-actions"><button class="btn-ghost btn-sm" onclick="openEditTransaction('${tx.id}')">Edit</button></div></article>`).join("") : emptyStateHtml("No recurring bills", "Add a bill or subscription and choose how often it repeats.");
+}
+function openBudgetModal(id = "") { const budget = STATE.budgets.find((item) => item.id === id); setEl("modal-budget-title", budget ? "Edit monthly budget" : "Add monthly budget"); document.getElementById("budget-id").value = budget?.id || ""; populateCategoryOptions("budget-category", budget?.category || ""); document.getElementById("budget-limit").value = budget?.limit || ""; document.getElementById("budget-alert").value = budget?.alertAt || 80; document.querySelectorAll(".budget-currency-symbol").forEach((el) => el.textContent = getCurrencySymbol()); openModal("modal-budget"); }
+function submitBudget(event) { event.preventDefault(); const id = document.getElementById("budget-id").value; const item = { id: id || generateId(), category: document.getElementById("budget-category").value, limit: Number(document.getElementById("budget-limit").value), alertAt: Number(document.getElementById("budget-alert").value) }; const index = STATE.budgets.findIndex((entry) => entry.id === id); if (index >= 0) STATE.budgets[index] = item; else STATE.budgets.push(item); persistBudgets(); closeModal("modal-budget"); renderPlanning(); showToast("Monthly budget saved.", "success"); }
+function deleteBudget(id) { STATE.budgets = STATE.budgets.filter((item) => item.id !== id); persistBudgets(); renderPlanning(); }
+function openGoalModal(id = "") { const goal = STATE.goals.find((item) => item.id === id); setEl("modal-goal-title", goal ? "Update savings goal" : "Add savings goal"); document.getElementById("goal-id").value = goal?.id || ""; document.getElementById("goal-name").value = goal?.name || ""; document.getElementById("goal-target").value = goal?.target || ""; document.getElementById("goal-current").value = goal?.current || 0; document.getElementById("goal-type").value = goal?.type || "goal"; document.getElementById("goal-date").value = goal?.targetDate || ""; openModal("modal-goal"); }
+function submitGoal(event) { event.preventDefault(); const id = document.getElementById("goal-id").value; const item = { id: id || generateId(), name: document.getElementById("goal-name").value.trim(), target: Number(document.getElementById("goal-target").value), current: Number(document.getElementById("goal-current").value) || 0, type: document.getElementById("goal-type").value, targetDate: document.getElementById("goal-date").value }; const index = STATE.goals.findIndex((entry) => entry.id === id); if (index >= 0) STATE.goals[index] = item; else STATE.goals.push(item); persistGoals(); closeModal("modal-goal"); renderPlanning(); showToast("Savings goal saved.", "success"); }
+function deleteGoal(id) { STATE.goals = STATE.goals.filter((item) => item.id !== id); persistGoals(); renderPlanning(); }
+function openRecurringBillModal() { openTransactionModal(); document.getElementById("tx-recurring").checked = true; document.getElementById("recurring-options").classList.remove("hidden"); document.getElementById("tx-description").placeholder = "Netflix, electricity, insurance…"; }
 
 function selectCalendarDate(date) {
   STATE.calendarSelectedDate = date;
@@ -1252,16 +1319,22 @@ function updateGasBanner() {
 function confirmReset() {
   openConfirmModal(
     "Reset All Data",
-    "This will delete ALL local transactions, wallets, and categories. This cannot be undone. Google Sheets data is not affected.",
+    "This will delete ALL local transactions, wallets, categories, lists, budgets, and savings goals. This cannot be undone. Google Sheets data is not affected.",
     () => {
       STATE.transactions = [];
       STATE.wallets = [];
       STATE.categories = [];
       STATE.pendingQueue = [];
+      STATE.listItems = [];
+      STATE.budgets = [];
+      STATE.goals = [];
       persistTransactions();
       persistWallets();
       persistCategories();
       persistPending();
+      persistListItems();
+      persistBudgets();
+      persistGoals();
       showToast("All local data has been reset.", "info");
       refreshCurrentPage();
     },
@@ -2246,11 +2319,8 @@ function confirmDelete(type, id, name) {
 }
 
 function clearFilters() {
-  document.getElementById("filter-wallet").value = "";
-  document.getElementById("filter-type").value = "";
-  document.getElementById("filter-category").value = "";
-  document.getElementById("filter-date-from").value = "";
-  document.getElementById("filter-date-to").value = "";
+  ["filter-wallet", "filter-type", "filter-category", "filter-date-from", "filter-date-to", "filter-search", "filter-status", "filter-currency", "filter-min-amount", "filter-max-amount"].forEach((id) => { const element = document.getElementById(id); if (element) element.value = ""; });
+  document.getElementById("filter-sort").value = "date-desc";
   renderTransactionsList();
 }
 
@@ -2303,6 +2373,7 @@ function navigate(page) {
     transactions: "Transactions",
     calendar: "Calendar",
     lists: "Buy & Pay Lists",
+    planning: "Financial Planning",
     reports: "Reports",
     settings: "Settings",
   };
@@ -2327,6 +2398,8 @@ function renderPage(page) {
     renderCalendar();
   } else if (page === "lists") {
     renderLists();
+  } else if (page === "planning") {
+    renderPlanning();
   } else if (page === "settings") {
     renderSettingsLists();
   }
@@ -2699,7 +2772,7 @@ function applyDemoState() {
   STATE.categories = ["Salary", "Food", "Transport", "Housing", "Health", "Leisure"];
   STATE.transactions = [
     { id:"demo1", date:date(17), wallet:"Everyday", type:"income", category:"Salary", description:"Monthly salary", amount:8500000, currency:"IDR", createdTime:new Date().toISOString() },
-    { id:"demo2", date:date(14), wallet:"Everyday", type:"expense", category:"Housing", description:"Rent", amount:2400000, currency:"IDR", createdTime:new Date().toISOString() },
+    { id:"demo2", date:date(14), wallet:"Everyday", type:"expense", category:"Housing", description:"Rent", amount:2400000, currency:"IDR", recurring:true, recurringFreq:"monthly", createdTime:new Date().toISOString() },
     { id:"demo3", date:date(10), wallet:"Everyday", type:"expense", category:"Food", description:"Groceries", amount:725000, currency:"IDR", createdTime:new Date().toISOString() },
     { id:"demo4", date:date(7), wallet:"Travel", type:"expense", category:"Leisure", description:"Travel booking", amount:95, currency:"USD", createdTime:new Date().toISOString() },
     { id:"demo5", date:date(4), wallet:"Everyday", type:"expense", category:"Transport", description:"Fuel and parking", amount:390000, currency:"IDR", createdTime:new Date().toISOString() },
@@ -2709,6 +2782,8 @@ function applyDemoState() {
     { id:"demolist1", kind:"pay", title:"Electricity bill", amount:425000, currency:"IDR", dueDate:date(-3), showOnCalendar:true, notes:"Pay before the due date", completed:false, createdTime:new Date().toISOString() },
     { id:"demolist2", kind:"buy", title:"Monthly groceries", amount:850000, currency:"IDR", dueDate:"", showOnCalendar:false, notes:"", completed:false, createdTime:new Date().toISOString() },
   ];
+  STATE.budgets = [{ id:"demobudget1", category:"Food", limit:1500000, alertAt:80 }];
+  STATE.goals = [{ id:"demogoal1", name:"Emergency fund", target:12000000, current:4500000, type:"goal", targetDate:date(-120) }];
   const banner = document.createElement("div");
   banner.className = "demo-banner";
   banner.innerHTML = '<span><strong>Demo mode</strong> — changes reset when you leave.</span><a href="/">Exit demo</a>';
@@ -2779,6 +2854,12 @@ function initEventListeners() {
     "filter-category",
     "filter-date-from",
     "filter-date-to",
+    "filter-search",
+    "filter-status",
+    "filter-currency",
+    "filter-min-amount",
+    "filter-max-amount",
+    "filter-sort",
   ].forEach((id) => {
     document
       .getElementById(id)
@@ -2848,6 +2929,15 @@ window.submitListItem = submitListItem;
 window.toggleListItem = toggleListItem;
 window.deleteListItem = deleteListItem;
 window.setListFilter = setListFilter;
+window.setListKind = setListKind;
+window.updateListCurrencySymbol = updateListCurrencySymbol;
+window.openBudgetModal = openBudgetModal;
+window.submitBudget = submitBudget;
+window.deleteBudget = deleteBudget;
+window.openGoalModal = openGoalModal;
+window.submitGoal = submitGoal;
+window.deleteGoal = deleteGoal;
+window.openRecurringBillModal = openRecurringBillModal;
 window.completePlannedTransaction = completePlannedTransaction;
 window.openEditTransaction = openEditTransaction;
 window.openWalletModal = openWalletModal;
@@ -2911,6 +3001,7 @@ function boot() {
   updateExchangeRates();
   syncFeedbackHistory();
   checkUpcomingPlannedTransactions();
+  setTimeout(checkBudgetAlerts, 400);
 
   const calendarDate = new URLSearchParams(location.search).get("calendarDate");
   if (calendarDate && /^\d{4}-\d{2}-\d{2}$/.test(calendarDate)) {
