@@ -41,6 +41,8 @@ const STATE = {
   categories: [],
   pendingQueue: [], // offline mutations waiting to sync
   feedback: [],
+  listItems: [],
+  listFilter: "open",
   installationId: "",
   gasUrl: "",
   currency: "IDR",
@@ -96,6 +98,7 @@ function loadStateFromLS() {
   STATE.categories = LS.get("fin_categories", []);
   STATE.pendingQueue = LS.get("fin_pending", []);
   STATE.feedback = LS.get("fin_feedback", []);
+  STATE.listItems = LS.get("fin_list_items", []);
   STATE.installationId = LS.get("fin_installation_id", "") || generateId();
   LS.set("fin_installation_id", STATE.installationId);
   STATE.gasUrl = LS.get("fin_gas_url", "") || DEFAULT_GAS_URL;
@@ -129,6 +132,7 @@ function persistPending() {
 function persistFeedback() {
   LS.set("fin_feedback", STATE.feedback);
 }
+function persistListItems() { LS.set("fin_list_items", STATE.listItems); }
 function persistSettings() {
   LS.set("fin_gas_url", STATE.gasUrl);
   LS.set("fin_currency", STATE.currency);
@@ -195,7 +199,7 @@ function populateCurrencySelects() {
     `<option value="${code}">${getCurrencyFlag(code)} ${getCurrencyName(code)}</option>`).join("");
   const topSelect = document.getElementById("currency-select");
   if (topSelect) topSelect.innerHTML = compactOptions;
-  ["tx-currency", "transfer-currency"].forEach((id) => {
+  ["tx-currency", "transfer-currency", "list-item-currency"].forEach((id) => {
     const select = document.getElementById(id);
     if (select) select.innerHTML = allCompactOptions;
   });
@@ -651,6 +655,10 @@ function getCalendarTransactions(date) {
     .sort((a, b) => (b.createdTime || "").localeCompare(a.createdTime || ""));
 }
 
+function getCalendarListItems(date) {
+  return STATE.listItems.filter((item) => item.showOnCalendar && item.dueDate === date);
+}
+
 function getCalendarDayTotals(transactions) {
   const income = transactions
     .filter((transaction) => transaction.type === "income")
@@ -691,12 +699,14 @@ function renderCalendar() {
     cellDate.setDate(gridStart.getDate() + index);
     const isoDate = formatLocalISODate(cellDate);
     const transactions = getCalendarTransactions(isoDate);
+    const listItems = getCalendarListItems(isoDate);
     const totals = getCalendarDayTotals(transactions);
     const plannedCount = transactions.filter((transaction) => transaction.status === "planned").length;
     const outside = cellDate.getMonth() !== monthIndex;
     cells.push(`<button class="calendar-cell${outside ? " outside" : ""}${isoDate === today ? " today" : ""}${isoDate === STATE.calendarSelectedDate ? " selected" : ""}" onclick="selectCalendarDate('${isoDate}')" aria-label="${cellDate.toLocaleDateString()}">
       <span class="calendar-day-number">${cellDate.getDate()}</span>
       ${transactions.length ? `<span class="calendar-cell-count">${transactions.length}</span>` : ""}
+      ${listItems.length ? `<span class="calendar-list-count" title="${listItems.length} checklist item(s)">✓${listItems.length}</span>` : ""}
       <span class="calendar-cell-values">
         ${totals.income ? `<i class="income">+${formatCalendarCompact(totals.income)}</i>` : ""}
         ${totals.expense ? `<i class="expense">−${formatCalendarCompact(totals.expense)}</i>` : ""}
@@ -723,7 +733,65 @@ function renderCalendarSelectedDay() {
   if (list) list.innerHTML = transactions.length
     ? transactions.map((transaction) => txItemHtml(transaction)).join("")
     : emptyStateHtml("No transactions", "Tap Add to record something on this day.");
+  const checklist = document.getElementById("calendar-day-list-items");
+  const items = getCalendarListItems(date);
+  if (checklist) checklist.innerHTML = items.length ? `<h4>Buy &amp; pay reminders</h4>${items.map(listItemHtml).join("")}` : "";
 }
+
+// ============================================================
+// BUY & PAY LISTS
+// ============================================================
+function listItemHtml(item) {
+  const amount = Number(item.amount) > 0 ? formatAmount(item.amount, item.currency || STATE.currency) : "";
+  const due = item.dueDate ? new Date(`${item.dueDate}T00:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "No due date";
+  return `<article class="list-item${item.completed ? " completed" : ""}">
+    <button class="list-check" onclick="toggleListItem('${item.id}')" aria-label="${item.completed ? "Mark open" : "Mark completed"}">${item.completed ? "✓" : ""}</button>
+    <div class="list-item-main"><div><span class="list-kind ${item.kind}">${item.kind === "pay" ? "To pay" : "To buy"}</span><strong>${escHtml(item.title)}</strong></div>
+      <p>${amount ? `<b>${escHtml(amount)}</b> · ` : ""}${escHtml(due)}${item.showOnCalendar && item.dueDate ? " · Calendar" : ""}</p>${item.notes ? `<small>${escHtml(item.notes)}</small>` : ""}</div>
+    <div class="list-item-actions"><button class="btn-ghost btn-sm" onclick="openListItemModal('${item.id}')">Edit</button><button class="btn-danger btn-sm" onclick="deleteListItem('${item.id}')">Delete</button></div>
+  </article>`;
+}
+
+function renderLists() {
+  const container = document.getElementById("buy-pay-list");
+  if (!container) return;
+  const open = STATE.listItems.filter((item) => !item.completed);
+  const amount = open.reduce((sum, item) => sum + (item.currency === STATE.currency || !item.currency ? Number(item.amount) || 0 : (Number(item.amount) || 0) / (Number(STATE.exchangeRates[item.currency]) || 1)), 0);
+  setEl("list-summary", `${open.length} open item${open.length === 1 ? "" : "s"}${amount ? ` · ${formatAmount(amount)} expected` : ""}`);
+  let items = [...STATE.listItems];
+  if (STATE.listFilter === "open") items = items.filter((item) => !item.completed);
+  else if (STATE.listFilter === "completed") items = items.filter((item) => item.completed);
+  else if (["buy", "pay"].includes(STATE.listFilter)) items = items.filter((item) => item.kind === STATE.listFilter);
+  items.sort((a, b) => Number(a.completed) - Number(b.completed) || (a.dueDate || "9999").localeCompare(b.dueDate || "9999"));
+  container.innerHTML = items.length ? items.map(listItemHtml).join("") : emptyStateHtml("Nothing here yet", "Add an item to start your buy or pay checklist.");
+  document.querySelectorAll(".list-filter").forEach((button) => button.classList.toggle("active", button.dataset.listFilter === STATE.listFilter));
+}
+
+function setListFilter(filter) { STATE.listFilter = filter; renderLists(); }
+function openListItemModal(id = "") {
+  const item = STATE.listItems.find((entry) => entry.id === id);
+  setEl("modal-list-item-title", item ? "Edit list item" : "Add list item");
+  document.getElementById("list-item-id").value = item?.id || "";
+  document.getElementById("list-item-kind").value = item?.kind || "buy";
+  document.getElementById("list-item-title").value = item?.title || "";
+  document.getElementById("list-item-amount").value = item?.amount || "";
+  document.getElementById("list-item-currency").value = item?.currency || STATE.currency;
+  document.getElementById("list-item-date").value = item?.dueDate || "";
+  document.getElementById("list-item-calendar").checked = Boolean(item?.showOnCalendar);
+  document.getElementById("list-item-notes").value = item?.notes || "";
+  openModal("modal-list-item");
+}
+function submitListItem(event) {
+  event.preventDefault();
+  const id = document.getElementById("list-item-id").value;
+  const dueDate = document.getElementById("list-item-date").value;
+  const item = { id: id || generateId(), kind: document.getElementById("list-item-kind").value, title: document.getElementById("list-item-title").value.trim(), amount: Number(document.getElementById("list-item-amount").value) || 0, currency: document.getElementById("list-item-currency").value, dueDate, showOnCalendar: Boolean(dueDate && document.getElementById("list-item-calendar").checked), notes: document.getElementById("list-item-notes").value.trim(), completed: false, createdTime: new Date().toISOString() };
+  const existing = STATE.listItems.findIndex((entry) => entry.id === id);
+  if (existing >= 0) { item.completed = STATE.listItems[existing].completed; item.createdTime = STATE.listItems[existing].createdTime; STATE.listItems[existing] = item; } else STATE.listItems.push(item);
+  persistListItems(); closeModal("modal-list-item"); refreshCurrentPage(); showToast(id ? "List item updated." : "List item added.", "success");
+}
+function toggleListItem(id) { const item = STATE.listItems.find((entry) => entry.id === id); if (!item) return; item.completed = !item.completed; item.completedTime = item.completed ? new Date().toISOString() : ""; persistListItems(); refreshCurrentPage(); }
+function deleteListItem(id) { STATE.listItems = STATE.listItems.filter((entry) => entry.id !== id); persistListItems(); refreshCurrentPage(); showToast("List item deleted.", "info"); }
 
 function selectCalendarDate(date) {
   STATE.calendarSelectedDate = date;
@@ -2234,6 +2302,7 @@ function navigate(page) {
     wallets: "Wallets",
     transactions: "Transactions",
     calendar: "Calendar",
+    lists: "Buy & Pay Lists",
     reports: "Reports",
     settings: "Settings",
   };
@@ -2256,6 +2325,8 @@ function renderPage(page) {
     renderReports();
   } else if (page === "calendar") {
     renderCalendar();
+  } else if (page === "lists") {
+    renderLists();
   } else if (page === "settings") {
     renderSettingsLists();
   }
@@ -2634,6 +2705,10 @@ function applyDemoState() {
     { id:"demo5", date:date(4), wallet:"Everyday", type:"expense", category:"Transport", description:"Fuel and parking", amount:390000, currency:"IDR", createdTime:new Date().toISOString() },
     { id:"demo6", date:date(2), wallet:"Savings", type:"income", category:"Salary", description:"Freelance project", amount:2100000, currency:"IDR", createdTime:new Date().toISOString() },
   ];
+  STATE.listItems = [
+    { id:"demolist1", kind:"pay", title:"Electricity bill", amount:425000, currency:"IDR", dueDate:date(-3), showOnCalendar:true, notes:"Pay before the due date", completed:false, createdTime:new Date().toISOString() },
+    { id:"demolist2", kind:"buy", title:"Monthly groceries", amount:850000, currency:"IDR", dueDate:"", showOnCalendar:false, notes:"", completed:false, createdTime:new Date().toISOString() },
+  ];
   const banner = document.createElement("div");
   banner.className = "demo-banner";
   banner.innerHTML = '<span><strong>Demo mode</strong> — changes reset when you leave.</span><a href="/">Exit demo</a>';
@@ -2768,6 +2843,11 @@ window.openQuickTransaction = openQuickTransaction;
 window.selectCalendarDate = selectCalendarDate;
 window.changeCalendarMonth = changeCalendarMonth;
 window.goCalendarToday = goCalendarToday;
+window.openListItemModal = openListItemModal;
+window.submitListItem = submitListItem;
+window.toggleListItem = toggleListItem;
+window.deleteListItem = deleteListItem;
+window.setListFilter = setListFilter;
 window.completePlannedTransaction = completePlannedTransaction;
 window.openEditTransaction = openEditTransaction;
 window.openWalletModal = openWalletModal;

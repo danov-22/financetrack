@@ -116,6 +116,10 @@
             </svg>
             <span>Calendar</span>
           </a>
+          <a href="#" class="nav-item" data-page="lists">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2" /></svg>
+            <span>Buy &amp; Pay</span>
+          </a>
           <a href="#" class="nav-item" data-page="reports">
             <svg
               width="20"
@@ -402,8 +406,18 @@
                 <div><small>Net</small><strong id="calendar-day-net">0</strong></div>
               </div>
               <div id="calendar-day-transactions" class="transaction-list calendar-day-transactions"></div>
+              <div id="calendar-day-list-items" class="calendar-day-list-items"></div>
             </aside>
           </div>
+        </section>
+
+        <section id="page-lists" class="page">
+          <div class="page-header"><div><h2>Buy &amp; Pay Lists</h2><p class="page-description">Keep a simple checklist, or give an item a due date and show it on your calendar.</p></div><button class="btn-primary" onclick="openListItemModal()">+ Add item</button></div>
+          <div class="list-summary" id="list-summary"></div>
+          <div class="list-toolbar">
+            <button class="list-filter active" data-list-filter="open" onclick="setListFilter('open')">Open</button><button class="list-filter" data-list-filter="all" onclick="setListFilter('all')">All</button><button class="list-filter" data-list-filter="buy" onclick="setListFilter('buy')">To buy</button><button class="list-filter" data-list-filter="pay" onclick="setListFilter('pay')">To pay</button><button class="list-filter" data-list-filter="completed" onclick="setListFilter('completed')">Completed</button>
+          </div>
+          <div id="buy-pay-list" class="buy-pay-list"></div>
         </section>
 
         <!-- REPORTS PAGE -->
@@ -567,7 +581,7 @@
         </svg>
         <span>Home</span>
       </a>
-      <a href="#" class="bottom-nav-item" data-page="wallets">
+      <a href="#" class="bottom-nav-item" data-page="lists">
         <svg
           width="22"
           height="22"
@@ -576,12 +590,9 @@
           stroke="currentColor"
           stroke-width="2"
         >
-          <path
-            d="M21 12V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2h14a2 2 0 002-2v-1"
-          />
-          <path d="M16 12a2 2 0 000 4h5v-4h-5z" />
+          <path d="M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2" />
         </svg>
-        <span>Wallets</span>
+        <span>Lists</span>
       </a>
       <a href="#" class="bottom-nav-item" data-page="transactions">
         <svg
@@ -1007,6 +1018,19 @@
             </button>
             <button type="submit" class="btn-primary">Save</button>
           </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="modal-list-item" class="modal-overlay" onclick="closeModalOutside(event, 'modal-list-item')">
+      <div class="modal"><div class="modal-header"><h3 id="modal-list-item-title">Add list item</h3><button class="modal-close" onclick="closeModal('modal-list-item')">&times;</button></div>
+        <form onsubmit="submitListItem(event)"><input type="hidden" id="list-item-id" />
+          <div class="form-row"><div class="form-group"><label for="list-item-kind">List</label><select id="list-item-kind"><option value="buy">To buy</option><option value="pay">To pay</option></select></div><div class="form-group"><label for="list-item-title">Item</label><input id="list-item-title" maxlength="100" required placeholder="Groceries, internet bill…" /></div></div>
+          <div class="form-row"><div class="form-group"><label for="list-item-amount">Expected amount <span class="optional">optional</span></label><input id="list-item-amount" type="number" min="0" step="any" inputmode="decimal" /></div><div class="form-group"><label for="list-item-currency">Currency</label><select id="list-item-currency"></select></div></div>
+          <div class="form-group"><label for="list-item-date">Due date <span class="optional">optional</span></label><input id="list-item-date" type="date" /></div>
+          <label class="checkbox-label"><input id="list-item-calendar" type="checkbox" /> Show this item on the calendar</label>
+          <div class="form-group"><label for="list-item-notes">Notes <span class="optional">optional</span></label><textarea id="list-item-notes" rows="3" maxlength="300"></textarea></div>
+          <div class="modal-footer"><button type="button" class="btn-ghost" onclick="closeModal('modal-list-item')">Cancel</button><button type="submit" class="btn-primary">Save item</button></div>
         </form>
       </div>
     </div>
