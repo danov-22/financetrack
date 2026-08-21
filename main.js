@@ -23,9 +23,11 @@ if (!demo) {
   }
   if (!accountResponse?.ok) location.replace("/?login=required");
   else {
-    const account = await accountResponse.json();
+    let account = await accountResponse.json();
     if (account.profile?.status !== "approved") location.replace(`/?status=${encodeURIComponent(account.profile?.status || "pending")}`);
     else {
+      const fullAccountResponse = await fetch("/api/account", { headers: { Authorization: `Bearer ${accessToken}` } }).catch(() => null);
+      if (fullAccountResponse?.ok) account = await fullAccountResponse.json();
       window.BEWLET_AUTH = { accessToken, account, config };
       window.bewletAuthFetch = async (url, options = {}) => {
         let token = window.BEWLET_AUTH.accessToken;
