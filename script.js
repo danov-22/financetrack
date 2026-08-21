@@ -5,7 +5,7 @@
 // Never embed a shared Apps Script or user credential in the public client.
 const DEFAULT_GAS_URL = "";
 
-const IS_DEMO_MODE = Boolean(window.BEWLET_DEMO) || new URLSearchParams(location.search).get("mode") === "demo";
+const IS_DEMO_MODE = Boolean(window.BEWLET_DEMO) || location.pathname === "/demo" || new URLSearchParams(location.search).get("mode") === "demo";
 
 /* ============================================================
    PERSONAL FINANCE DASHBOARD — script.js

@@ -1,8 +1,8 @@
-const CACHE_NAME = "bewlet-shell-v15";
+const CACHE_NAME = "bewlet-shell-v16";
 const CHART_URL = "https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js";
 const APP_SHELL = [
   "/", "/index.html", "/landing.css", "/auth.js", "/favicon.svg",
-  "/app", "/app.html", "/style.css", "/main.js", "/script.js",
+  "/app", "/demo", "/app.html", "/style.css", "/main.js", "/script.js",
   "/manifest.webmanifest", CHART_URL
 ];
 
@@ -38,7 +38,7 @@ self.addEventListener("fetch", (event) => {
       .catch(() => caches.match(event.request).then((cached) => {
         if (cached) return cached;
         if (event.request.mode === "navigate") {
-          return caches.match(url.pathname === "/app" ? "/app.html" : "/index.html");
+          return caches.match(["/app", "/demo"].includes(url.pathname) ? "/app.html" : "/index.html");
         }
         return caches.match("/index.html");
       }))

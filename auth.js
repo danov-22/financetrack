@@ -229,7 +229,15 @@ modal.addEventListener("click", (event) => { if (event.target === modal) closeAu
 
 await loadConfig();
 await handleAuthReturn();
-await restoreRequestedSession();
+const oauthError = new URLSearchParams(location.search).get("error_description") || new URLSearchParams(location.hash.slice(1)).get("error_description");
+if (oauthError) {
+  localStorage.removeItem("bewlet_supabase_access_token");
+  localStorage.removeItem("bewlet_supabase_refresh_token");
+  openAuth();
+  setAuthMode("login");
+  setStatus("Google sign-in could not be completed. The Bewlet administrator needs to verify the Google Client ID, Client Secret, and Supabase callback URL in the Supabase Google provider settings.", true);
+  history.replaceState(null, "", "/");
+} else await restoreRequestedSession();
 
 const pageStatus = new URLSearchParams(location.search);
 if (pageStatus.get("status")) { openAuth(); setStatus(`Your Bewlet account is ${pageStatus.get("status")}. Sign in again after its status changes.`); }

@@ -1,4 +1,4 @@
-const demo = new URLSearchParams(location.search).get("mode") === "demo" || sessionStorage.getItem("bewlet_demo_mode") === "1";
+const demo = location.pathname === "/demo" || new URLSearchParams(location.search).get("mode") === "demo" || sessionStorage.getItem("bewlet_demo_mode") === "1";
 if (demo) { window.BEWLET_DEMO = true; sessionStorage.setItem("bewlet_demo_mode", "1"); }
 
 async function refreshSession(config) {
