@@ -22,6 +22,7 @@ function setAuthMode(mode) {
   document.getElementById("registration-region").closest("label").hidden = !registering;
   document.getElementById("payment-instructions").hidden = !registering;
   document.getElementById("payment-proof-panel").hidden = true;
+  document.getElementById("auth-legal").hidden = !registering;
   document.getElementById("google-login").innerHTML = `<span>G</span>${registering ? "Register with Google" : "Sign in with Google"}`;
   setStatus("");
 }
@@ -121,10 +122,10 @@ async function restoreRequestedSession() {
   const requested = new URLSearchParams(location.search).get("login");
   if (requested !== "required") return false;
   let accessToken = localStorage.getItem("bewlet_supabase_access_token");
-  let response = accessToken ? await fetch("/api/account", { headers: { Authorization: `Bearer ${accessToken}` } }) : null;
+  let response = accessToken ? await fetch("/api/session", { headers: { Authorization: `Bearer ${accessToken}` } }) : null;
   if (!response || response.status === 401) {
     accessToken = await refreshLandingSession();
-    response = accessToken ? await fetch("/api/account", { headers: { Authorization: `Bearer ${accessToken}` } }) : null;
+    response = accessToken ? await fetch("/api/session", { headers: { Authorization: `Bearer ${accessToken}` } }) : null;
   }
   if (!response?.ok) return false;
   const account = await response.json();
@@ -162,7 +163,7 @@ async function handleAuthReturn() {
     const [profile] = await profileResponse.json();
     localStorage.setItem("bewlet_supabase_access_token", accessToken);
     if (refreshToken) localStorage.setItem("bewlet_supabase_refresh_token", refreshToken);
-    const accountResponse = await fetch("/api/account", { headers: { Authorization: `Bearer ${accessToken}` } });
+    const accountResponse = await fetch("/api/session", { headers: { Authorization: `Bearer ${accessToken}` } });
     if (accountResponse.ok) {
       const account = await accountResponse.json();
       if (account.admin) return showAdminChoice();

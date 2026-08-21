@@ -15,10 +15,10 @@ if (!demo) {
   const config = await fetch("/api/public-config", { cache: "no-store" }).then((response) => response.json()).catch(() => ({}));
   let accessToken = localStorage.getItem("bewlet_supabase_access_token");
   if (!accessToken || !config.supabaseUrl) accessToken = await refreshSession(config);
-  let accountResponse = accessToken ? await fetch("/api/account", { headers: { Authorization: `Bearer ${accessToken}` } }) : null;
+  let accountResponse = accessToken ? await fetch("/api/session", { headers: { Authorization: `Bearer ${accessToken}` } }) : null;
   if (accountResponse?.status === 401) {
     accessToken = await refreshSession(config);
-    accountResponse = accessToken ? await fetch("/api/account", { headers: { Authorization: `Bearer ${accessToken}` } }) : null;
+    accountResponse = accessToken ? await fetch("/api/session", { headers: { Authorization: `Bearer ${accessToken}` } }) : null;
   }
   if (!accountResponse?.ok) location.replace("/?login=required");
   else {
