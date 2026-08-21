@@ -38,6 +38,7 @@ if (!demo) {
           window.BEWLET_AUTH.accessToken = token;
           response = await fetch(url, { ...options, headers: { "Content-Type": "application/json", ...(options.headers || {}), Authorization: `Bearer ${token}` } });
         }
+        if (!response.ok) response.clone().json().then((body) => console.error(`Bewlet API ${response.status} ${url}:`, body.error || body)).catch(() => {});
         return response;
       };
     }
