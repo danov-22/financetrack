@@ -235,7 +235,7 @@ function populateCurrencySelects() {
   if (topSelect) topSelect.innerHTML = compactOptions;
   ["tx-currency", "transfer-currency", "list-item-currency"].forEach((id) => {
     const select = document.getElementById(id);
-    if (select) select.innerHTML = allCompactOptions;
+    if (select) select.innerHTML = compactOptions;
   });
   const settingsSelect = document.getElementById("settings-currency");
   if (settingsSelect) settingsSelect.innerHTML = namedOptions;

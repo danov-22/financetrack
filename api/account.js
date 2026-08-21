@@ -19,15 +19,13 @@ module.exports = async function handler(request, response) {
       const admin = await isAdmin(session.token, session.user.email);
       if (request.query?.action === "admin-list") {
         if (!admin) return send(response, 403, { error: "Administrator access required" });
-        const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
-        const authResponse = await fetch(`${process.env.SUPABASE_URL}/auth/v1/admin/users?page=1&per_page=1000`, { headers: { apikey: serviceRole, Authorization: `Bearer ${serviceRole}` } });
-        if (authResponse.ok) {
-          const authData = await authResponse.json();
+        try {
+          const authData = await supabase("/auth/v1/admin/users?page=1&per_page=1000");
           const existing = await supabase("/rest/v1/profiles?select=id");
           const existingIds = new Set((existing || []).map((profile) => profile.id));
           const missing = (authData.users || []).filter((user) => !existingIds.has(user.id)).map((user) => { const owner = String(user.email || "").toLowerCase() === String(process.env.ADMIN_EMAIL || "").trim().toLowerCase(); return { id: user.id, email: user.email || "", display_name: user.user_metadata?.full_name || user.email || "Bewlet user", avatar_url: user.user_metadata?.avatar_url || null, status: owner ? "approved" : "pending", license_type: owner ? "lifetime" : null }; });
           if (missing.length) await supabase("/rest/v1/profiles?on_conflict=id", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify(missing) });
-        }
+        } catch {}
         const profiles = await supabase("/rest/v1/profiles?select=id,email,display_name,avatar_url,status,pricing_region,license_type,created_at,approved_at,rejection_reason&order=created_at.desc");
         const payments = await supabase("/rest/v1/payment_submissions?select=id,user_id,storage_path,amount_minor,currency,status,submitted_at&order=submitted_at.desc");
         const latestPayments = new Map();
@@ -42,8 +40,10 @@ module.exports = async function handler(request, response) {
         profiles.forEach((profile) => { profile.payment = latestPayments.get(profile.id) || null; });
         return send(response, 200, { profiles });
       }
-      const connections = await supabase(`/rest/v1/google_connections?user_id=eq.${session.user.id}&select=google_email,connected_at`);
-      const backups = session.profile.status === "approved" ? await supabase(`/rest/v1/data_backups?user_id=eq.${session.user.id}&select=id,byte_size,spreadsheet_revision,created_at&order=created_at.desc&limit=20`) : [];
+      const [connections, backups] = await Promise.all([
+        supabase(`/rest/v1/google_connections?user_id=eq.${session.user.id}&select=google_email,connected_at`).catch(() => []),
+        session.profile.status === "approved" ? supabase(`/rest/v1/data_backups?user_id=eq.${session.user.id}&select=id,byte_size,spreadsheet_revision,created_at&order=created_at.desc&limit=20`).catch(() => []) : [],
+      ]);
       return send(response, 200, { user: { id: session.user.id, email: session.user.email }, profile: session.profile, admin, google: connections?.[0] || null, backups });
     }
     if (request.method !== "POST") return send(response, 405, { error: "Method not allowed" });

@@ -11,17 +11,21 @@ function bearer(request) {
 }
 
 async function supabase(path, options = {}, token = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY) {
+  const serverKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const headers = {
+    apikey: serverKey,
+    "Content-Type": "application/json",
+    ...(options.headers || {}),
+  };
+  if (token && !(token === serverKey && token.startsWith("sb_secret_"))) headers.Authorization = `Bearer ${token}`;
   const response = await fetch(`${process.env.SUPABASE_URL}${path}`, {
     ...options,
-    headers: {
-      apikey: process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-    },
+    signal: options.signal || AbortSignal.timeout(15000),
+    headers,
   });
   const text = await response.text();
-  const data = text ? JSON.parse(text) : null;
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch { data = { error: text || `Supabase ${response.status}` }; }
   if (!response.ok) throw new Error(data?.message || data?.error_description || data?.error || `Supabase ${response.status}`);
   return data;
 }
@@ -30,13 +34,16 @@ async function authenticatedUser(request, approved = false) {
   const token = bearer(request);
   if (!token) throw Object.assign(new Error("Sign in required"), { status: 401 });
   const userResponse = await fetch(`${process.env.SUPABASE_URL}/auth/v1/user`, {
+    signal: AbortSignal.timeout(15000),
     headers: { apikey: process.env.SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${token}` },
   });
   if (!userResponse.ok) throw Object.assign(new Error("Session expired"), { status: 401 });
   const user = await userResponse.json();
-  const profiles = await supabase(`/rest/v1/profiles?id=eq.${encodeURIComponent(user.id)}&select=*`);
   const ownerEmails = String(process.env.ADMIN_EMAIL || "").split(",").map((value) => value.trim().toLowerCase()).filter(Boolean);
   const owner = ownerEmails.includes(String(user.email || "").trim().toLowerCase());
+  let profiles = [];
+  try { profiles = await supabase(`/rest/v1/profiles?id=eq.${encodeURIComponent(user.id)}&select=*`); }
+  catch (error) { if (!owner) throw error; }
   let profile = profiles?.[0];
   if (!profile && owner) profile = { id: user.id, email: user.email, display_name: user.user_metadata?.full_name || user.email, status: "approved", license_type: "lifetime", google_sheet_id: null };
   if (!profile) throw Object.assign(new Error("Account profile not found"), { status: 403 });
@@ -81,14 +88,14 @@ async function googleAccessFor(userId) {
   if (!rows?.[0]) throw Object.assign(new Error("Connect Google Drive first"), { status: 409, code: "google_not_connected" });
   const refreshToken = decrypt(rows[0].encrypted_refresh_token);
   const body = new URLSearchParams({ client_id: process.env.GOOGLE_CLIENT_ID, client_secret: process.env.GOOGLE_CLIENT_SECRET, refresh_token: refreshToken, grant_type: "refresh_token" });
-  const response = await fetch("https://oauth2.googleapis.com/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body });
+  const response = await fetch("https://oauth2.googleapis.com/token", { method: "POST", signal: AbortSignal.timeout(15000), headers: { "Content-Type": "application/x-www-form-urlencoded" }, body });
   const data = await response.json();
   if (!response.ok) throw new Error(data.error_description || "Google authorization expired");
   return data.access_token;
 }
 
 async function googleFetch(url, accessToken, options = {}) {
-  const response = await fetch(url, { ...options, headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", ...(options.headers || {}) } });
+  const response = await fetch(url, { ...options, signal: options.signal || AbortSignal.timeout(20000), headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", ...(options.headers || {}) } });
   const text = await response.text();
   const data = text ? JSON.parse(text) : null;
   if (!response.ok) throw new Error(data?.error?.message || `Google API ${response.status}`);
