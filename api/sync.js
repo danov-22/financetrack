@@ -8,7 +8,7 @@ async function ensureSpreadsheet(session, access) {
     try { await googleFetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(session.profile.google_sheet_id)}?fields=spreadsheetId`, access); return session.profile.google_sheet_id; } catch {}
   }
   const created = await googleFetch("https://sheets.googleapis.com/v4/spreadsheets", access, { method: "POST", body: JSON.stringify({ properties: { title: "Bewlet Finance Data" }, sheets: [{ properties: { title: "Transactions", gridProperties: { frozenRowCount: 1 } } }, { properties: { title: "AppData", gridProperties: { frozenRowCount: 1 } } }, { properties: { title: "Metadata" } }] }) });
-  await supabase(`/rest/v1/profiles?id=eq.${session.user.id}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ google_sheet_id: created.spreadsheetId, updated_at: new Date().toISOString() }) });
+  await supabase("/rest/v1/profiles?on_conflict=id", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ id: session.user.id, email: session.user.email || session.profile.email || "", display_name: session.profile.display_name || session.user.email || "Bewlet user", status: session.profile.status, license_type: session.profile.license_type || null, google_sheet_id: created.spreadsheetId, updated_at: new Date().toISOString() }) });
   return created.spreadsheetId;
 }
 

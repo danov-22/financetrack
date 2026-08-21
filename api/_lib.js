@@ -35,8 +35,12 @@ async function authenticatedUser(request, approved = false) {
   if (!userResponse.ok) throw Object.assign(new Error("Session expired"), { status: 401 });
   const user = await userResponse.json();
   const profiles = await supabase(`/rest/v1/profiles?id=eq.${encodeURIComponent(user.id)}&select=*`);
-  const profile = profiles?.[0];
+  const ownerEmails = String(process.env.ADMIN_EMAIL || "").split(",").map((value) => value.trim().toLowerCase()).filter(Boolean);
+  const owner = ownerEmails.includes(String(user.email || "").trim().toLowerCase());
+  let profile = profiles?.[0];
+  if (!profile && owner) profile = { id: user.id, email: user.email, display_name: user.user_metadata?.full_name || user.email, status: "approved", license_type: "lifetime", google_sheet_id: null };
   if (!profile) throw Object.assign(new Error("Account profile not found"), { status: 403 });
+  if (owner) profile = { ...profile, status: "approved", license_type: profile.license_type || "lifetime" };
   if (approved && profile.status !== "approved") throw Object.assign(new Error(`Account is ${profile.status}`), { status: 403, code: profile.status });
   return { token, user, profile };
 }
