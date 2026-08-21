@@ -1,4 +1,5 @@
-const demo = new URLSearchParams(location.search).get("mode") === "demo";
+const demo = new URLSearchParams(location.search).get("mode") === "demo" || sessionStorage.getItem("bewlet_demo_mode") === "1";
+if (demo) { window.BEWLET_DEMO = true; sessionStorage.setItem("bewlet_demo_mode", "1"); }
 
 async function refreshSession(config) {
   const refreshToken = localStorage.getItem("bewlet_supabase_refresh_token");

@@ -14,13 +14,11 @@ module.exports = async function handler(request, response) {
     const userResponse = await fetch(`${process.env.SUPABASE_URL}/auth/v1/user`, { headers: { apikey: process.env.SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${token}` } });
     if (!userResponse.ok) return send(response, 401, { error: "Session expired" });
     const user = await userResponse.json();
-    let [profile] = await supabase(`/rest/v1/profiles?id=eq.${encodeURIComponent(user.id)}&select=*`);
     let admin = ownerEmail(user.email);
-    if (admin && profile?.status !== "approved") {
-      const ownerProfile = { id: user.id, email: user.email || "", display_name: user.user_metadata?.full_name || user.email || "Bewlet Admin", avatar_url: user.user_metadata?.avatar_url || null, status: "approved", license_type: "lifetime", approved_at: new Date().toISOString() };
-      await supabase("/rest/v1/profiles?on_conflict=id", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=representation" }, body: JSON.stringify(ownerProfile) });
-      [profile] = await supabase(`/rest/v1/profiles?id=eq.${encodeURIComponent(user.id)}&select=*`);
-    }
+    if (admin) return send(response, 200, { user: { id: user.id, email: user.email }, profile: { id: user.id, email: user.email, display_name: user.user_metadata?.full_name || user.email, status: "approved", license_type: "lifetime" }, admin: true });
+    const profileResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(user.id)}&select=*`, { headers: { apikey: process.env.SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${token}` } });
+    if (!profileResponse.ok) return send(response, profileResponse.status, { error: "Could not load account profile" });
+    const [profile] = await profileResponse.json();
     if (!profile) return send(response, 403, { error: "Account profile not found" });
     if (!admin) {
       try { admin = Boolean(await supabase("/rest/v1/rpc/is_bewlet_admin", { method: "POST", body: "{}" }, token)); }

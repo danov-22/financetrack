@@ -5,7 +5,7 @@
 // Never embed a shared Apps Script or user credential in the public client.
 const DEFAULT_GAS_URL = "";
 
-const IS_DEMO_MODE = new URLSearchParams(location.search).get("mode") === "demo";
+const IS_DEMO_MODE = Boolean(window.BEWLET_DEMO) || new URLSearchParams(location.search).get("mode") === "demo";
 
 /* ============================================================
    PERSONAL FINANCE DASHBOARD — script.js
@@ -3050,7 +3050,7 @@ function applyDemoState() {
   STATE.goals = [{ id:"demogoal1", name:"Emergency fund", target:12000000, current:4500000, type:"goal", targetDate:date(-120) }];
   const banner = document.createElement("div");
   banner.className = "demo-banner";
-  banner.innerHTML = '<span><strong>Demo mode</strong> — changes reset when you leave.</span><a href="/">Exit demo</a>';
+  banner.innerHTML = '<span><strong>Demo mode</strong> — changes reset when you leave.</span><a href="/" onclick="sessionStorage.removeItem(\'bewlet_demo_mode\')">Exit demo</a>';
   document.body.prepend(banner);
   document.body.classList.add("demo-mode");
 }
