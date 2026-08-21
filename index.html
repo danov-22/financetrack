@@ -22,7 +22,7 @@
         <a href="#features">Features</a>
         <a href="#product-tour">Product tour</a>
         <a href="#pricing">Pricing</a>
-        <button class="nav-login" data-login>Sign in</button>
+        <button class="nav-login" data-login data-auth-mode="login">Sign in</button>
       </nav>
     </header>
 
@@ -34,7 +34,7 @@
           <p>Bewlet brings wallets, transactions, multi-currency totals, and reports into one calm dashboard. Your financial records stay in a Google Sheet owned by you.</p>
           <div class="hero-actions">
             <a class="button primary" href="/app?mode=demo">Explore the demo</a>
-            <button class="button secondary" data-login>Register with Google</button>
+            <button class="button secondary" data-login data-auth-mode="register">Register with Google</button>
           </div>
           <p class="hero-note">No subscription. Founder lifetime access from Rp175,000 or US$19.</p>
         </div>
@@ -102,14 +102,14 @@
 
       <section class="section browser-callout">
         <div><span class="eyebrow">NO APP STORE REQUIRED</span><h2>Open. Sign in. Start tracking.</h2><p>Use Bewlet in your browser or install it to your home screen for an app-like experience.</p></div>
-        <button class="button primary" data-login>Register with Google</button>
+        <button class="button primary" data-login data-auth-mode="register">Register with Google</button>
       </section>
 
       <section id="pricing" class="section pricing-section">
         <div class="section-heading"><span>Founder lifetime access</span><h2>Pay once. Keep every core update.</h2></div>
         <div class="pricing-grid">
-          <article class="price-card featured"><span class="price-badge">First 100 Indonesian users</span><h3>Indonesia</h3><div class="price"><strong>Rp175k</strong><span>one time</span></div><p>Then Rp199k after the founder allocation.</p><button class="button primary" data-login>Claim founder access</button></article>
-          <article class="price-card"><span class="price-badge">First 100 international users</span><h3>International</h3><div class="price"><strong>US$19</strong><span>one time</span></div><p>Then US$29 after the founder allocation.</p><button class="button secondary" data-login>Claim founder access</button></article>
+          <article class="price-card featured"><span class="price-badge">First 100 Indonesian users</span><h3>Indonesia</h3><div class="price"><strong>Rp175k</strong><span>one time</span></div><p>Then Rp199k after the founder allocation.</p><button class="button primary" data-login data-auth-mode="register">Claim founder access</button></article>
+          <article class="price-card"><span class="price-badge">First 100 international users</span><h3>International</h3><div class="price"><strong>US$19</strong><span>one time</span></div><p>Then US$29 after the founder allocation.</p><button class="button secondary" data-login data-auth-mode="register">Claim founder access</button></article>
         </div>
       </section>
     </main>
@@ -120,6 +120,7 @@
       <div class="auth-card" role="dialog" aria-modal="true" aria-labelledby="auth-title">
         <button id="auth-close" class="auth-close" aria-label="Close">×</button>
         <img src="favicon.svg" alt="" />
+        <div class="auth-mode-switch" role="tablist" aria-label="Account access"><span></span><button id="auth-mode-login" type="button" role="tab">Sign in</button><button id="auth-mode-register" type="button" role="tab">Register</button></div>
         <h2 id="auth-title">Join Bewlet</h2>
         <p id="auth-message">Sign in with Gmail to register. New accounts require approval before accessing the finance dashboard.</p>
         <label class="region-field">Your pricing region<select id="registration-region"><option value="ID">Indonesia — Rp175,000</option><option value="INTL">International — US$19</option></select></label>

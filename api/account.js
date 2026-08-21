@@ -1,6 +1,8 @@
 const { send, supabase, authenticatedUser, googleAccessFor, googleFetch } = require("./_lib");
 
-async function isAdmin(token) {
+async function isAdmin(token, email = "") {
+  const ownerEmails = String(process.env.ADMIN_EMAIL || "").split(",").map((value) => value.trim().toLowerCase()).filter(Boolean);
+  if (ownerEmails.includes(String(email).trim().toLowerCase())) return true;
   return Boolean(await supabase("/rest/v1/rpc/is_bewlet_admin", { method: "POST", body: "{}" }, token));
 }
 
@@ -14,7 +16,7 @@ module.exports = async function handler(request, response) {
   try {
     const session = await authenticatedUser(request, false);
     if (request.method === "GET") {
-      const admin = await isAdmin(session.token);
+      const admin = await isAdmin(session.token, session.user.email);
       if (request.query?.action === "admin-list") {
         if (!admin) return send(response, 403, { error: "Administrator access required" });
         const profiles = await supabase("/rest/v1/profiles?select=id,email,display_name,avatar_url,status,pricing_region,license_type,created_at,approved_at,rejection_reason&order=created_at.desc");
@@ -38,7 +40,7 @@ module.exports = async function handler(request, response) {
     if (request.method !== "POST") return send(response, 405, { error: "Method not allowed" });
     const body = request.body || {};
     if (body.action === "review") {
-      if (!(await isAdmin(session.token))) return send(response, 403, { error: "Administrator access required" });
+      if (!(await isAdmin(session.token, session.user.email))) return send(response, 403, { error: "Administrator access required" });
       const result = await supabase("/rest/v1/rpc/review_bewlet_account", { method: "POST", body: JSON.stringify({ target_user: body.userId, decision: body.decision, reason: body.reason || null }) }, session.token);
       const reviewed = Array.isArray(result) ? result[0] : result;
       const paymentStatus = body.decision === "approved" ? "accepted" : body.decision === "rejected" ? "rejected" : null;

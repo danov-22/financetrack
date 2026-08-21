@@ -3,6 +3,7 @@ const statusEl = document.getElementById("auth-status");
 let config = null;
 let pendingRegistration = null;
 let paymentDetails = null;
+let authMode = "login";
 const escapeHtml = (value) => String(value || "").replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]);
 
 function setStatus(message, isError = false) {
@@ -10,7 +11,23 @@ function setStatus(message, isError = false) {
   statusEl.classList.toggle("error", isError);
 }
 
-function openAuth() {
+function setAuthMode(mode) {
+  authMode = mode === "register" ? "register" : "login";
+  const registering = authMode === "register";
+  document.querySelector(".auth-mode-switch").classList.toggle("register", registering);
+  document.getElementById("auth-mode-login").setAttribute("aria-selected", String(!registering));
+  document.getElementById("auth-mode-register").setAttribute("aria-selected", String(registering));
+  document.getElementById("auth-title").textContent = registering ? "Join Bewlet" : "Welcome back";
+  document.getElementById("auth-message").textContent = registering ? "Create your Bewlet account with Gmail. New registrations require payment and approval." : "Sign in with the approved Gmail account connected to your Bewlet access.";
+  document.getElementById("registration-region").closest("label").hidden = !registering;
+  document.getElementById("payment-instructions").hidden = !registering;
+  document.getElementById("payment-proof-panel").hidden = true;
+  document.getElementById("google-login").innerHTML = `<span>G</span>${registering ? "Register with Google" : "Sign in with Google"}`;
+  setStatus("");
+}
+
+function openAuth(event) {
+  setAuthMode(event?.currentTarget?.dataset?.authMode || "login");
   modal.classList.add("open");
   modal.setAttribute("aria-hidden", "false");
   document.body.classList.add("auth-open");
@@ -66,6 +83,7 @@ function showAdminChoice() {
   document.getElementById("registration-region").closest("label").hidden = true;
   document.getElementById("payment-instructions").hidden = true;
   document.getElementById("google-login").hidden = true;
+  document.querySelector(".auth-mode-switch").hidden = true;
   document.getElementById("admin-choice-panel").hidden = false;
   setStatus("");
 }
@@ -76,6 +94,7 @@ async function startGoogleLogin() {
     return;
   }
   sessionStorage.setItem("bewlet_registration_region", document.getElementById("registration-region").value);
+  sessionStorage.setItem("bewlet_auth_mode", authMode);
   const redirectTo = `${location.origin}/`;
   const authorizeUrl = new URL(`${config.supabaseUrl}/auth/v1/authorize`);
   authorizeUrl.searchParams.set("provider", "google");
@@ -129,11 +148,14 @@ async function handleAuthReturn() {
     if (!userResponse.ok) throw new Error("Could not verify Google sign-in");
     const user = await userResponse.json();
     const region = sessionStorage.getItem("bewlet_registration_region") || "INTL";
-    await fetch(`${config.supabaseUrl}/rest/v1/profiles?id=eq.${encodeURIComponent(user.id)}`, {
-      method: "PATCH",
-      headers: { apikey: config.supabasePublishableKey, Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
-      body: JSON.stringify({ pricing_region: region }),
-    });
+    const returningLogin = sessionStorage.getItem("bewlet_auth_mode") !== "register";
+    if (!returningLogin) {
+      await fetch(`${config.supabaseUrl}/rest/v1/profiles?id=eq.${encodeURIComponent(user.id)}`, {
+        method: "PATCH",
+        headers: { apikey: config.supabasePublishableKey, Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+        body: JSON.stringify({ pricing_region: region }),
+      });
+    }
     const profileResponse = await fetch(`${config.supabaseUrl}/rest/v1/profiles?id=eq.${encodeURIComponent(user.id)}&select=status`, {
       headers: { apikey: config.supabasePublishableKey, Authorization: `Bearer ${accessToken}` },
     });
@@ -145,7 +167,12 @@ async function handleAuthReturn() {
       const account = await accountResponse.json();
       if (account.admin) return showAdminChoice();
     }
+    if (returningLogin && profile?.status !== "approved") {
+      setAuthMode("login");
+      return setStatus(`This Gmail account is ${profile?.status || "not registered"}. Use Register if this is a new account, or wait for approval if you already submitted payment.`, true);
+    }
     if (profile?.status !== "approved") {
+      setAuthMode("register");
       pendingRegistration = { accessToken, user, region };
       const paymentInfoResponse = await fetch("/api/payment-info", { headers: { Authorization: `Bearer ${accessToken}` } });
       if (paymentInfoResponse.ok) {
@@ -190,6 +217,8 @@ async function submitPaymentProof() {
 }
 
 document.querySelectorAll("[data-login]").forEach((button) => button.addEventListener("click", openAuth));
+document.getElementById("auth-mode-login").addEventListener("click", () => setAuthMode("login"));
+document.getElementById("auth-mode-register").addEventListener("click", () => setAuthMode("register"));
 document.getElementById("auth-close").addEventListener("click", closeAuth);
 document.getElementById("google-login").addEventListener("click", startGoogleLogin);
 document.getElementById("payment-proof-submit").addEventListener("click", submitPaymentProof);
