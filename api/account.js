@@ -75,6 +75,44 @@ module.exports = async function handler(request, response) {
       await notifyDecision(reviewed, body.decision, body.reason);
       return send(response, 200, { profile: reviewed });
     }
+    if (body.action === "admin-delete-account") {
+      if (!(await isAdmin(session.token, session.user.email))) return send(response, 403, { error: "Administrator access required" });
+      const userId = String(body.userId || "");
+      const profiles = await supabase(`/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&select=id,email,pricing_region,license_type,google_sheet_id`);
+      const target = profiles?.[0];
+      if (!target) return send(response, 404, { error: "Account not found" });
+      const ownerEmails = String(process.env.ADMIN_EMAIL || "").split(",").map((value) => value.trim().toLowerCase()).filter(Boolean);
+      if (userId === session.user.id || ownerEmails.includes(String(target.email || "").toLowerCase())) return send(response, 400, { error: "The Bewlet administrator account cannot be deleted" });
+      if (String(body.confirmation || "").trim().toLowerCase() !== String(target.email || "").trim().toLowerCase()) return send(response, 400, { error: "Type the account email exactly to confirm deletion" });
+
+      const warnings = [];
+      try {
+        const access = await googleAccessFor(userId);
+        if (target.google_sheet_id) await googleFetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(target.google_sheet_id)}`, access, { method: "DELETE" }).catch(() => {});
+        const backups = await supabase(`/rest/v1/data_backups?user_id=eq.${encodeURIComponent(userId)}&select=drive_file_id`);
+        for (const backup of backups || []) await googleFetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(backup.drive_file_id)}`, access, { method: "DELETE" }).catch(() => {});
+        await fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(access)}`, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" } }).catch(() => {});
+      } catch (error) { if (error.code !== "google_not_connected") warnings.push("Google Drive cleanup could not be completed"); }
+
+      try {
+        const payments = await supabase(`/rest/v1/payment_submissions?user_id=eq.${encodeURIComponent(userId)}&select=storage_path`);
+        const prefixes = (payments || []).map((payment) => payment.storage_path).filter(Boolean);
+        if (prefixes.length) await supabase("/storage/v1/object/payment-proofs", { method: "DELETE", body: JSON.stringify({ prefixes }) });
+      } catch { warnings.push("One or more payment-proof files may still need manual removal"); }
+
+      const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
+      const deletion = await fetch(`${process.env.SUPABASE_URL}/auth/v1/admin/users/${encodeURIComponent(userId)}`, { method: "DELETE", headers: { apikey: process.env.SUPABASE_SECRET_KEY || serviceRole, Authorization: `Bearer ${serviceRole}` } });
+      if (!deletion.ok) throw new Error("Account deletion could not be completed");
+
+      if (target.license_type === "founder_lifetime" && ["ID", "INTL"].includes(target.pricing_region)) {
+        try {
+          const slots = await supabase(`/rest/v1/founder_slots?region=eq.${target.pricing_region}&select=claimed`);
+          const claimed = Number(slots?.[0]?.claimed || 0);
+          await supabase(`/rest/v1/founder_slots?region=eq.${target.pricing_region}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ claimed: Math.max(0, claimed - 1), updated_at: new Date().toISOString() }) });
+        } catch { warnings.push("The founder counter could not be adjusted automatically"); }
+      }
+      return send(response, 200, { deleted: true, warnings });
+    }
     if (body.action === "notify-registration") {
       if (session.profile.registration_notified_at) return send(response, 200, { notified: true });
       if (process.env.RESEND_API_KEY && process.env.APP_FROM_EMAIL && process.env.ADMIN_EMAIL) {
