@@ -95,19 +95,24 @@
         <div class="tour-cta"><div><strong>Want to try every feature yourself?</strong><span>The demo uses sample data and resets when you leave.</span></div><a class="button primary" href="/demo" onclick="sessionStorage.setItem('bewlet_demo_mode','1')">Open the interactive demo</a></div>
       </section>
 
-      <section class="section difference-section">
+      <section class="section difference-section difference-toggle-section">
         <div class="difference-copy">
           <span class="eyebrow">WHAT MAKES BEWLET DIFFERENT</span>
           <h2>Your finance app should move with you—not lock you to one device.</h2>
+          <button id="difference-toggle" class="difference-toggle" type="button" aria-expanded="false" aria-controls="difference-details"><span>See what makes Bewlet different</span><i aria-hidden="true">⌄</i></button>
+        </div>
+        <div id="difference-details" class="difference-details" hidden>
+          <div class="difference-copy difference-copy-details">
           <p>Bewlet is a browser-first personal finance app. Sign in with your Google account, open it from any modern browser, and continue on your phone, tablet, or computer. No app-store download is required.</p>
           <p>Want it to feel like an app? Install Bewlet directly from your browser and place it on your home screen. You can record and review data offline, then synchronize when your connection returns.</p>
-        </div>
-        <div class="difference-list">
-          <article><b>01</b><div><h3>One sign-in, any device</h3><p>Use the same approved account from mobile, tablet, or desktop without purchasing separate versions.</p></div></article>
-          <article><b>02</b><div><h3>Your spreadsheet, your records</h3><p>Bewlet creates a private Google Sheet in your Drive. You retain direct access to your financial records.</p></div></article>
-          <article><b>03</b><div><h3>Online and offline</h3><p>Keep tracking when the connection drops. Pending changes synchronize after you return online.</p></div></article>
-          <article><b>04</b><div><h3>Make it feel personal</h3><p>Choose light or dark mode, six curated finance themes, or create a custom accent color.</p></div></article>
-          <article><b>05</b><div><h3>Core updates for life</h3><p>Your one-time lifetime license includes future core improvements and maintenance patches for the supported life of Bewlet.</p></div></article>
+          </div>
+          <div class="difference-list">
+            <article><b>01</b><div><h3>One sign-in, any device</h3><p>Use the same approved account from mobile, tablet, or desktop without purchasing separate versions.</p></div></article>
+            <article><b>02</b><div><h3>Your spreadsheet, your records</h3><p>Bewlet creates a private Google Sheet in your Drive. You retain direct access to your financial records.</p></div></article>
+            <article><b>03</b><div><h3>Online and offline</h3><p>Keep tracking when the connection drops. Pending changes synchronize after you return online.</p></div></article>
+            <article><b>04</b><div><h3>Make it feel personal</h3><p>Choose light or dark mode, six curated finance themes, or create a custom accent color.</p></div></article>
+            <article><b>05</b><div><h3>Core updates for life</h3><p>Your one-time lifetime license includes future core improvements and maintenance patches for the supported life of Bewlet.</p></div></article>
+          </div>
         </div>
       </section>
 
@@ -123,9 +128,12 @@
       <section class="section device-section">
         <div class="section-heading device-heading"><span>BEWLET GOES WITH YOU</span><h2>Install it beside the apps you already use</h2><p>Bewlet can live on your home screen for quick, app-like access without an app-store download.</p><button id="device-preview-toggle" class="device-preview-toggle" type="button" aria-expanded="false" aria-controls="device-preview"><span>See installed preview</span><i aria-hidden="true">⌄</i></button></div>
         <div id="device-preview" class="install-preview" hidden>
+          <div class="install-devices">
           <div class="install-device install-desktop"><div class="install-screen"><div class="install-status"><span>9:41</span><i></i></div><div class="install-icons"><i></i><i></i><i></i><i></i><div class="bewlet-installed"><img src="favicon.svg" alt="" /><b>Bewlet</b></div><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="install-dock"><i></i><i></i><i></i><i></i></div></div><p>Desktop</p></div>
           <div class="install-device install-tablet"><div class="install-screen"><div class="install-status"><span>9:41</span><i></i></div><div class="install-icons"><i></i><i></i><i></i><i></i><div class="bewlet-installed"><img src="favicon.svg" alt="" /><b>Bewlet</b></div><i></i><i></i><i></i><i></i></div><div class="install-dock"><i></i><i></i><i></i><i></i></div></div><p>Tablet</p></div>
           <div class="install-device install-phone"><div class="install-screen"><div class="install-status"><span>9:41</span><i></i></div><div class="install-icons"><i></i><i></i><i></i><i></i><div class="bewlet-installed"><img src="favicon.svg" alt="" /><b>Bewlet</b></div><i></i><i></i><i></i></div><div class="install-dock"><i></i><i></i><i></i><i></i></div></div><p>Phone</p></div>
+          </div>
+          <div class="install-guide"><span class="eyebrow">QUICK INSTALL GUIDE</span><h3>Add Bewlet to your device</h3><div class="install-guide-grid"><article><b>Android · Chrome</b><p>Open the browser menu <strong>⋮</strong>, choose <strong>Install app</strong> or <strong>Add to Home screen</strong>, then confirm.</p></article><article><b>iPhone or iPad · Safari</b><p>Tap <strong>Share</strong>, choose <strong>Add to Home Screen</strong>, then tap <strong>Add</strong>.</p></article><article><b>Desktop · Chrome or Edge</b><p>Open Bewlet, select the install icon in the address bar—or open the browser menu and choose <strong>Install Bewlet</strong>.</p></article></div><p class="install-guide-note">The wording may vary slightly depending on your browser and device.</p><button id="device-preview-close" class="device-preview-close" type="button">Close installed preview <span aria-hidden="true">⌃</span></button></div>
         </div>
       </section>
 
@@ -166,12 +174,13 @@
       if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");
       const deviceToggle = document.getElementById("device-preview-toggle");
       const devicePreview = document.getElementById("device-preview");
-      deviceToggle?.addEventListener("click", () => {
-        const opening = devicePreview.hidden;
+      const setDevicePreview = (opening) => {
         devicePreview.hidden = !opening;
         deviceToggle.setAttribute("aria-expanded", String(opening));
         deviceToggle.querySelector("span").textContent = opening ? "Hide installed preview" : "See installed preview";
-      });
+      };
+      deviceToggle?.addEventListener("click", () => setDevicePreview(devicePreview.hidden));
+      document.getElementById("device-preview-close")?.addEventListener("click", () => setDevicePreview(false));
       const privacyToggle = document.getElementById("privacy-details-toggle");
       const privacyDetails = document.getElementById("privacy-details");
       privacyToggle?.addEventListener("click", () => {
@@ -179,6 +188,14 @@
         privacyDetails.hidden = !opening;
         privacyToggle.setAttribute("aria-expanded", String(opening));
         privacyToggle.querySelector("span").textContent = opening ? "Hide the safety details" : "Read the safety details";
+      });
+      const differenceToggle = document.getElementById("difference-toggle");
+      const differenceDetails = document.getElementById("difference-details");
+      differenceToggle?.addEventListener("click", () => {
+        const opening = differenceDetails.hidden;
+        differenceDetails.hidden = !opening;
+        differenceToggle.setAttribute("aria-expanded", String(opening));
+        differenceToggle.querySelector("span").textContent = opening ? "Hide Bewlet differences" : "See what makes Bewlet different";
       });
     </script>
   </body>
