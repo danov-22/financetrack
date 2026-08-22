@@ -3349,6 +3349,7 @@ function boot() {
   if (IS_DEMO_MODE) applyDemoState();
   ensureDefaults();
   applyTheme(STATE.theme);
+  document.getElementById("sidebar-admin-control")?.classList.toggle("hidden", !window.BEWLET_AUTH?.account?.admin);
 
   populateCurrencySelects();
   document.getElementById("currency-select").value = STATE.currency;

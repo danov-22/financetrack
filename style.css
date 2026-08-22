@@ -221,6 +221,9 @@ input, select, textarea { outline: none; }
   font-weight: 500;
 }
 .theme-toggle-btn:hover { background: var(--surface-2); color: var(--text); }
+.sidebar-admin { margin-top:7px;color:var(--accent);background:var(--accent-light); }
+.sidebar-admin:hover { color:var(--accent);filter:brightness(.98); }
+.sidebar.collapsed .sidebar-admin span { display:none; }
 .sidebar-signout { margin-top:7px;color:var(--expense); }
 .sidebar.collapsed .sidebar-signout span { display:none; }
 
