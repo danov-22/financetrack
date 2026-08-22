@@ -61,7 +61,8 @@
         <div>
           <span class="eyebrow">PRIVATE BY DESIGN</span>
           <h2 id="manual-safety-title">No bank account connection. No financial login required.</h2>
-          <p>Bewlet is a manual personal finance tracker. It does not connect to your bank, card, e-wallet, investment account, or payment apps—and it will never ask for their usernames, passwords, PINs, or one-time codes. You enter the transactions you want to track, and your Bewlet records stay in the Google Drive connected by you.</p>
+          <button id="privacy-details-toggle" class="privacy-details-toggle" type="button" aria-expanded="false" aria-controls="privacy-details"><span>Read the safety details</span><i aria-hidden="true">⌄</i></button>
+          <div id="privacy-details" class="privacy-details" hidden><p>Bewlet is a manual personal finance tracker. It does not connect to your bank, card, e-wallet, investment account, or payment apps—and it will never ask for their usernames, passwords, PINs, or one-time codes. You enter the transactions you want to track, and your Bewlet records stay in the Google Drive connected by you.</p></div>
         </div>
       </section>
 
@@ -170,6 +171,14 @@
         devicePreview.hidden = !opening;
         deviceToggle.setAttribute("aria-expanded", String(opening));
         deviceToggle.querySelector("span").textContent = opening ? "Hide installed preview" : "See installed preview";
+      });
+      const privacyToggle = document.getElementById("privacy-details-toggle");
+      const privacyDetails = document.getElementById("privacy-details");
+      privacyToggle?.addEventListener("click", () => {
+        const opening = privacyDetails.hidden;
+        privacyDetails.hidden = !opening;
+        privacyToggle.setAttribute("aria-expanded", String(opening));
+        privacyToggle.querySelector("span").textContent = opening ? "Hide the safety details" : "Read the safety details";
       });
     </script>
   </body>
