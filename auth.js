@@ -55,7 +55,7 @@ function renderPaymentInstructions() {
   const container = document.getElementById("payment-instructions");
   if (!container) return;
   if (!pendingRegistration) {
-    const price = region === "ID" ? "Rp175,000" : "US$19";
+    const price = region === "ID" ? "Rp179,000" : "US$19";
     container.className = "payment-instructions sign-in-first";
     container.innerHTML = `<strong>Lifetime access: ${price}</strong><span>Sign in with Gmail first to securely view the payment destination and upload your proof.</span>`;
     return;
@@ -209,7 +209,7 @@ async function submitPaymentProof() {
     const upload = await fetch(`${config.supabaseUrl}/storage/v1/object/payment-proofs/${path}`, { method: "POST", headers: { apikey: config.supabasePublishableKey, Authorization: `Bearer ${pendingRegistration.accessToken}`, "Content-Type": file.type, "x-upsert": "false" }, body: file });
     if (!upload.ok) throw new Error((await upload.json()).message || "Upload failed");
     const isIndonesia = pendingRegistration.region === "ID";
-    const submission = await fetch(`${config.supabaseUrl}/rest/v1/payment_submissions`, { method: "POST", headers: { apikey: config.supabasePublishableKey, Authorization: `Bearer ${pendingRegistration.accessToken}`, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify({ user_id: pendingRegistration.user.id, storage_path: path, amount_minor: isIndonesia ? 175000 : 1900, currency: isIndonesia ? "IDR" : "USD" }) });
+    const submission = await fetch(`${config.supabaseUrl}/rest/v1/payment_submissions`, { method: "POST", headers: { apikey: config.supabasePublishableKey, Authorization: `Bearer ${pendingRegistration.accessToken}`, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify({ user_id: pendingRegistration.user.id, storage_path: path, amount_minor: isIndonesia ? 179000 : 1900, currency: isIndonesia ? "IDR" : "USD" }) });
     if (!submission.ok) throw new Error((await submission.json()).message || "Could not register payment proof");
     fetch("/api/account", { method: "POST", headers: { Authorization: `Bearer ${pendingRegistration.accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify({ action: "notify-payment-proof" }) }).catch(() => {});
     setStatus(`Payment proof submitted. Your registration is ready for review and is ${config.approvalTimeText}.`);
