@@ -277,6 +277,10 @@ input, select, textarea { outline: none; }
   font-size: 1.1rem;
   font-weight: 600;
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--text);
 }
 
@@ -349,6 +353,12 @@ input, select, textarea { outline: none; }
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.page-header > .btn-primary:only-child,
+.page-header > .page-actions:only-child,
+.page-header > .report-period:only-child {
+  margin-left: auto;
 }
 
 /* ============================================================

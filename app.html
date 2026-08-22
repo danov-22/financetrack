@@ -118,7 +118,7 @@
           </a>
           <a href="#" class="nav-item" data-page="lists">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2" /></svg>
-            <span>Buy &amp; Pay</span>
+            <span>Checklist</span>
           </a>
           <a href="#" class="nav-item" data-page="planning">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2" /></svg>
@@ -313,7 +313,6 @@
         <!-- WALLETS PAGE -->
         <section id="page-wallets" class="page">
           <div class="page-header">
-            <h2>Wallets</h2>
             <button class="btn-primary" onclick="openWalletModal()">
               + Add Wallet
             </button>
@@ -324,7 +323,6 @@
         <!-- TRANSACTIONS PAGE -->
         <section id="page-transactions" class="page">
           <div class="page-header">
-            <h2>Transactions</h2>
             <div class="page-actions">
               <button class="btn-secondary" onclick="openTransferModal()">
                 Transfer
@@ -386,7 +384,6 @@
         <section id="page-calendar" class="page">
           <div class="page-header calendar-page-header">
             <div>
-              <h2>Calendar</h2>
               <p class="page-description">Review each day or add a transaction to a specific date.</p>
             </div>
             <button class="btn-primary" onclick="openTransactionForDate()">+ Add to selected day</button>
@@ -423,7 +420,7 @@
         </section>
 
         <section id="page-lists" class="page">
-          <div class="page-header"><div><h2>Buy &amp; Pay Lists</h2><p class="page-description">Keep a simple checklist, or give an item a due date and show it on your calendar.</p></div><button class="btn-primary" onclick="openListItemModal()">+ Add item</button></div>
+          <div class="page-header"><div><p class="page-description">Keep a simple checklist, or give an item a due date and show it on your calendar.</p></div><button class="btn-primary" onclick="openListItemModal()">+ Add item</button></div>
           <div class="list-summary" id="list-summary"></div>
           <div class="list-toolbar">
             <button class="list-filter active" data-list-filter="open" onclick="setListFilter('open')">Open</button><button class="list-filter" data-list-filter="all" onclick="setListFilter('all')">All</button><button class="list-filter" data-list-filter="buy" onclick="setListFilter('buy')">To buy</button><button class="list-filter" data-list-filter="pay" onclick="setListFilter('pay')">To pay</button><button class="list-filter" data-list-filter="completed" onclick="setListFilter('completed')">Completed</button>
@@ -432,7 +429,7 @@
         </section>
 
         <section id="page-planning" class="page">
-          <div class="page-header"><div><h2>Financial Planning</h2><p class="page-description">Set spending limits, build savings funds, and keep recurring bills visible.</p></div></div>
+          <div class="page-header"><div><p class="page-description">Set spending limits, build savings funds, and keep recurring bills visible.</p></div></div>
           <div class="planning-section"><div class="panel-header"><div><h3>Monthly category budgets</h3><p class="page-description">Bewlet warns you as spending approaches or passes each limit.</p></div><button class="btn-primary" onclick="openBudgetModal()">+ Add budget</button></div><div id="budgets-grid" class="planning-grid"></div></div>
           <div class="planning-section"><div class="panel-header"><div><h3>Savings goals &amp; sinking funds</h3><p class="page-description">Track progress toward planned purchases, emergencies, or annual expenses.</p></div><button class="btn-primary" onclick="openGoalModal()">+ Add goal</button></div><div id="goals-grid" class="planning-grid"></div></div>
           <div class="planning-section"><div class="panel-header"><div><h3>Recurring bills &amp; subscriptions</h3><p class="page-description">These use Bewlet’s recurring transactions and are included in your financial records.</p></div><button class="btn-primary" onclick="openRecurringBillModal()">+ Add recurring bill</button></div><div id="recurring-bills-list" class="buy-pay-list"></div></div>
@@ -441,7 +438,6 @@
         <!-- REPORTS PAGE -->
         <section id="page-reports" class="page">
           <div class="page-header">
-            <h2>Reports</h2>
             <div class="report-period">
               <select id="report-month" class="filter-select"></select>
               <select id="report-year" class="filter-select"></select>
@@ -472,8 +468,6 @@
 
         <!-- SETTINGS PAGE -->
         <section id="page-settings" class="page">
-          <div class="page-header"><h2>Settings</h2></div>
-
           <div class="settings-grid">
             <div class="settings-card account-card">
               <h3>Bewlet account</h3>
@@ -642,7 +636,7 @@
         >
           <path d="M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2" />
         </svg>
-        <span>Lists</span>
+        <span>Checklist</span>
       </a>
       <a href="#" class="bottom-nav-item" data-page="transactions">
         <svg

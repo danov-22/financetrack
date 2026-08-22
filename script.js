@@ -37,7 +37,7 @@ const IS_DEMO_MODE = Boolean(window.BEWLET_DEMO) || location.pathname === "/demo
 // ============================================================
 const BOTTOM_NAV_PAGES = {
   dashboard: "Home", wallets: "Wallets", transactions: "Transactions", calendar: "Calendar",
-  lists: "Lists", planning: "Planning", reports: "Reports", settings: "Settings",
+  lists: "Checklist", planning: "Planning", reports: "Reports", settings: "Settings",
 };
 
 const STATE = {
@@ -1346,7 +1346,7 @@ async function renderAccountManagement() {
   } catch (error) { showToast(error.message, "error"); }
 }
 async function connectGoogleDrive() { try { const response = await window.bewletAuthFetch("/api/google-oauth", { method: "POST", body: "{}" }); const data = await response.json(); if (!response.ok) throw new Error(data.error); location.assign(data.url); } catch (error) { showToast(error.message, "error"); } }
-function saveAccountName() { const input = document.getElementById("account-display-name"); STATE.accountName = (input?.value || "").trim().slice(0, 60); persistSettings(); renderAccountManagement(); showToast(STATE.accountName ? `Account name saved as “${STATE.accountName}”.` : "Custom account name removed.", "success"); }
+function saveAccountName() { const input = document.getElementById("account-display-name"); STATE.accountName = (input?.value || "").trim().slice(0, 60); persistSettings(); updatePageTitle(); renderAccountManagement(); showToast(STATE.accountName ? `Account name saved as “${STATE.accountName}”.` : "Custom account name removed.", "success"); }
 async function signOutBewlet() { const token = localStorage.getItem("bewlet_supabase_access_token"); const config = window.BEWLET_AUTH?.config; if (token && config?.supabaseUrl) await fetch(`${config.supabaseUrl}/auth/v1/logout`, { method: "POST", headers: { apikey: config.supabasePublishableKey, Authorization: `Bearer ${token}` } }).catch(() => {}); localStorage.removeItem("bewlet_supabase_access_token"); localStorage.removeItem("bewlet_supabase_refresh_token"); location.replace("/"); }
 async function createCloudBackup() { try { const response = await window.bewletAuthFetch("/api/sync", { method: "POST", body: JSON.stringify({ action: "backup" }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error); showToast("Backup saved to your Google Drive.", "success"); renderAccountManagement(); } catch (error) { showToast(error.message, "error"); } }
 async function restoreCloudBackup(backupId) { if (!confirm("Restore this backup? Bewlet will first back up your current cloud data.")) return; try { const response = await window.bewletAuthFetch("/api/sync", { method: "POST", body: JSON.stringify({ action: "restore", backupId }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error); applyManagedSnapshot({ ...data.snapshot, revision: data.revision }); showToast("Backup restored successfully.", "success"); refreshCurrentPage(); } catch (error) { showToast(error.message, "error"); } }
@@ -1575,6 +1575,7 @@ function getDateRangeBounds(range) {
 }
 
 function renderDashboard() {
+  updatePageTitle();
   const range = STATE.dashRange;
   const { from, to } = getDateRangeBounds(range);
   const periodTxs = STATE.transactions.filter(
@@ -2591,24 +2592,39 @@ function navigate(page) {
     a.classList.toggle("active", a.dataset.page === page);
   });
 
-  // Update page title
-  const titles = {
-    dashboard: "Dashboard",
-    wallets: "Wallets",
-    transactions: "Transactions",
-    calendar: "Calendar",
-    lists: "Buy & Pay Lists",
-    planning: "Financial Planning",
-    reports: "Reports",
-    settings: "Settings",
-  };
-  document.getElementById("page-title").textContent = titles[page] || page;
+  updatePageTitle();
 
   // Close mobile sidebar
   closeMobileSidebar();
 
   // Render content
   renderPage(page);
+}
+
+function dashboardOwnerName() {
+  const account = window.BEWLET_AUTH?.account;
+  let name = STATE.accountName || (account?.admin ? "Admin" : account?.profile?.display_name) || "";
+  name = String(name).trim().replace(/['’]s account$/i, "").replace(/ account$/i, "").trim();
+  return name;
+}
+
+function updatePageTitle() {
+  const titles = {
+    dashboard: "Dashboard",
+    wallets: "Wallets",
+    transactions: "Transactions",
+    calendar: "Calendar",
+    lists: "Checklist",
+    planning: "Financial Planning",
+    reports: "Reports",
+    settings: "Settings",
+  };
+  const owner = dashboardOwnerName();
+  const title = STATE.currentPage === "dashboard" && owner
+    ? `${owner}${/[sS]$/.test(owner) ? "’" : "’s"} Dashboard`
+    : (titles[STATE.currentPage] || STATE.currentPage);
+  const titleElement = document.getElementById("page-title");
+  if (titleElement) titleElement.textContent = title;
 }
 
 function renderPage(page) {
