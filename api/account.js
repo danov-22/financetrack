@@ -15,9 +15,13 @@ async function isAdmin(token, email = "") {
 }
 
 async function notifyDecision(profile, decision, reason) {
-  if (!process.env.RESEND_API_KEY || !process.env.APP_FROM_EMAIL) return;
+  if (!process.env.RESEND_API_KEY || !process.env.APP_FROM_EMAIL) return { sent: false, error: "Email notifications are not configured" };
   const approved = decision === "approved";
-  await fetch("https://api.resend.com/emails", { method: "POST", headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" }, body: JSON.stringify({ from: process.env.APP_FROM_EMAIL, to: profile.email, subject: approved ? "Your Bewlet access is approved" : "Update about your Bewlet registration", html: approved ? `<p>Your Bewlet account is approved.</p><p><a href="https://bewlet.vercel.app/">Sign in to continue</a>.</p>` : `<p>Your Bewlet registration was ${decision}.</p><p>${reason || "Contact support if you believe this is a mistake."}</p>` }) });
+  const appUrl = String(process.env.APP_ORIGIN || "https://bewlet.vercel.app").replace(/\/$/, "");
+  const response = await fetch("https://api.resend.com/emails", { method: "POST", headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" }, body: JSON.stringify({ from: process.env.APP_FROM_EMAIL, to: profile.email, subject: approved ? "Your Bewlet access is approved" : "Update about your Bewlet registration", html: approved ? `<h2>Welcome to Bewlet</h2><p>Hello ${emailHtml(profile.display_name || "there")},</p><p>Your Bewlet account has been approved. You can now sign in and connect your Google Drive.</p><p><a href="${emailHtml(appUrl)}">Open Bewlet</a></p><p>Your lifetime access is connected to ${emailHtml(profile.email)}.</p>` : `<h2>Bewlet registration update</h2><p>Your registration was ${emailHtml(decision)}.</p><p>${emailHtml(reason || "Contact support if you believe this is a mistake.")}</p>` }) });
+  if (response.ok) return { sent: true };
+  const data = await response.json().catch(() => ({}));
+  return { sent: false, error: data.message || "The email provider rejected the message" };
 }
 
 module.exports = async function handler(request, response) {
@@ -81,8 +85,8 @@ module.exports = async function handler(request, response) {
         const pending = await supabase(`/rest/v1/payment_submissions?user_id=eq.${encodeURIComponent(body.userId)}&status=eq.pending&select=id&order=submitted_at.desc&limit=1`);
         if (pending?.[0]) await supabase(`/rest/v1/payment_submissions?id=eq.${pending[0].id}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ status: paymentStatus, reviewed_at: new Date().toISOString(), rejection_reason: body.reason || null }) });
       }
-      await notifyDecision(reviewed, body.decision, body.reason);
-      return send(response, 200, { profile: reviewed });
+      const notification = await notifyDecision(reviewed, body.decision, body.reason).catch((error) => ({ sent: false, error: error.message }));
+      return send(response, 200, { profile: reviewed, notification });
     }
     if (body.action === "admin-delete-account") {
       if (!(await isAdmin(session.token, session.user.email))) return send(response, 403, { error: "Administrator access required" });

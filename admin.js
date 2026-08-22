@@ -48,7 +48,7 @@ async function load() {
 window.review = async (userId, decision) => {
   const reason = ["rejected","suspended"].includes(decision) ? prompt(`Reason for ${decision}:`) || `Account ${decision}` : "";
   if (!confirm(`${decision.charAt(0).toUpperCase() + decision.slice(1)} this account?`)) return;
-  try { await api("", { method:"POST", body:JSON.stringify({ action:"review", userId, decision, reason }) }); await load(); } catch (error) { statusEl.textContent = error.message; }
+  try { const result = await api("", { method:"POST", body:JSON.stringify({ action:"review", userId, decision, reason }) }); await load(); statusEl.textContent = result.notification?.sent ? `Account ${decision}. Email notification sent successfully.` : `Account ${decision}, but email was not delivered: ${result.notification?.error || "unknown email error"}`; } catch (error) { statusEl.textContent = error.message; }
 };
 
 window.deleteAndReset = async (userId, email) => {
