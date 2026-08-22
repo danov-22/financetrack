@@ -65,7 +65,7 @@ module.exports = async function handler(request, response) {
         profiles.forEach((profile) => { profile.payment = latestPayments.get(profile.id) || null; });
         let founderSlots = [];
         try { founderSlots = await supabase("/rest/v1/founder_slots?select=region,capacity,claimed"); }
-        catch (error) { warnings.push(`Founder counts: ${error.message}`); }
+        catch (error) { warnings.push(`Early-access counts: ${error.message}`); }
         return send(response, 200, { profiles, founderSlots, warnings });
       }
       const [connections, backups] = await Promise.all([
@@ -122,7 +122,7 @@ module.exports = async function handler(request, response) {
           const slots = await supabase(`/rest/v1/founder_slots?region=eq.${target.pricing_region}&select=claimed`);
           const claimed = Number(slots?.[0]?.claimed || 0);
           await supabase(`/rest/v1/founder_slots?region=eq.${target.pricing_region}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ claimed: Math.max(0, claimed - 1), updated_at: new Date().toISOString() }) });
-        } catch { warnings.push("The founder counter could not be adjusted automatically"); }
+        } catch { warnings.push("The early-access counter could not be adjusted automatically"); }
       }
       return send(response, 200, { deleted: true, warnings });
     }
