@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#4f46e5" />
-    <title>Bewlet — Tracking money made simple</title>
+    <title>Bewlet — Personal finance on every device</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml" sizes="any" />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -29,14 +29,15 @@
     <main>
       <section class="hero">
         <div class="hero-copy">
-          <span class="eyebrow">PRIVATE • SIMPLE • YOUR DATA</span>
-          <h1>Track your money from any device.</h1>
-          <p>Bewlet brings wallets, transactions, multi-currency totals, and reports into one calm dashboard. Your financial records stay in a Google Sheet owned by you.</p>
+          <span class="eyebrow">YOUR MONEY • YOUR WAY • YOUR DATA</span>
+          <h1>Your money. Your way. On every device.</h1>
+          <p>Bewlet is an all-in-one personal finance tracker that adapts to you. Track online or offline, personalize your workspace, and synchronize your records with a Google Sheet in your own Drive.</p>
           <div class="hero-actions">
             <a class="button primary" href="/demo" onclick="sessionStorage.setItem('bewlet_demo_mode','1')">Explore the demo</a>
             <button class="button secondary" data-login data-auth-mode="register">Register with Google</button>
           </div>
-          <p class="hero-note">No subscription. Early Access Lifetime Price from Rp179,000 or US$19.</p>
+          <div class="hero-trust" aria-label="Bewlet benefits"><span>No complicated setup</span><span>No subscription</span><span>Your data stays yours</span></div>
+          <p class="hero-note">Early Access Lifetime Price from Rp179,000 or US$19.</p>
         </div>
         <div class="hero-preview" aria-label="Bewlet dashboard preview">
           <div class="preview-top"><span></span><strong>Monthly overview</strong><small>August</small></div>
@@ -47,16 +48,16 @@
       </section>
 
       <section id="features" class="section">
-        <div class="section-heading"><span>Built for real life</span><h2>Finance tracking that stays understandable</h2></div>
-        <div class="feature-grid">
-          <article><span>↗</span><h3>Multi-currency totals</h3><p>Record expenses in different currencies and see normalized totals in your chosen currency.</p></article>
-          <article><span>▦</span><h3>Useful reports</h3><p>Understand cash flow, categories, monthly trends, and wallet balances at a glance.</p></article>
-          <article><span>◇</span><h3>You own the data</h3><p>Bewlet creates and uses a private spreadsheet inside your own Google Drive.</p></article>
+        <div class="section-heading"><span>BUILT AROUND YOU</span><h2>A complete finance workspace that still feels simple</h2></div>
+        <div class="feature-grid feature-grid-primary">
+          <article><span>01</span><h3>Your records stay yours</h3><p>Bewlet creates a private spreadsheet in your own Google Drive, keeping you in control of your financial records.</p></article>
+          <article><span>02</span><h3>Online, offline, everywhere</h3><p>Use Bewlet on mobile, tablet, or desktop. Keep tracking offline and synchronize when your connection returns.</p></article>
+          <article><span>03</span><h3>Personalized around you</h3><p>Choose your theme, accent, currencies, and quick-access pages so your finance workspace fits your routine.</p></article>
         </div>
       </section>
 
       <section id="product-tour" class="section product-tour">
-        <div class="section-heading"><span>SEE BEWLET IN ACTION</span><h2>Understand your money without learning a complicated system</h2><p>These previews show how Bewlet turns everyday financial decisions into a clear, visual routine.</p></div>
+        <div class="section-heading"><span>SEE BEWLET IN ACTION</span><h2>Everything you need, without a complicated system</h2><p>Track transactions, budgets, goals, recurring bills, calendars, checklists, and reports in one clear visual routine.</p></div>
 
         <article class="tour-row">
           <div class="tour-copy"><span class="tour-number">01</span><h3>See the full picture at a glance</h3><p>Your dashboard brings balances, income, expenses, savings, wallet totals, and trends into one calm overview.</p><ul><li>Totals automatically use your chosen currency</li><li>Switch between monthly, quarterly, and yearly views</li><li>Works comfortably on phones, tablets, and desktop</li></ul></div>
@@ -77,7 +78,7 @@
         </article>
 
         <article class="tour-row reverse personalize-tour">
-          <div class="tour-copy"><span class="tour-number">04</span><h3>Arrange Bewlet around your routine</h3><p>Your most-used pages stay one swipe away, while every other tool remains available in the slide-out drawer.</p><ul><li>Choose 2–6 pages for the mobile bottom bar</li><li>Rearrange shortcuts into your preferred order</li><li>Swipe left or right between selected pages</li><li>Swipe from the left edge to open every feature</li></ul></div>
+          <div class="tour-copy"><span class="tour-number">04</span><h3>Make Bewlet feel like yours</h3><p>Personalize the colors, currencies, and navigation around the way you manage money.</p><ul><li>Choose a curated theme or your own accent color</li><li>Keep preferred currencies ready for quick entry</li><li>Choose 2–6 pages for the mobile bottom bar</li><li>Swipe between selected pages or open every feature from the drawer</li></ul></div>
           <div class="product-shot navigation-shot" aria-label="Bewlet customizable navigation preview"><div class="navigation-phone"><div class="navigation-top"><b>Settings</b><span>🇮🇩 Rp</span></div><small>QUICK ACCESS NAVIGATION</small><p>Choose the pages you want in your bottom bar.</p><div class="shortcut-list"><div><i>☰</i><b>✓</b><span>Home</span><em>← →</em></div><div><i>☰</i><b>✓</b><span>Calendar</span><em>← →</em></div><div class="off"><i>☰</i><b></b><span>Reports</span></div><div class="off"><i>☰</i><b></b><span>Planning</span></div></div><div class="custom-bottom"><span class="active">⌂<small>Home</small></span><span>□<small>Calendar</small></span></div></div><div class="swipe-hint"><b>‹</b><span>Swipe between your chosen pages</span><b>›</b></div><div class="drawer-peek"><strong>All pages</strong><span>Dashboard</span><span>Wallets</span><span>Transactions</span><span>Calendar</span><span>Buy &amp; Pay</span><span>Planning</span></div></div>
         </article>
 
@@ -100,8 +101,17 @@
         </div>
       </section>
 
+      <section class="section setup-section">
+        <div class="section-heading"><span>READY IN THREE STEPS</span><h2>Easy to start. Yours from the beginning.</h2><p>Bewlet handles the technical setup while your financial records remain in your Google account.</p></div>
+        <div class="setup-steps">
+          <article><b>1</b><h3>Sign in with Google</h3><p>Use your approved Gmail account to open Bewlet securely.</p></article>
+          <article><b>2</b><h3>Connect Drive once</h3><p>Allow Bewlet to create and update its private spreadsheet in your Drive.</p></article>
+          <article><b>3</b><h3>Start tracking</h3><p>No API keys, shared finance database, or Apps Script setup required.</p></article>
+        </div>
+      </section>
+
       <section class="section browser-callout">
-        <div><span class="eyebrow">NO APP STORE REQUIRED</span><h2>Open. Sign in. Start tracking.</h2><p>Use Bewlet in your browser or install it to your home screen for an app-like experience.</p></div>
+        <div><span class="eyebrow">NO APP STORE REQUIRED</span><h2>Open it anywhere. Install it if you want.</h2><p>Use Bewlet in any modern browser or add it to your home screen for an app-like experience.</p></div>
         <button class="button primary" data-login data-auth-mode="register">Register with Google</button>
       </section>
 
