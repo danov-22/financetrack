@@ -120,11 +120,11 @@
       </section>
 
       <section class="section device-section">
-        <div class="section-heading"><span>BEWLET GOES WITH YOU</span><h2>One familiar workspace on every screen</h2><p>Install Bewlet on your phone or tablet, or open it directly from your desktop browser.</p></div>
-        <div class="device-stage" aria-label="Bewlet shown on phone, tablet, and desktop">
-          <div class="device device-desktop"><div class="device-frame"><div class="device-bar"><i></i><i></i><i></i><span>Bewlet · Dashboard</span></div><div class="device-ui"><aside><b>B</b><i></i><i></i><i></i></aside><main><small>WELCOME BACK</small><strong>Your financial overview</strong><div class="device-cards"><i></i><i></i><i></i></div><div class="device-graph"><span></span></div></main></div></div><p>Desktop</p></div>
-          <div class="device device-tablet"><div class="device-frame"><div class="device-notch"></div><div class="device-ui"><aside><b>B</b><i></i><i></i></aside><main><small>DASHBOARD</small><strong>Monthly overview</strong><div class="device-cards"><i></i><i></i></div><div class="device-graph"><span></span></div></main></div></div><p>Tablet</p></div>
-          <div class="device device-phone"><div class="device-frame"><div class="device-notch"></div><div class="device-mobile-head"><b>Bewlet</b><span>Rp</span></div><main><small>THIS MONTH</small><strong>Rp12,113,015</strong><div class="device-cards"><i></i><i></i></div><div class="device-graph"><span></span></div></main><nav><i></i><i></i><i></i><i></i></nav></div><p>Phone</p></div>
+        <div class="section-heading device-heading"><span>BEWLET GOES WITH YOU</span><h2>Install it beside the apps you already use</h2><p>Bewlet can live on your home screen for quick, app-like access without an app-store download.</p><button id="device-preview-toggle" class="device-preview-toggle" type="button" aria-expanded="false" aria-controls="device-preview"><span>See installed preview</span><i aria-hidden="true">⌄</i></button></div>
+        <div id="device-preview" class="install-preview" hidden>
+          <div class="install-device install-desktop"><div class="install-screen"><div class="install-status"><span>9:41</span><i></i></div><div class="install-icons"><i></i><i></i><i></i><i></i><div class="bewlet-installed"><img src="favicon.svg" alt="" /><b>Bewlet</b></div><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="install-dock"><i></i><i></i><i></i><i></i></div></div><p>Desktop</p></div>
+          <div class="install-device install-tablet"><div class="install-screen"><div class="install-status"><span>9:41</span><i></i></div><div class="install-icons"><i></i><i></i><i></i><i></i><div class="bewlet-installed"><img src="favicon.svg" alt="" /><b>Bewlet</b></div><i></i><i></i><i></i><i></i></div><div class="install-dock"><i></i><i></i><i></i><i></i></div></div><p>Tablet</p></div>
+          <div class="install-device install-phone"><div class="install-screen"><div class="install-status"><span>9:41</span><i></i></div><div class="install-icons"><i></i><i></i><i></i><i></i><div class="bewlet-installed"><img src="favicon.svg" alt="" /><b>Bewlet</b></div><i></i><i></i><i></i></div><div class="install-dock"><i></i><i></i><i></i><i></i></div></div><p>Phone</p></div>
         </div>
       </section>
 
@@ -161,6 +161,16 @@
       </div>
     </div>
     <script type="module" src="auth.js"></script>
-    <script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");</script>
+    <script>
+      if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");
+      const deviceToggle = document.getElementById("device-preview-toggle");
+      const devicePreview = document.getElementById("device-preview");
+      deviceToggle?.addEventListener("click", () => {
+        const opening = devicePreview.hidden;
+        devicePreview.hidden = !opening;
+        deviceToggle.setAttribute("aria-expanded", String(opening));
+        deviceToggle.querySelector("span").textContent = opening ? "Hide installed preview" : "See installed preview";
+      });
+    </script>
   </body>
 </html>
