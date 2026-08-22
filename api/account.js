@@ -1,5 +1,13 @@
 const { send, supabase, authenticatedUser, googleAccessFor, googleFetch } = require("./_lib");
 
+const emailHtml = (value) => String(value || "").replace(/[&<>"']/g, (character) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" })[character]);
+
+async function sendAdminEmail(subject, html) {
+  if (!process.env.RESEND_API_KEY || !process.env.APP_FROM_EMAIL || !process.env.ADMIN_EMAIL) return false;
+  const result = await fetch("https://api.resend.com/emails", { method: "POST", headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" }, body: JSON.stringify({ from: process.env.APP_FROM_EMAIL, to: String(process.env.ADMIN_EMAIL).split(",").map((email) => email.trim()).filter(Boolean), subject, html }) });
+  return result.ok;
+}
+
 async function isAdmin(token, email = "") {
   const ownerEmails = String(process.env.ADMIN_EMAIL || "").split(",").map((value) => value.trim().toLowerCase()).filter(Boolean);
   if (ownerEmails.includes(String(email).trim().toLowerCase())) return true;
@@ -21,6 +29,7 @@ module.exports = async function handler(request, response) {
         if (!admin) return send(response, 403, { error: "Administrator access required" });
         let authUsers = [];
         const warnings = [];
+        if (!process.env.RESEND_API_KEY || !process.env.APP_FROM_EMAIL || !process.env.ADMIN_EMAIL) warnings.push("Email notifications are not configured");
         try {
           const serverKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
           const authData = await supabase("/auth/v1/admin/users?page=1&per_page=1000", { headers: { Authorization: `Bearer ${serverKey}` } });
@@ -120,6 +129,15 @@ module.exports = async function handler(request, response) {
       }
       await supabase(`/rest/v1/profiles?id=eq.${session.user.id}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ registration_notified_at: new Date().toISOString() }) });
       return send(response, 200, { notified: true });
+    }
+    if (body.action === "notify-payment-proof") {
+      const payments = await supabase(`/rest/v1/payment_submissions?user_id=eq.${encodeURIComponent(session.user.id)}&status=eq.pending&select=id,amount_minor,currency,submitted_at&order=submitted_at.desc&limit=1`);
+      const payment = payments?.[0];
+      if (!payment) return send(response, 404, { error: "Payment proof submission not found" });
+      const amount = payment.currency === "USD" ? `US$${(Number(payment.amount_minor) / 100).toFixed(2)}` : `Rp${Number(payment.amount_minor).toLocaleString("en-US")}`;
+      const adminUrl = `${String(process.env.APP_ORIGIN || "https://bewlet.vercel.app").replace(/\/$/, "")}/admin`;
+      const notified = await sendAdminEmail("Bewlet payment proof ready for review", `<h2>New payment proof submitted</h2><p><strong>${emailHtml(session.profile.display_name || session.profile.email)}</strong> (${emailHtml(session.profile.email)}) has submitted a ${emailHtml(amount)} payment proof.</p><p>The image remains private. Open Bewlet Admin to review the registration and proof.</p><p><a href="${emailHtml(adminUrl)}">Open Bewlet Admin</a></p>`).catch(() => false);
+      return send(response, 200, { notified });
     }
     if (body.action === "disconnect-google") {
       try { const access = await googleAccessFor(session.user.id); await fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(access)}`, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" } }); } catch {}

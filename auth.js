@@ -211,6 +211,7 @@ async function submitPaymentProof() {
     const isIndonesia = pendingRegistration.region === "ID";
     const submission = await fetch(`${config.supabaseUrl}/rest/v1/payment_submissions`, { method: "POST", headers: { apikey: config.supabasePublishableKey, Authorization: `Bearer ${pendingRegistration.accessToken}`, "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify({ user_id: pendingRegistration.user.id, storage_path: path, amount_minor: isIndonesia ? 175000 : 1900, currency: isIndonesia ? "IDR" : "USD" }) });
     if (!submission.ok) throw new Error((await submission.json()).message || "Could not register payment proof");
+    fetch("/api/account", { method: "POST", headers: { Authorization: `Bearer ${pendingRegistration.accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify({ action: "notify-payment-proof" }) }).catch(() => {});
     setStatus(`Payment proof submitted. Your registration is ready for review and is ${config.approvalTimeText}.`);
     document.getElementById("payment-proof-panel").hidden = true;
   } catch (error) { setStatus(error.message, true); }
