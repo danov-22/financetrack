@@ -46,6 +46,7 @@ const STATE = {
   categories: [],
   pendingQueue: [], // offline mutations waiting to sync
   feedback: [],
+  notifications: [],
   listItems: [],
   listFilter: "open",
   budgets: [],
@@ -502,6 +503,17 @@ async function apiWithdrawFeedback(id) {
 async function apiDeleteFeedback(id) {
   if (isManagedSync()) { const response = await window.bewletAuthFetch("/api/feedback", { method: "POST", body: JSON.stringify({ action: "deleteFeedback", id }) }); return response.json(); }
   return gasRequest({ method: "POST", body: { action: "deleteFeedback", id, userId: STATE.installationId } });
+}
+
+async function apiGetNotifications() {
+  if (!isManagedSync()) return { notifications: [] };
+  const response = await window.bewletAuthFetch("/api/notifications");
+  return response.json();
+}
+
+async function apiMarkNotificationRead(id) {
+  if (!isManagedSync()) return;
+  await window.bewletAuthFetch("/api/notifications", { method:"POST", body:JSON.stringify({ action:"mark-read", id }) });
 }
 
 // ============================================================
@@ -1466,6 +1478,46 @@ function checkUpcomingPlannedTransactions(force = false) {
   }
   shown[key] = Date.now();
   LS.set("fin_planned_reminders_shown", shown);
+}
+
+function localReminderNotifications() {
+  const today = getTodayISO();
+  const end = new Date(`${today}T00:00:00`);
+  end.setDate(end.getDate() + STATE.reminderDays);
+  const until = formatLocalISODate(end);
+  const transactionReminders = STATE.transactions.filter((item) => item.status === "planned" && item.date <= until).map((item) => ({ id:`reminder-tx-${item.id}-${item.date}`, kind:"reminder", title:item.date < today ? "Planned transaction overdue" : "Upcoming planned transaction", message:`${item.description || item.category || "Transaction"} · ${formatAmount(transactionAmount(item))} · ${formatDateShort(item.date)}`, created_at:`${item.date}T00:00:00`, local:true }));
+  const checklistReminders = STATE.listItems.filter((item) => !item.completed && item.dueDate && item.dueDate <= until).map((item) => ({ id:`reminder-list-${item.id}-${item.dueDate}`, kind:"reminder", title:item.dueDate < today ? "Checklist item overdue" : "Upcoming checklist item", message:`${item.title}${item.amount ? ` · ${getCurrencySymbol(item.currency || STATE.currency)}${Number(item.amount).toLocaleString()}` : ""} · ${formatDateShort(item.dueDate)}`, created_at:`${item.dueDate}T00:00:00`, local:true }));
+  return [...transactionReminders, ...checklistReminders];
+}
+
+function renderNotificationCenter() {
+  const readLocal = new Set(LS.get("fin_notification_reads", []));
+  const items = [...STATE.notifications, ...localReminderNotifications()].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+  const unread = items.filter((item) => item.local ? !readLocal.has(item.id) : !item.read).length;
+  const badge = document.getElementById("notification-badge");
+  if (badge) { badge.textContent = unread > 99 ? "99+" : String(unread); badge.classList.toggle("hidden", unread === 0); }
+  const container = document.getElementById("notification-list");
+  if (!container) return;
+  if (!items.length) { container.innerHTML = '<div class="notification-empty">You’re all caught up.</div>'; return; }
+  const symbols = { feedback:"💬", update:"✨", maintenance:"🔧", reminder:"⏰" };
+  container.innerHTML = items.map((item) => { const read = item.local ? readLocal.has(item.id) : item.read; return `<button class="notification-item ${read ? "" : "unread"}" onclick="readNotification('${escHtml(item.id)}',${item.local ? "true" : "false"})"><span class="notification-symbol">${symbols[item.kind] || "•"}</span><span><h4>${escHtml(item.title)}</h4><p>${escHtml(item.message)}</p><time>${new Date(item.created_at).toLocaleString()}</time></span></button>`; }).join("");
+}
+
+async function loadNotifications(showHeadsUp = false) {
+  try {
+    const response = await apiGetNotifications();
+    STATE.notifications = response.notifications || [];
+    renderNotificationCenter();
+    const priority = STATE.notifications.find((item) => !item.read && item.kind === "maintenance");
+    if (showHeadsUp && priority) showToast(`${priority.title}: ${priority.message}`, "warning", 9000);
+  } catch {}
+}
+
+function openNotificationCenter() { renderNotificationCenter(); openModal("modal-notifications"); if (!IS_DEMO_MODE) loadNotifications(false); }
+async function readNotification(id, local) {
+  if (local) { const reads = new Set(LS.get("fin_notification_reads", [])); reads.add(id); LS.set("fin_notification_reads", [...reads].slice(-300)); }
+  else { const item = STATE.notifications.find((notification) => notification.id === id); if (item) item.read = true; await apiMarkNotificationRead(id).catch(() => {}); }
+  renderNotificationCenter();
 }
 
 function saveGASUrl() {
@@ -2908,10 +2960,11 @@ function renderFeedbackHistory() {
     return `<article class="feedback-entry ${withdrawn ? "withdrawn" : ""}">
       <div class="feedback-entry-head">
         <span class="feedback-type">${escHtml(item.type)}</span>
-        <span class="feedback-status">${withdrawn ? "Withdrawn" : item.status === "sent" ? "Sent" : "Saved locally"}</span>
+        <span class="feedback-status">${withdrawn ? "Withdrawn" : ({ open:"Received", reviewing:"Under review", resolved:"Resolved", sent:"Sent" })[item.status] || "Saved locally"}</span>
       </div>
       <p>${escHtml(item.message)}</p>
       ${item.attachmentUrl ? `<a class="feedback-attachment-link" href="${escHtml(item.attachmentUrl)}" target="_blank" rel="noopener">View attached screenshot</a>` : ""}
+      ${item.adminReply ? `<div class="feedback-admin-reply"><strong>Bewlet replied</strong><p>${escHtml(item.adminReply)}</p></div>` : ""}
       <div class="feedback-entry-foot">
         <time>${new Date(item.createdTime).toLocaleString()}</time>
         <div class="feedback-entry-actions">
@@ -2932,7 +2985,7 @@ async function submitFeedback(event) {
     return;
   }
   if (pendingFeedbackScreenshot && (!STATE.gasUrl || !STATE.isOnline)) {
-    showToast("Connect to Google Sheets and go online to share a screenshot.", "warning");
+    showToast("Go online before sharing a screenshot.", "warning");
     return;
   }
   const feedback = {
@@ -2967,7 +3020,10 @@ async function submitFeedback(event) {
       removeFeedbackScreenshot();
       persistFeedback();
       renderFeedbackHistory();
-    } catch {}
+    } catch (error) {
+      showToast(error.message || "Feedback could not be sent. It remains saved on this device.", "warning", 6000);
+      return;
+    }
   }
   const preview = `${message.slice(0, 70)}${message.length > 70 ? "…" : ""}`;
   showToast(`Feedback received: “${preview}”`, "success");
@@ -3282,6 +3338,8 @@ window.enablePlannedReminders = enablePlannedReminders;
 window.setAppearanceMode = setAppearanceMode;
 window.handleFeedbackScreenshot = handleFeedbackScreenshot;
 window.removeFeedbackScreenshot = removeFeedbackScreenshot;
+window.openNotificationCenter = openNotificationCenter;
+window.readNotification = readNotification;
 
 // ============================================================
 // BOOT
@@ -3311,6 +3369,9 @@ function boot() {
   renderPage("dashboard");
   updateExchangeRates();
   checkUpcomingPlannedTransactions();
+  renderNotificationCenter();
+  if (!IS_DEMO_MODE && window.BEWLET_AUTH) setTimeout(() => loadNotifications(true), 700);
+  if (!IS_DEMO_MODE && window.BEWLET_AUTH) setInterval(() => loadNotifications(true), 5 * 60 * 1000);
   setTimeout(checkBudgetAlerts, 400);
 
   const googleResult = new URLSearchParams(location.search).get("google");

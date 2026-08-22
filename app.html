@@ -216,6 +216,7 @@
           </button>
           <h1 id="page-title" class="page-title">Dashboard</h1>
           <div class="topbar-actions">
+            <button id="notification-button" class="notification-button" onclick="openNotificationCenter()" title="Notifications" aria-label="Open notifications"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 00-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span id="notification-badge" class="notification-badge hidden">0</span></button>
             <div id="sync-indicator" class="sync-indicator" title="Sync status">
               <svg
                 class="sync-icon"
@@ -901,6 +902,13 @@
           <h4>What you’ve sent</h4>
           <div id="feedback-history" class="feedback-history"></div>
         </div>
+      </div>
+    </div>
+
+    <div id="modal-notifications" class="modal-overlay" onclick="closeModalOutside(event, 'modal-notifications')">
+      <div class="modal notification-modal">
+        <div class="modal-header"><div><h3>Notifications</h3><p>Updates, maintenance, feedback replies, and reminders</p></div><button class="modal-close" onclick="closeModal('modal-notifications')">&times;</button></div>
+        <div id="notification-list" class="notification-list"></div>
       </div>
     </div>
 

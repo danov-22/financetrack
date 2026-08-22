@@ -289,6 +289,7 @@ input, select, textarea { outline: none; }
   align-items: center;
   gap: 12px;
 }
+.notification-button{position:relative;display:grid;place-items:center;width:34px;height:34px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);color:var(--text-2)}.notification-button:hover{color:var(--accent);border-color:var(--accent)}.notification-badge{position:absolute;right:-5px;top:-6px;min-width:18px;height:18px;padding:0 4px;border-radius:10px;background:var(--expense);color:#fff;font-size:.65rem;font-weight:800;display:grid;place-items:center}.notification-list{display:grid;gap:9px;padding:4px 22px 22px;max-height:min(68vh,620px);overflow-y:auto}.notification-item{display:grid;grid-template-columns:34px 1fr;gap:10px;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}.notification-item.unread{border-color:var(--accent);background:var(--accent-light)}.notification-symbol{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--surface-2)}.notification-item h4{margin:0 0 4px;font-size:.88rem}.notification-item p{margin:0;color:var(--text-2);font-size:.8rem;overflow-wrap:anywhere}.notification-item time{display:block;margin-top:7px;color:var(--text-3);font-size:.68rem}.notification-empty{padding:30px;text-align:center;color:var(--text-3)}
 
 .sync-indicator {
   display: flex;
@@ -1389,6 +1390,7 @@ input, select, textarea { outline: none; }
 .feedback-entry-actions { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .feedback-entry-actions .feedback-delete { color: var(--expense); }
 .feedback-entry.withdrawn p { text-decoration: line-through; opacity: .55; }
+.feedback-admin-reply{margin:9px 0;padding:10px;border-radius:9px;background:var(--accent-light);border-left:3px solid var(--accent)}.feedback-admin-reply strong{font-size:.72rem;color:var(--accent)}.feedback-admin-reply p{margin:4px 0 0!important;text-decoration:none!important;opacity:1!important}
 .withdrawn-mark { color: var(--warning); font-size: .7rem; font-weight: 600; }
 
 /* ============================================================
