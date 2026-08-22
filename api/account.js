@@ -22,7 +22,8 @@ module.exports = async function handler(request, response) {
         let authUsers = [];
         const warnings = [];
         try {
-          const authData = await supabase("/auth/v1/admin/users?page=1&per_page=1000");
+          const serverKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+          const authData = await supabase("/auth/v1/admin/users?page=1&per_page=1000", { headers: { Authorization: `Bearer ${serverKey}` } });
           authUsers = authData.users || [];
           const existing = await supabase("/rest/v1/profiles?select=id");
           const existingIds = new Set((existing || []).map((profile) => profile.id));
