@@ -59,6 +59,7 @@ const STATE = {
   theme: "light",
   themePreset: "original",
   customThemeColor: "#7c3aed",
+  accountName: "",
   currentPage: "dashboard",
   dashRange: "month",
   calendarMonth: "",
@@ -126,6 +127,7 @@ function loadStateFromLS() {
   STATE.themePreset = LS.get("fin_theme_preset", "original");
   STATE.themePreset = ({ indigo: "royal", emerald: "wealth", sunset: "gold", rose: "berry" })[STATE.themePreset] || STATE.themePreset;
   STATE.customThemeColor = LS.get("fin_custom_theme_color", "#7c3aed");
+  STATE.accountName = LS.get("fin_account_name", "");
   STATE.reminderDays = Number(LS.get("fin_reminder_days", 3)) || 3;
   const savedBottomNav = LS.get("fin_bottom_nav_pages", null);
   if (Array.isArray(savedBottomNav)) STATE.bottomNavPages = savedBottomNav.filter((page) => BOTTOM_NAV_PAGES[page]).slice(0, 6);
@@ -140,7 +142,7 @@ function markCloudDirty() {
   if (window.BEWLET_AUTH && !STATE.isHydrating) {
     STATE.cloudDirty = true; LS.set("fin_cloud_dirty", true);
     clearTimeout(_managedSyncTimer);
-    if (navigator.onLine) _managedSyncTimer = setTimeout(() => { if (!STATE.isSyncing && STATE.cloudDirty) syncNow(); }, 1400);
+    if (navigator.onLine && window.BEWLET_AUTH?.account?.google) _managedSyncTimer = setTimeout(() => { if (!STATE.isSyncing && STATE.cloudDirty) syncNow(); }, 1400);
   }
 }
 
@@ -172,6 +174,7 @@ function persistSettings() {
   LS.set("fin_theme", STATE.theme);
   LS.set("fin_theme_preset", STATE.themePreset);
   LS.set("fin_custom_theme_color", STATE.customThemeColor);
+  LS.set("fin_account_name", STATE.accountName);
   LS.set("fin_reminder_days", STATE.reminderDays);
   LS.set("fin_bottom_nav_pages", STATE.bottomNavPages);
   markCloudDirty();
@@ -363,7 +366,7 @@ function buildManagedSnapshot() {
   return {
     transactions: STATE.transactions, wallets: STATE.wallets, categories: STATE.categories,
     listItems: STATE.listItems, budgets: STATE.budgets, goals: STATE.goals,
-    settings: { currency: STATE.currency, favoriteCurrencies: STATE.favoriteCurrencies, theme: STATE.theme, themePreset: STATE.themePreset, customThemeColor: STATE.customThemeColor, reminderDays: STATE.reminderDays, bottomNavPages: STATE.bottomNavPages },
+    settings: { currency: STATE.currency, favoriteCurrencies: STATE.favoriteCurrencies, theme: STATE.theme, themePreset: STATE.themePreset, customThemeColor: STATE.customThemeColor, accountName: STATE.accountName, reminderDays: STATE.reminderDays, bottomNavPages: STATE.bottomNavPages },
   };
 }
 function applyManagedSnapshot(snapshot) {
@@ -380,6 +383,7 @@ function applyManagedSnapshot(snapshot) {
   if (settings.theme) STATE.theme = settings.theme;
   if (settings.themePreset) STATE.themePreset = settings.themePreset;
   if (settings.customThemeColor) STATE.customThemeColor = settings.customThemeColor;
+  if (typeof settings.accountName === "string") STATE.accountName = settings.accountName;
   if (settings.reminderDays) STATE.reminderDays = Number(settings.reminderDays);
   if (settings.bottomNavPages?.length >= 2) STATE.bottomNavPages = settings.bottomNavPages;
   STATE.syncRevision = snapshot.revision || STATE.syncRevision;
@@ -409,6 +413,10 @@ async function managedPush(force = false) {
   STATE.cloudDirty = false;
   LS.set("fin_cloud_dirty", false);
   return { success: true, data };
+}
+function managedMutation() {
+  if (!window.BEWLET_AUTH?.account?.google) return Promise.resolve({ success: true, localOnly: true });
+  return managedPush();
 }
 
 async function gasRequest(params) {
@@ -446,22 +454,22 @@ async function apiGetSettings() {
 }
 
 async function apiAdd(tx) {
-  if (isManagedSync()) return managedPush();
+  if (isManagedSync()) return managedMutation();
   return gasRequest({ method: "POST", body: { action: "add", ...tx } });
 }
 
 async function apiUpdate(tx) {
-  if (isManagedSync()) return managedPush();
+  if (isManagedSync()) return managedMutation();
   return gasRequest({ method: "POST", body: { action: "update", ...tx } });
 }
 
 async function apiDelete(id) {
-  if (isManagedSync()) return managedPush();
+  if (isManagedSync()) return managedMutation();
   return gasRequest({ method: "POST", body: { action: "delete", id } });
 }
 
 async function apiAddSetting(type, name) {
-  if (isManagedSync()) return managedPush();
+  if (isManagedSync()) return managedMutation();
   return gasRequest({
     method: "POST",
     body: { action: "addSetting", type, name },
@@ -469,7 +477,7 @@ async function apiAddSetting(type, name) {
 }
 
 async function apiDeleteSetting(type, name) {
-  if (isManagedSync()) return managedPush();
+  if (isManagedSync()) return managedMutation();
   return gasRequest({
     method: "POST",
     body: { action: "deleteSetting", type, name },
@@ -558,6 +566,10 @@ async function syncNow() {
   }
   if (!STATE.isOnline) {
     showToast("You are offline. Will sync when back online.", "warning");
+    return;
+  }
+  if (isManagedSync() && !window.BEWLET_AUTH?.account?.google) {
+    showToast("Connect Google Drive in Settings before cloud synchronization. Your changes remain saved on this device.", "info", 5000);
     return;
   }
 
@@ -1319,7 +1331,10 @@ async function renderAccountManagement() {
     const account = await accountApi();
     window.BEWLET_AUTH.account = account;
     const summary = document.getElementById("account-summary");
-    if (summary) summary.innerHTML = `<span>✓</span><div><strong>${escHtml(account.profile.display_name || account.user.email)}</strong><small>${escHtml(account.user.email)} · ${escHtml(account.profile.license_type || "Approved access")}</small></div>`;
+    const accountLabel = STATE.accountName || (account.admin ? "Admin" : account.profile.display_name) || account.user.email;
+    if (summary) summary.innerHTML = `<span>✓</span><div><strong>${escHtml(accountLabel)}</strong><small>${escHtml(account.user.email)} · ${escHtml(account.profile.license_type || "Approved access")}</small></div>`;
+    const nameInput = document.getElementById("account-display-name");
+    if (nameInput) nameInput.value = STATE.accountName;
     const drive = document.getElementById("google-drive-status");
     if (drive) { drive.className = `account-connection${account.google ? " connected" : ""}`; drive.textContent = account.google ? `Google Drive connected as ${account.google.google_email || account.user.email}.` : "Google Drive is not connected. Connect it to create your private Bewlet spreadsheet."; }
     const connect = document.getElementById("connect-google-drive");
@@ -1331,6 +1346,7 @@ async function renderAccountManagement() {
   } catch (error) { showToast(error.message, "error"); }
 }
 async function connectGoogleDrive() { try { const response = await window.bewletAuthFetch("/api/google-oauth", { method: "POST", body: "{}" }); const data = await response.json(); if (!response.ok) throw new Error(data.error); location.assign(data.url); } catch (error) { showToast(error.message, "error"); } }
+function saveAccountName() { const input = document.getElementById("account-display-name"); STATE.accountName = (input?.value || "").trim().slice(0, 60); persistSettings(); renderAccountManagement(); showToast(STATE.accountName ? `Account name saved as “${STATE.accountName}”.` : "Custom account name removed.", "success"); }
 async function signOutBewlet() { const token = localStorage.getItem("bewlet_supabase_access_token"); const config = window.BEWLET_AUTH?.config; if (token && config?.supabaseUrl) await fetch(`${config.supabaseUrl}/auth/v1/logout`, { method: "POST", headers: { apikey: config.supabasePublishableKey, Authorization: `Bearer ${token}` } }).catch(() => {}); localStorage.removeItem("bewlet_supabase_access_token"); localStorage.removeItem("bewlet_supabase_refresh_token"); location.replace("/"); }
 async function createCloudBackup() { try { const response = await window.bewletAuthFetch("/api/sync", { method: "POST", body: JSON.stringify({ action: "backup" }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error); showToast("Backup saved to your Google Drive.", "success"); renderAccountManagement(); } catch (error) { showToast(error.message, "error"); } }
 async function restoreCloudBackup(backupId) { if (!confirm("Restore this backup? Bewlet will first back up your current cloud data.")) return; try { const response = await window.bewletAuthFetch("/api/sync", { method: "POST", body: JSON.stringify({ action: "restore", backupId }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error); applyManagedSnapshot({ ...data.snapshot, revision: data.revision }); showToast("Backup restored successfully.", "success"); refreshCurrentPage(); } catch (error) { showToast(error.message, "error"); } }
@@ -2859,6 +2875,7 @@ function openFeedbackModal() {
   document.getElementById("feedback-error").textContent = "";
   renderFeedbackHistory();
   openModal("modal-feedback");
+  syncFeedbackHistory();
   setTimeout(() => document.getElementById("feedback-message")?.focus(), 250);
 }
 
@@ -3205,6 +3222,7 @@ window.openRecurringBillModal = openRecurringBillModal;
 window.toggleBottomNavPage = toggleBottomNavPage;
 window.moveBottomNavPage = moveBottomNavPage;
 window.connectGoogleDrive = connectGoogleDrive;
+window.saveAccountName = saveAccountName;
 window.signOutBewlet = signOutBewlet;
 window.createCloudBackup = createCloudBackup;
 window.restoreCloudBackup = restoreCloudBackup;
@@ -3276,7 +3294,6 @@ function boot() {
   // Render initial page
   renderPage("dashboard");
   updateExchangeRates();
-  syncFeedbackHistory();
   checkUpcomingPlannedTransactions();
   setTimeout(checkBudgetAlerts, 400);
 

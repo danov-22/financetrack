@@ -35,6 +35,8 @@ module.exports = async function handler(request, response) {
         catch (error) { warnings.push(`Profiles: ${error.message}`); }
         const profileIds = new Set(profiles.map((profile) => profile.id));
         profiles.push(...authUsers.filter((user) => !profileIds.has(user.id)).map((user) => ({ id: user.id, email: user.email || "", display_name: user.user_metadata?.full_name || user.email, status: "pending", pricing_region: "INTL", license_type: null, created_at: user.created_at })));
+        const authById = new Map(authUsers.map((user) => [user.id, user]));
+        profiles.forEach((profile) => { const authUser = authById.get(profile.id); profile.last_sign_in_at = authUser?.last_sign_in_at || null; });
         let payments = [];
         try { payments = await supabase("/rest/v1/payment_submissions?select=id,user_id,storage_path,amount_minor,currency,status,submitted_at&order=submitted_at.desc"); }
         catch (error) { warnings.push(`Payments: ${error.message}`); }
@@ -48,7 +50,10 @@ module.exports = async function handler(request, response) {
           latestPayments.set(payment.user_id, payment);
         }
         profiles.forEach((profile) => { profile.payment = latestPayments.get(profile.id) || null; });
-        return send(response, 200, { profiles, warnings });
+        let founderSlots = [];
+        try { founderSlots = await supabase("/rest/v1/founder_slots?select=region,capacity,claimed"); }
+        catch (error) { warnings.push(`Founder counts: ${error.message}`); }
+        return send(response, 200, { profiles, founderSlots, warnings });
       }
       const [connections, backups] = await Promise.all([
         supabase(`/rest/v1/google_connections?user_id=eq.${session.user.id}&select=google_email,connected_at`).catch(() => []),
