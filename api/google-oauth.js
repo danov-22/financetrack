@@ -6,7 +6,7 @@ module.exports = async function handler(request, response) {
       const { user } = await authenticatedUser(request, true);
       const state = signedState({ userId: user.id, exp: Date.now() + 10 * 60 * 1000 });
       const redirectUri = `${process.env.APP_ORIGIN || "https://bewlet.vercel.app"}/api/google-oauth`;
-      const params = new URLSearchParams({ client_id: process.env.GOOGLE_CLIENT_ID, redirect_uri: redirectUri, response_type: "code", access_type: "offline", prompt: "consent", include_granted_scopes: "true", scope: "openid email https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets", state });
+      const params = new URLSearchParams({ client_id: process.env.GOOGLE_CLIENT_ID, redirect_uri: redirectUri, response_type: "code", access_type: "offline", prompt: "consent", include_granted_scopes: "true", scope: "openid email https://www.googleapis.com/auth/drive.file", state });
       return send(response, 200, { url: `https://accounts.google.com/o/oauth2/v2/auth?${params}` });
     }
     if (request.method !== "GET") return send(response, 405, { error: "Method not allowed" });
