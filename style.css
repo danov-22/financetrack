@@ -1433,6 +1433,7 @@ input, select, textarea { outline: none; }
   word-break: break-word;
 }
 .toast > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.toast > span:last-child{display:-webkit-box;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:3;line-clamp:3}
 
 .toast.success { border-left: 3px solid var(--income); color: var(--text); }
 .toast.error { border-left: 3px solid var(--expense); color: var(--text); }

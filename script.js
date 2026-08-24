@@ -1509,7 +1509,7 @@ async function loadNotifications(showHeadsUp = false) {
     STATE.notifications = response.notifications || [];
     renderNotificationCenter();
     const priority = STATE.notifications.find((item) => !item.read && item.kind === "maintenance");
-    if (showHeadsUp && priority) showToast(`${priority.title}: ${priority.message}`, "warning", 9000);
+    if (showHeadsUp && priority) showToast(`New announcement: ${priority.title}. Open Notifications to read it.`, "warning", 5500);
   } catch {}
 }
 
