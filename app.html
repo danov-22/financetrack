@@ -469,8 +469,26 @@
             <button class="settings-tab" data-settings-tab="preferences" onclick="setSettingsTab('preferences')">Preferences</button>
             <button class="settings-tab" data-settings-tab="organize" onclick="setSettingsTab('organize')">Organize</button>
             <button class="settings-tab" data-settings-tab="data" onclick="setSettingsTab('data')">Data</button>
+            <button class="settings-tab" data-settings-tab="guide" onclick="setSettingsTab('guide')">How to use</button>
           </nav>
           <div class="settings-grid">
+            <div class="settings-card guide-card" data-settings-panel="guide">
+              <div class="guide-heading"><span class="guide-icon" aria-hidden="true">?</span><div><h3>How to use Bewlet</h3><p class="settings-desc">A quick guide from first setup to everyday money tracking.</p></div></div>
+              <div class="guide-steps" aria-label="Bewlet quick start">
+                <div><span>1</span><strong>Connect</strong><small>Link Google Drive once.</small></div>
+                <div><span>2</span><strong>Personalize</strong><small>Choose currency, theme, and shortcuts.</small></div>
+                <div><span>3</span><strong>Track</strong><small>Add transactions and review progress.</small></div>
+              </div>
+            </div>
+
+            <div class="settings-card guide-card" data-settings-panel="guide">
+              <details class="guide-topic" open><summary><span>Getting started</span><small>Your one-time setup</small></summary><div class="guide-topic-body"><p><strong>Connect Google Drive</strong> in Account. Bewlet creates and manages your private Google Sheet automatically.</p><p>Then choose your main currency, quick currencies, theme, and preferred bottom navigation in Settings.</p></div></details>
+              <details class="guide-topic"><summary><span>Move around Bewlet</span><small>Drawer, tabs, and swipe</small></summary><div class="guide-topic-body"><p><strong>Swipe right from the left edge</strong> to open the full menu, and swipe left to close it.</p><p><strong>Swipe left or right on the page</strong> to move between pages in your chosen bottom navigation. Horizontal tab rows can be swiped separately.</p></div></details>
+              <details class="guide-topic"><summary><span>Everyday tracking</span><small>Transactions, calendar, and privacy</small></summary><div class="guide-topic-body"><p>Tap the floating <strong>+</strong> button to record income, expenses, savings, or transfers. Pick a different date when entering an older or future transaction.</p><p>Use Calendar for a daily summary. Use the eye button on Dashboard to quickly hide or reveal financial amounts.</p></div></details>
+              <details class="guide-topic"><summary><span>Plan ahead</span><small>Checklist, budgets, goals, and bills</small></summary><div class="guide-topic-body"><p>Planning brings together your checklist, category budgets, savings goals, and recurring bills.</p><p>A planned transaction does not affect your totals until you confirm that it happened.</p></div></details>
+              <details class="guide-topic"><summary><span>Sync, backup, and support</span><small>Keep data safe and ask for help</small></summary><div class="guide-topic-body"><p>Changes save on your device and synchronize with your Google Sheet when online. Bewlet creates safety backups; restore one only when you need to return to older data.</p><p>Use the floating feedback button to report an issue or suggestion, attach a screenshot, and see replies from Bewlet.</p></div></details>
+            </div>
+
             <div class="settings-card account-card" data-settings-panel="account">
               <h3>Bewlet account</h3>
               <div id="account-summary" class="managed-storage-status"><span>✓</span><div><strong>Approved account</strong><small>Loading account details…</small></div></div>

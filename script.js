@@ -1324,7 +1324,7 @@ function deleteCategory(name) {
 let ACTIVE_SETTINGS_TAB = "account";
 
 function setSettingsTab(tab = "account") {
-  const valid = ["account", "preferences", "organize", "data"];
+  const valid = ["account", "preferences", "organize", "data", "guide"];
   ACTIVE_SETTINGS_TAB = valid.includes(tab) ? tab : "account";
   document.querySelectorAll("[data-settings-tab]").forEach((button) => {
     const active = button.dataset.settingsTab === ACTIVE_SETTINGS_TAB;
