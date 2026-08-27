@@ -470,8 +470,14 @@
 
         <!-- SETTINGS PAGE -->
         <section id="page-settings" class="page">
+          <nav class="settings-tabs" aria-label="Settings sections">
+            <button class="settings-tab active" data-settings-tab="account" onclick="setSettingsTab('account')">Account</button>
+            <button class="settings-tab" data-settings-tab="preferences" onclick="setSettingsTab('preferences')">Preferences</button>
+            <button class="settings-tab" data-settings-tab="organize" onclick="setSettingsTab('organize')">Organize</button>
+            <button class="settings-tab" data-settings-tab="data" onclick="setSettingsTab('data')">Data</button>
+          </nav>
           <div class="settings-grid">
-            <div class="settings-card account-card">
+            <div class="settings-card account-card" data-settings-panel="account">
               <h3>Bewlet account</h3>
               <div id="account-summary" class="managed-storage-status"><span>✓</span><div><strong>Approved account</strong><small>Loading account details…</small></div></div>
               <p class="settings-label">Personal account name</p><div class="input-row"><input id="account-display-name" class="input-field" maxlength="60" placeholder="e.g. Benny's account"/><button class="btn-secondary" onclick="saveAccountName()">Save</button></div>
@@ -479,21 +485,28 @@
               <div class="btn-row account-actions"><button id="connect-google-drive" class="btn-primary" onclick="connectGoogleDrive()">Connect Google Drive</button><button class="btn-secondary" onclick="signOutBewlet()">Sign out</button></div>
             </div>
 
-            <div class="settings-card account-card">
+            <div class="settings-card account-card" data-settings-panel="account">
               <h3>Backups, restore &amp; export</h3>
-              <p class="settings-desc">Bewlet creates an automatic Drive backup before replacing existing cloud data, at most once per day. You can also create one now.</p>
+              <p class="settings-desc"><strong>You normally do not need to restore anything.</strong> Bewlet creates safety copies in your Google Drive before cloud data is replaced. Use Restore only if you need to return Bewlet to an older version after accidental deletion or an unwanted change.</p>
+              <div class="backup-help"><strong>Back up now</strong><span>Create an extra recovery point before a major change.</span><strong>Export all data</strong><span>Download a readable copy for your own records.</span><strong>Restore</strong><span>Replace current Bewlet data with the selected older copy.</span></div>
               <div class="btn-row"><button class="btn-primary" onclick="createCloudBackup()">Back up now</button><button class="btn-secondary" onclick="exportAllData()">Export all data</button></div>
               <div id="backup-history" class="backup-history"></div>
             </div>
 
-            <div id="admin-approval-card" class="settings-card account-card hidden"><h3>Account approvals</h3><p class="settings-desc">Review new Bewlet registrations. Approval notifications are emailed when the optional Resend variables are configured.</p><div id="admin-account-list" class="admin-account-list"></div></div>
-            <div class="settings-card">
+            <div id="admin-approval-card" class="settings-card account-card hidden" data-settings-panel="account"><h3>Account approvals</h3><p class="settings-desc">Review new Bewlet registrations. Approval notifications are emailed when the optional Resend variables are configured.</p><div id="admin-account-list" class="admin-account-list"></div></div>
+            <div class="settings-card" data-settings-panel="account">
               <h3>Google Sheet storage</h3>
               <p class="settings-desc">Bewlet securely manages the connection to the private finance spreadsheet in your Google Drive. No API URL or Apps Script setup is required.</p>
               <div class="managed-storage-status"><span>✓</span><div><strong>Managed by Bewlet</strong><small>Your financial records remain in your own Google account.</small></div></div>
             </div>
 
-            <div class="settings-card">
+            <div class="settings-card" data-settings-panel="preferences">
+              <h3>Dashboard privacy</h3>
+              <p class="settings-desc">Hide financial amounts and the balance chart whenever the Dashboard opens, so people nearby cannot read them from your screen.</p>
+              <label class="privacy-setting"><span><strong>Hide dashboard balances</strong><small>You can turn this off here whenever you want to reveal them.</small></span><input id="dashboard-privacy-toggle" type="checkbox" onchange="saveDashboardPrivacy(this.checked)" /><i aria-hidden="true"></i></label>
+            </div>
+
+            <div class="settings-card" data-settings-panel="preferences">
               <h3>Currency</h3>
               <p class="settings-desc">Default currency used for totals and reports.</p>
               <select
@@ -515,7 +528,7 @@
               <a class="rate-attribution" href="https://www.exchangerate-api.com" target="_blank" rel="noopener">Rates by Exchange Rate API</a>
             </div>
 
-            <div class="settings-card">
+            <div class="settings-card" data-settings-panel="organize">
               <h3>Wallets</h3>
               <div id="settings-wallets-list" class="settings-list"></div>
               <button class="btn-secondary btn-sm" onclick="openWalletModal()">
@@ -523,7 +536,7 @@
               </button>
             </div>
 
-            <div class="settings-card">
+            <div class="settings-card" data-settings-panel="preferences">
               <h3>Theme color</h3>
               <p class="settings-desc">Choose light or dark mode, then select an accent color.</p>
               <div class="appearance-toggle" aria-label="Appearance mode">
@@ -553,7 +566,7 @@
               </div>
             </div>
 
-            <div class="settings-card">
+            <div class="settings-card" data-settings-panel="preferences">
               <h3>Planned transaction reminders</h3>
               <p class="settings-desc">Get notified about upcoming planned income and expenses when Bewlet is open or reopened.</p>
               <div class="reminder-settings-row">
@@ -563,13 +576,13 @@
               <p id="reminder-permission-status" class="settings-desc reminder-status"></p>
             </div>
 
-            <div class="settings-card">
+            <div class="settings-card" data-settings-panel="preferences">
               <h3>Quick access navigation</h3>
               <p class="settings-desc">Choose 2–6 pages for the mobile bottom bar. Drag them or use the arrows to change their order. Every page remains available in the swipe-out drawer.</p>
               <div id="bottom-nav-settings" class="nav-customizer"></div>
             </div>
 
-            <div class="settings-card">
+            <div class="settings-card" data-settings-panel="organize">
               <h3>Categories</h3>
               <div id="settings-categories-list" class="settings-list"></div>
               <button
@@ -580,7 +593,7 @@
               </button>
             </div>
 
-            <div class="settings-card danger-zone">
+            <div class="settings-card danger-zone" data-settings-panel="data">
               <h3>Data</h3>
               <p class="settings-desc">
                 Sync data from Google Sheets or reset all local data.
@@ -598,7 +611,7 @@
               <label class="checkbox-label"><input id="keep-drive-files" type="checkbox" checked /> Keep my spreadsheet and backup files in Google Drive</label>
               <button class="btn-danger account-delete" onclick="deleteBewletAccount()">Delete my account</button>
             </div>
-            <div class="settings-card data-trust-card">
+            <div class="settings-card data-trust-card" data-settings-panel="data">
               <h3>Privacy, ownership &amp; offline use</h3>
               <p class="settings-desc"><strong>You own your financial data.</strong> Bewlet does not sell transaction information or use it for advertising.</p>
               <ul class="trust-list"><li><strong>On this device:</strong> changes are saved locally so the app can continue working offline.</li><li><strong>When connected:</strong> pending changes are synchronized after internet access returns.</li><li><strong>Your Google Sheet:</strong> once account sync is released, each user’s finance records will be stored in their own Google Drive—not the owner’s finance sheet.</li><li><strong>Bewlet access:</strong> only feedback and issue reports are sent to Bewlet’s support storage.</li></ul>

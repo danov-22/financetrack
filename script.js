@@ -66,6 +66,7 @@ const STATE = {
   calendarMonth: "",
   calendarSelectedDate: "",
   reminderDays: 3,
+  hideDashboardBalances: false,
   bottomNavPages: ["dashboard", "lists", "transactions", "calendar", "reports", "settings"],
   isOnline: navigator.onLine,
   lastSynced: null, // timestamp
@@ -130,6 +131,7 @@ function loadStateFromLS() {
   STATE.customThemeColor = LS.get("fin_custom_theme_color", "#7c3aed");
   STATE.accountName = LS.get("fin_account_name", "");
   STATE.reminderDays = Number(LS.get("fin_reminder_days", 3)) || 3;
+  STATE.hideDashboardBalances = Boolean(LS.get("fin_hide_dashboard_balances", false));
   const savedBottomNav = LS.get("fin_bottom_nav_pages", null);
   if (Array.isArray(savedBottomNav)) STATE.bottomNavPages = savedBottomNav.filter((page) => BOTTOM_NAV_PAGES[page]).slice(0, 6);
   if (STATE.bottomNavPages.length < 2) STATE.bottomNavPages = ["dashboard", "calendar"];
@@ -177,6 +179,7 @@ function persistSettings() {
   LS.set("fin_custom_theme_color", STATE.customThemeColor);
   LS.set("fin_account_name", STATE.accountName);
   LS.set("fin_reminder_days", STATE.reminderDays);
+  LS.set("fin_hide_dashboard_balances", STATE.hideDashboardBalances);
   LS.set("fin_bottom_nav_pages", STATE.bottomNavPages);
   markCloudDirty();
 }
@@ -367,7 +370,7 @@ function buildManagedSnapshot() {
   return {
     transactions: STATE.transactions, wallets: STATE.wallets, categories: STATE.categories,
     listItems: STATE.listItems, budgets: STATE.budgets, goals: STATE.goals,
-    settings: { currency: STATE.currency, favoriteCurrencies: STATE.favoriteCurrencies, theme: STATE.theme, themePreset: STATE.themePreset, customThemeColor: STATE.customThemeColor, accountName: STATE.accountName, reminderDays: STATE.reminderDays, bottomNavPages: STATE.bottomNavPages },
+    settings: { currency: STATE.currency, favoriteCurrencies: STATE.favoriteCurrencies, theme: STATE.theme, themePreset: STATE.themePreset, customThemeColor: STATE.customThemeColor, accountName: STATE.accountName, reminderDays: STATE.reminderDays, hideDashboardBalances: STATE.hideDashboardBalances, bottomNavPages: STATE.bottomNavPages },
   };
 }
 function applyManagedSnapshot(snapshot) {
@@ -386,6 +389,7 @@ function applyManagedSnapshot(snapshot) {
   if (settings.customThemeColor) STATE.customThemeColor = settings.customThemeColor;
   if (typeof settings.accountName === "string") STATE.accountName = settings.accountName;
   if (settings.reminderDays) STATE.reminderDays = Number(settings.reminderDays);
+  if (typeof settings.hideDashboardBalances === "boolean") STATE.hideDashboardBalances = settings.hideDashboardBalances;
   if (settings.bottomNavPages?.length >= 2) STATE.bottomNavPages = settings.bottomNavPages;
   STATE.syncRevision = snapshot.revision || STATE.syncRevision;
   persistTransactions(); persistWallets(); persistCategories(); persistListItems(); persistBudgets(); persistGoals(); persistSettings();
@@ -896,11 +900,26 @@ function renderCalendarSelectedDay() {
   setEl("calendar-day-net", formatAmount(totals.net));
   const list = document.getElementById("calendar-day-transactions");
   if (list) list.innerHTML = transactions.length
-    ? transactions.map((transaction) => txItemHtml(transaction)).join("")
+    ? transactions.map(calendarTxItemHtml).join("")
     : emptyStateHtml("No transactions", "Tap Add to record something on this day.");
   const checklist = document.getElementById("calendar-day-list-items");
   const items = getCalendarListItems(date);
   if (checklist) checklist.innerHTML = items.length ? `<h4>Buy &amp; pay reminders</h4>${items.map(listItemHtml).join("")}` : "";
+}
+
+function calendarTxItemHtml(tx) {
+  const isPlanned = tx.status === "planned";
+  const isOverdue = isPlanned && normalizeDateValue(tx.date) < getTodayISO();
+  const converted = !isPlanned && tx.currency && tx.currency !== STATE.currency;
+  const sign = tx.type === "income" ? "+" : "−";
+  const icon = tx.type === "income" ? "↑" : "↓";
+  const description = tx.description || tx.category || tx.type;
+  return `<article class="calendar-tx${isPlanned ? " planned" : ""}${isOverdue ? " overdue" : ""}" onclick="openEditTransaction('${tx.id}')">
+    <span class="calendar-tx-icon ${tx.type}">${icon}</span>
+    <div class="calendar-tx-main"><strong>${escHtml(description)}</strong><div class="calendar-tx-meta">${tx.wallet ? `<span>${escHtml(tx.wallet)}</span>` : ""}${tx.category ? `<span>${escHtml(tx.category)}</span>` : ""}${isPlanned ? `<span class="planned-badge">${isOverdue ? "Overdue" : "Planned"}</span>` : ""}</div></div>
+    <div class="calendar-tx-value ${tx.type}">${isPlanned ? "Planned " : sign}${formatAmount(tx.amount, tx.currency)}${converted ? `<small>≈ ${sign}${formatAmount(transactionAmount(tx))}</small>` : ""}</div>
+    <div class="calendar-tx-actions">${isPlanned ? `<button onclick="event.stopPropagation();completePlannedTransaction('${tx.id}')" aria-label="Mark completed" title="Mark completed">✓</button>` : ""}<button onclick="event.stopPropagation();openEditTransaction('${tx.id}')" aria-label="Edit transaction" title="Edit">Edit</button><button class="delete" onclick="event.stopPropagation();confirmDelete('transaction','${tx.id}','${escHtml(description)}')" aria-label="Delete transaction" title="Delete">Delete</button></div>
+  </article>`;
 }
 
 // ============================================================
@@ -1275,6 +1294,35 @@ function deleteCategory(name) {
   refreshCurrentPage();
 }
 
+let ACTIVE_SETTINGS_TAB = "account";
+
+function setSettingsTab(tab = "account") {
+  const valid = ["account", "preferences", "organize", "data"];
+  ACTIVE_SETTINGS_TAB = valid.includes(tab) ? tab : "account";
+  document.querySelectorAll("[data-settings-tab]").forEach((button) => {
+    const active = button.dataset.settingsTab === ACTIVE_SETTINGS_TAB;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", String(active));
+  });
+  document.querySelectorAll("[data-settings-panel]").forEach((panel) => {
+    panel.hidden = panel.dataset.settingsPanel !== ACTIVE_SETTINGS_TAB;
+  });
+  document.querySelector(".settings-tabs")?.scrollTo({ left: document.querySelector(`[data-settings-tab="${ACTIVE_SETTINGS_TAB}"]`)?.offsetLeft || 0, behavior: "smooth" });
+}
+
+function applyDashboardPrivacy() {
+  document.getElementById("page-dashboard")?.classList.toggle("privacy-mode", STATE.hideDashboardBalances);
+  const toggle = document.getElementById("dashboard-privacy-toggle");
+  if (toggle) toggle.checked = STATE.hideDashboardBalances;
+}
+
+function saveDashboardPrivacy(enabled) {
+  STATE.hideDashboardBalances = Boolean(enabled);
+  persistSettings();
+  applyDashboardPrivacy();
+  showToast(STATE.hideDashboardBalances ? "Dashboard balances are now hidden." : "Dashboard balances are now visible.", "success");
+}
+
 function renderSettingsLists() {
   const walletsList = document.getElementById("settings-wallets-list");
   const catList = document.getElementById("settings-categories-list");
@@ -1325,6 +1373,8 @@ function renderSettingsLists() {
   if (settingsCurrency) settingsCurrency.value = STATE.currency;
   const reminderDays = document.getElementById("reminder-days");
   if (reminderDays) reminderDays.value = String(STATE.reminderDays);
+  applyDashboardPrivacy();
+  setSettingsTab(ACTIVE_SETTINGS_TAB);
   updateReminderPermissionStatus();
   renderBottomNavSettings();
   renderAccountManagement();
@@ -1352,7 +1402,7 @@ async function renderAccountManagement() {
     const connect = document.getElementById("connect-google-drive");
     if (connect) connect.textContent = account.google ? "Reconnect Google Drive" : "Connect Google Drive";
     const history = document.getElementById("backup-history");
-    if (history) history.innerHTML = account.backups?.length ? account.backups.map((backup) => `<div class="backup-item"><div><strong>${new Date(backup.created_at).toLocaleString()}</strong><small>${Math.max(1, Math.round(Number(backup.byte_size || 0) / 1024))} KB · Stored in your Drive</small></div><button class="btn-secondary btn-sm" onclick="restoreCloudBackup('${backup.id}')">Restore</button></div>`).join("") : '<p class="settings-desc">No cloud backups yet.</p>';
+    if (history) history.innerHTML = account.backups?.length ? `<p class="backup-history-label">Available recovery points</p>${account.backups.map((backup) => `<div class="backup-item"><div><strong>${new Date(backup.created_at).toLocaleString()}</strong><small>${Math.max(1, Math.round(Number(backup.byte_size || 0) / 1024))} KB · Stored in your Drive</small></div><button class="btn-secondary btn-sm" onclick="restoreCloudBackup('${backup.id}')">Restore this version</button></div>`).join("")}` : '<p class="settings-desc">No recovery points yet. Bewlet will create one automatically when needed.</p>';
     document.getElementById("admin-approval-card")?.classList.toggle("hidden", !account.admin);
     if (account.admin) renderAdminAccounts();
   } catch (error) { showToast(error.message, "error"); }
@@ -1361,7 +1411,7 @@ async function connectGoogleDrive() { try { const response = await window.bewlet
 function saveAccountName() { const input = document.getElementById("account-display-name"); STATE.accountName = (input?.value || "").trim().slice(0, 60); persistSettings(); updatePageTitle(); renderAccountManagement(); showToast(STATE.accountName ? `Account name saved as “${STATE.accountName}”.` : "Custom account name removed.", "success"); }
 async function signOutBewlet() { const token = localStorage.getItem("bewlet_supabase_access_token"); const config = window.BEWLET_AUTH?.config; if (token && config?.supabaseUrl) await fetch(`${config.supabaseUrl}/auth/v1/logout`, { method: "POST", headers: { apikey: config.supabasePublishableKey, Authorization: `Bearer ${token}` } }).catch(() => {}); localStorage.removeItem("bewlet_supabase_access_token"); localStorage.removeItem("bewlet_supabase_refresh_token"); location.replace("/"); }
 async function createCloudBackup() { try { const response = await window.bewletAuthFetch("/api/sync", { method: "POST", body: JSON.stringify({ action: "backup" }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error); showToast("Backup saved to your Google Drive.", "success"); renderAccountManagement(); } catch (error) { showToast(error.message, "error"); } }
-async function restoreCloudBackup(backupId) { if (!confirm("Restore this backup? Bewlet will first back up your current cloud data.")) return; try { const response = await window.bewletAuthFetch("/api/sync", { method: "POST", body: JSON.stringify({ action: "restore", backupId }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error); applyManagedSnapshot({ ...data.snapshot, revision: data.revision }); showToast("Backup restored successfully.", "success"); refreshCurrentPage(); } catch (error) { showToast(error.message, "error"); } }
+async function restoreCloudBackup(backupId) { if (!confirm("Restore this older version? Your current Bewlet data will be backed up first, then replaced with the selected recovery point. Use this only to recover from an unwanted change.")) return; try { const response = await window.bewletAuthFetch("/api/sync", { method: "POST", body: JSON.stringify({ action: "restore", backupId }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error); applyManagedSnapshot({ ...data.snapshot, revision: data.revision }); showToast("Older Bewlet version restored successfully.", "success"); refreshCurrentPage(); } catch (error) { showToast(error.message, "error"); } }
 function exportAllData() { const payload = { format: "bewlet-export", version: 1, exportedAt: new Date().toISOString(), account: window.BEWLET_AUTH ? { email: window.BEWLET_AUTH.account?.user?.email } : null, data: buildManagedSnapshot() }; const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `bewlet-export-${getTodayISO()}.json`; link.click(); URL.revokeObjectURL(link.href); showToast("Complete data export downloaded.", "success"); }
 async function deleteBewletAccount() { const phrase = prompt('This is permanent. Type "DELETE MY BEWLET ACCOUNT" to continue.'); if (phrase !== "DELETE MY BEWLET ACCOUNT") { if (phrase !== null) showToast("Account deletion cancelled: phrase did not match.", "warning"); return; } try { await accountApi("", { method: "POST", body: JSON.stringify({ action: "delete-account", confirmation: phrase, keepDriveFiles: document.getElementById("keep-drive-files")?.checked !== false }) }); Object.keys(localStorage).filter((key) => key.startsWith("fin_") || key.startsWith("bewlet_")).forEach((key) => localStorage.removeItem(key)); location.replace("/?account=deleted"); } catch (error) { showToast(error.message, "error"); } }
 async function renderAdminAccounts() { try { const data = await accountApi("?action=admin-list"); const list = document.getElementById("admin-account-list"); if (!list) return; const pending = data.profiles.filter((profile) => profile.status === "pending"); list.innerHTML = pending.length ? pending.map((profile) => `<div class="admin-account-item"><div><strong>${escHtml(profile.display_name || profile.email)}</strong><small>${escHtml(profile.email)} · ${profile.pricing_region} · ${new Date(profile.created_at).toLocaleDateString()}</small>${profile.payment?.signed_url ? `<a href="${escHtml(profile.payment.signed_url)}" target="_blank" rel="noopener">View payment proof · ${profile.payment.currency === "USD" ? `US$${(Number(profile.payment.amount_minor) / 100).toFixed(2)}` : `Rp${Number(profile.payment.amount_minor).toLocaleString()}`}</a>` : '<small>No payment proof submitted</small>'}</div><div class="admin-account-actions"><button onclick="reviewAccount('${profile.id}','approved')">Approve</button><button onclick="reviewAccount('${profile.id}','rejected')">Reject</button></div></div>`).join("") : '<p class="settings-desc">No registrations are waiting for approval.</p>'; } catch (error) { showToast(error.message, "error"); } }
@@ -1628,6 +1678,7 @@ function getDateRangeBounds(range) {
 
 function renderDashboard() {
   updatePageTitle();
+  applyDashboardPrivacy();
   const range = STATE.dashRange;
   const { from, to } = getDateRangeBounds(range);
   const periodTxs = STATE.transactions.filter(
@@ -3334,6 +3385,8 @@ window.deleteFeedbackRecord = deleteFeedbackRecord;
 window.setThemePreset = setThemePreset;
 window.saveCustomTheme = saveCustomTheme;
 window.saveReminderDays = saveReminderDays;
+window.setSettingsTab = setSettingsTab;
+window.saveDashboardPrivacy = saveDashboardPrivacy;
 window.enablePlannedReminders = enablePlannedReminders;
 window.setAppearanceMode = setAppearanceMode;
 window.handleFeedbackScreenshot = handleFeedbackScreenshot;
@@ -3349,6 +3402,7 @@ function boot() {
   if (IS_DEMO_MODE) applyDemoState();
   ensureDefaults();
   applyTheme(STATE.theme);
+  applyDashboardPrivacy();
   document.getElementById("sidebar-admin-control")?.classList.toggle("hidden", !window.BEWLET_AUTH?.account?.admin);
 
   populateCurrencySelects();
