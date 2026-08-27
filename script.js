@@ -1334,13 +1334,11 @@ function saveDashboardPrivacy(enabled) {
   STATE.dashboardBalancesHidden = STATE.hideDashboardBalances;
   persistSettings();
   applyDashboardPrivacy();
-  showToast(STATE.hideDashboardBalances ? "Dashboard will start with balances hidden." : "Dashboard will start with balances visible.", "success");
 }
 
 function toggleDashboardPrivacy() {
   STATE.dashboardBalancesHidden = !STATE.dashboardBalancesHidden;
   applyDashboardPrivacy();
-  showToast(STATE.dashboardBalancesHidden ? "Dashboard balances hidden." : "Dashboard balances revealed for this visit.", "info");
 }
 
 function renderSettingsLists() {
