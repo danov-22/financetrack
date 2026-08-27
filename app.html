@@ -246,7 +246,7 @@
         <!-- DASHBOARD PAGE -->
         <section id="page-dashboard" class="page active">
           <div class="page-header">
-            <h2>Overview</h2>
+            <div class="dashboard-title-row"><h2>Overview</h2><button id="dashboard-privacy-button" class="dashboard-privacy-button" type="button" onclick="toggleDashboardPrivacy()" aria-pressed="false"><svg class="eye-open" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg><svg class="eye-closed" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l18 18M10.6 10.6a2 2 0 002.8 2.8M9.9 4.2A10.8 10.8 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.1 3.1M6.6 6.6C3.3 8.6 1 12 1 12s4 8 11 8a10.7 10.7 0 005.4-1.5"/></svg><span>Hide</span></button></div>
             <div class="date-range-quick">
               <button class="quick-date active" data-range="month">
                 This Month
@@ -502,8 +502,8 @@
 
             <div class="settings-card" data-settings-panel="preferences">
               <h3>Dashboard privacy</h3>
-              <p class="settings-desc">Hide financial amounts and the balance chart whenever the Dashboard opens, so people nearby cannot read them from your screen.</p>
-              <label class="privacy-setting"><span><strong>Hide dashboard balances</strong><small>You can turn this off here whenever you want to reveal them.</small></span><input id="dashboard-privacy-toggle" type="checkbox" onchange="saveDashboardPrivacy(this.checked)" /><i aria-hidden="true"></i></label>
+              <p class="settings-desc">Choose whether every visit to the Dashboard should begin with its financial information hidden. The Dashboard eye button can still reveal or hide it temporarily.</p>
+              <label class="privacy-setting"><span><strong>Start Dashboard with balances hidden</strong><small>Recommended when you often open Bewlet around other people.</small></span><input id="dashboard-privacy-toggle" type="checkbox" onchange="saveDashboardPrivacy(this.checked)" /><i aria-hidden="true"></i></label>
             </div>
 
             <div class="settings-card" data-settings-panel="preferences">

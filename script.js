@@ -67,6 +67,7 @@ const STATE = {
   calendarSelectedDate: "",
   reminderDays: 3,
   hideDashboardBalances: false,
+  dashboardBalancesHidden: false,
   bottomNavPages: ["dashboard", "lists", "transactions", "calendar", "reports", "settings"],
   isOnline: navigator.onLine,
   lastSynced: null, // timestamp
@@ -132,6 +133,7 @@ function loadStateFromLS() {
   STATE.accountName = LS.get("fin_account_name", "");
   STATE.reminderDays = Number(LS.get("fin_reminder_days", 3)) || 3;
   STATE.hideDashboardBalances = Boolean(LS.get("fin_hide_dashboard_balances", false));
+  STATE.dashboardBalancesHidden = STATE.hideDashboardBalances;
   const savedBottomNav = LS.get("fin_bottom_nav_pages", null);
   if (Array.isArray(savedBottomNav)) STATE.bottomNavPages = savedBottomNav.filter((page) => BOTTOM_NAV_PAGES[page]).slice(0, 6);
   if (STATE.bottomNavPages.length < 2) STATE.bottomNavPages = ["dashboard", "calendar"];
@@ -389,7 +391,10 @@ function applyManagedSnapshot(snapshot) {
   if (settings.customThemeColor) STATE.customThemeColor = settings.customThemeColor;
   if (typeof settings.accountName === "string") STATE.accountName = settings.accountName;
   if (settings.reminderDays) STATE.reminderDays = Number(settings.reminderDays);
-  if (typeof settings.hideDashboardBalances === "boolean") STATE.hideDashboardBalances = settings.hideDashboardBalances;
+  if (typeof settings.hideDashboardBalances === "boolean") {
+    STATE.hideDashboardBalances = settings.hideDashboardBalances;
+    STATE.dashboardBalancesHidden = settings.hideDashboardBalances;
+  }
   if (settings.bottomNavPages?.length >= 2) STATE.bottomNavPages = settings.bottomNavPages;
   STATE.syncRevision = snapshot.revision || STATE.syncRevision;
   persistTransactions(); persistWallets(); persistCategories(); persistListItems(); persistBudgets(); persistGoals(); persistSettings();
@@ -1311,16 +1316,31 @@ function setSettingsTab(tab = "account") {
 }
 
 function applyDashboardPrivacy() {
-  document.getElementById("page-dashboard")?.classList.toggle("privacy-mode", STATE.hideDashboardBalances);
+  document.getElementById("page-dashboard")?.classList.toggle("privacy-mode", STATE.dashboardBalancesHidden);
   const toggle = document.getElementById("dashboard-privacy-toggle");
   if (toggle) toggle.checked = STATE.hideDashboardBalances;
+  const button = document.getElementById("dashboard-privacy-button");
+  if (button) {
+    button.classList.toggle("hidden-values", STATE.dashboardBalancesHidden);
+    button.setAttribute("aria-pressed", String(STATE.dashboardBalancesHidden));
+    button.setAttribute("aria-label", STATE.dashboardBalancesHidden ? "Show dashboard balances" : "Hide dashboard balances");
+    const label = button.querySelector("span");
+    if (label) label.textContent = STATE.dashboardBalancesHidden ? "Show" : "Hide";
+  }
 }
 
 function saveDashboardPrivacy(enabled) {
   STATE.hideDashboardBalances = Boolean(enabled);
+  STATE.dashboardBalancesHidden = STATE.hideDashboardBalances;
   persistSettings();
   applyDashboardPrivacy();
-  showToast(STATE.hideDashboardBalances ? "Dashboard balances are now hidden." : "Dashboard balances are now visible.", "success");
+  showToast(STATE.hideDashboardBalances ? "Dashboard will start with balances hidden." : "Dashboard will start with balances visible.", "success");
+}
+
+function toggleDashboardPrivacy() {
+  STATE.dashboardBalancesHidden = !STATE.dashboardBalancesHidden;
+  applyDashboardPrivacy();
+  showToast(STATE.dashboardBalancesHidden ? "Dashboard balances hidden." : "Dashboard balances revealed for this visit.", "info");
 }
 
 function renderSettingsLists() {
@@ -2678,6 +2698,7 @@ function showToast(message, type = "info", duration = 3500) {
 function navigate(page) {
   if (STATE.currentPage === page) return;
   STATE.currentPage = page;
+  if (page === "dashboard") STATE.dashboardBalancesHidden = STATE.hideDashboardBalances;
 
   // Update page visibility
   document
@@ -3387,6 +3408,7 @@ window.saveCustomTheme = saveCustomTheme;
 window.saveReminderDays = saveReminderDays;
 window.setSettingsTab = setSettingsTab;
 window.saveDashboardPrivacy = saveDashboardPrivacy;
+window.toggleDashboardPrivacy = toggleDashboardPrivacy;
 window.enablePlannedReminders = enablePlannedReminders;
 window.setAppearanceMode = setAppearanceMode;
 window.handleFeedbackScreenshot = handleFeedbackScreenshot;
