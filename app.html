@@ -116,10 +116,6 @@
             </svg>
             <span>Calendar</span>
           </a>
-          <a href="#" class="nav-item" data-page="lists">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2" /></svg>
-            <span>Checklist</span>
-          </a>
           <a href="#" class="nav-item" data-page="planning">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2" /></svg>
             <span>Planning</span>
@@ -421,20 +417,18 @@
           </div>
         </section>
 
-        <section id="page-lists" class="page">
-          <div class="page-header"><div><p class="page-description">Keep a simple checklist, or give an item a due date and show it on your calendar.</p></div><button class="btn-primary" onclick="openListItemModal()">+ Add item</button></div>
-          <div class="list-summary" id="list-summary"></div>
-          <div class="list-toolbar">
-            <button class="list-filter active" data-list-filter="open" onclick="setListFilter('open')">Open</button><button class="list-filter" data-list-filter="all" onclick="setListFilter('all')">All</button><button class="list-filter" data-list-filter="buy" onclick="setListFilter('buy')">To buy</button><button class="list-filter" data-list-filter="pay" onclick="setListFilter('pay')">To pay</button><button class="list-filter" data-list-filter="completed" onclick="setListFilter('completed')">Completed</button>
-          </div>
-          <div id="buy-pay-list" class="buy-pay-list"></div>
-        </section>
-
         <section id="page-planning" class="page">
-          <div class="page-header"><div><p class="page-description">Set spending limits, build savings funds, and keep recurring bills visible.</p></div></div>
-          <div class="planning-section"><div class="panel-header"><div><h3>Monthly category budgets</h3><p class="page-description">Bewlet warns you as spending approaches or passes each limit.</p></div><button class="btn-primary" onclick="openBudgetModal()">+ Add budget</button></div><div id="budgets-grid" class="planning-grid"></div></div>
-          <div class="planning-section"><div class="panel-header"><div><h3>Savings goals &amp; sinking funds</h3><p class="page-description">Track progress toward planned purchases, emergencies, or annual expenses.</p></div><button class="btn-primary" onclick="openGoalModal()">+ Add goal</button></div><div id="goals-grid" class="planning-grid"></div></div>
-          <div class="planning-section"><div class="panel-header"><div><h3>Recurring bills &amp; subscriptions</h3><p class="page-description">These use Bewlet’s recurring transactions and are included in your financial records.</p></div><button class="btn-primary" onclick="openRecurringBillModal()">+ Add recurring bill</button></div><div id="recurring-bills-list" class="buy-pay-list"></div></div>
+          <div class="page-header"><div><p class="page-description">Keep everyday checklists, budgets, savings targets, and recurring bills together.</p></div></div>
+          <nav class="planning-tabs" aria-label="Planning sections">
+            <button class="planning-tab active" data-planning-tab="checklist" onclick="setPlanningTab('checklist')">Checklist</button>
+            <button class="planning-tab" data-planning-tab="budgets" onclick="setPlanningTab('budgets')">Budgets</button>
+            <button class="planning-tab" data-planning-tab="goals" onclick="setPlanningTab('goals')">Savings goals</button>
+            <button class="planning-tab" data-planning-tab="recurring" onclick="setPlanningTab('recurring')">Recurring bills</button>
+          </nav>
+          <section class="planning-tab-panel" data-planning-panel="checklist"><div class="planning-section"><div class="panel-header"><div><h3>Checklist</h3><p class="page-description">Keep a simple checklist, or give an item a due date and show it on your calendar.</p></div><button class="btn-primary" onclick="openListItemModal()">+ Add item</button></div><div class="list-summary" id="list-summary"></div><div class="list-toolbar"><button class="list-filter active" data-list-filter="open" onclick="setListFilter('open')">Open</button><button class="list-filter" data-list-filter="all" onclick="setListFilter('all')">All</button><button class="list-filter" data-list-filter="buy" onclick="setListFilter('buy')">To buy</button><button class="list-filter" data-list-filter="pay" onclick="setListFilter('pay')">To pay</button><button class="list-filter" data-list-filter="completed" onclick="setListFilter('completed')">Completed</button></div><div id="buy-pay-list" class="buy-pay-list"></div></div></section>
+          <section class="planning-tab-panel" data-planning-panel="budgets" hidden><div class="planning-section"><div class="panel-header"><div><h3>Monthly category budgets</h3><p class="page-description">Bewlet warns you as spending approaches or passes each limit.</p></div><button class="btn-primary" onclick="openBudgetModal()">+ Add budget</button></div><div id="budgets-grid" class="planning-grid"></div></div></section>
+          <section class="planning-tab-panel" data-planning-panel="goals" hidden><div class="planning-section"><div class="panel-header"><div><h3>Savings goals &amp; sinking funds</h3><p class="page-description">Track progress toward planned purchases, emergencies, or annual expenses.</p></div><button class="btn-primary" onclick="openGoalModal()">+ Add goal</button></div><div id="goals-grid" class="planning-grid"></div></div></section>
+          <section class="planning-tab-panel" data-planning-panel="recurring" hidden><div class="planning-section"><div class="panel-header"><div><h3>Recurring bills &amp; subscriptions</h3><p class="page-description">These use Bewlet’s recurring transactions and are included in your financial records.</p></div><button class="btn-primary" onclick="openRecurringBillModal()">+ Add recurring bill</button></div><div id="recurring-bills-list" class="buy-pay-list"></div></div></section>
         </section>
 
         <!-- REPORTS PAGE -->
@@ -640,7 +634,7 @@
         </svg>
         <span>Home</span>
       </a>
-      <a href="#" class="bottom-nav-item" data-page="lists">
+      <a href="#" class="bottom-nav-item" data-page="planning">
         <svg
           width="22"
           height="22"
@@ -651,7 +645,7 @@
         >
           <path d="M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2" />
         </svg>
-        <span>Checklist</span>
+        <span>Planning</span>
       </a>
       <a href="#" class="bottom-nav-item" data-page="transactions">
         <svg

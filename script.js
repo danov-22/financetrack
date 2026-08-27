@@ -37,8 +37,13 @@ const IS_DEMO_MODE = Boolean(window.BEWLET_DEMO) || location.pathname === "/demo
 // ============================================================
 const BOTTOM_NAV_PAGES = {
   dashboard: "Home", wallets: "Wallets", transactions: "Transactions", calendar: "Calendar",
-  lists: "Checklist", planning: "Planning", reports: "Reports", settings: "Settings",
+  planning: "Planning", reports: "Reports", settings: "Settings",
 };
+
+function normalizeBottomNavPages(pages) {
+  if (!Array.isArray(pages)) return [];
+  return [...new Set(pages.map((page) => page === "lists" ? "planning" : page).filter((page) => BOTTOM_NAV_PAGES[page]))].slice(0, 6);
+}
 
 const STATE = {
   transactions: [],
@@ -49,6 +54,7 @@ const STATE = {
   notifications: [],
   listItems: [],
   listFilter: "open",
+  planningTab: "checklist",
   budgets: [],
   goals: [],
   installationId: "",
@@ -68,7 +74,7 @@ const STATE = {
   reminderDays: 3,
   hideDashboardBalances: false,
   dashboardBalancesHidden: false,
-  bottomNavPages: ["dashboard", "lists", "transactions", "calendar", "reports", "settings"],
+  bottomNavPages: ["dashboard", "planning", "transactions", "calendar", "reports", "settings"],
   isOnline: navigator.onLine,
   lastSynced: null, // timestamp
   syncRevision: "",
@@ -135,7 +141,7 @@ function loadStateFromLS() {
   STATE.hideDashboardBalances = Boolean(LS.get("fin_hide_dashboard_balances", false));
   STATE.dashboardBalancesHidden = STATE.hideDashboardBalances;
   const savedBottomNav = LS.get("fin_bottom_nav_pages", null);
-  if (Array.isArray(savedBottomNav)) STATE.bottomNavPages = savedBottomNav.filter((page) => BOTTOM_NAV_PAGES[page]).slice(0, 6);
+  if (Array.isArray(savedBottomNav)) STATE.bottomNavPages = normalizeBottomNavPages(savedBottomNav);
   if (STATE.bottomNavPages.length < 2) STATE.bottomNavPages = ["dashboard", "calendar"];
   STATE.lastSynced = LS.get("fin_last_synced", null);
   STATE.syncRevision = LS.get("fin_sync_revision", "") || "";
@@ -395,7 +401,7 @@ function applyManagedSnapshot(snapshot) {
     STATE.hideDashboardBalances = settings.hideDashboardBalances;
     STATE.dashboardBalancesHidden = settings.hideDashboardBalances;
   }
-  if (settings.bottomNavPages?.length >= 2) STATE.bottomNavPages = settings.bottomNavPages;
+  if (settings.bottomNavPages?.length >= 2) STATE.bottomNavPages = normalizeBottomNavPages(settings.bottomNavPages);
   STATE.syncRevision = snapshot.revision || STATE.syncRevision;
   persistTransactions(); persistWallets(); persistCategories(); persistListItems(); persistBudgets(); persistGoals(); persistSettings();
   LS.set("fin_sync_revision", STATE.syncRevision);
@@ -1010,7 +1016,22 @@ function checkBudgetAlerts() {
     LS.set(alertKey, true);
   });
 }
+function setPlanningTab(tab = "checklist") {
+  const valid = ["checklist", "budgets", "goals", "recurring"];
+  STATE.planningTab = valid.includes(tab) ? tab : "checklist";
+  document.querySelectorAll("[data-planning-tab]").forEach((button) => {
+    const active = button.dataset.planningTab === STATE.planningTab;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", String(active));
+  });
+  document.querySelectorAll("[data-planning-panel]").forEach((panel) => {
+    panel.hidden = panel.dataset.planningPanel !== STATE.planningTab;
+  });
+  const activeButton = document.querySelector(`[data-planning-tab="${STATE.planningTab}"]`);
+  document.querySelector(".planning-tabs")?.scrollTo({ left: activeButton?.offsetLeft || 0, behavior: "smooth" });
+}
 function renderPlanning() {
+  renderLists();
   const budgetGrid = document.getElementById("budgets-grid");
   if (!budgetGrid) return;
   budgetGrid.innerHTML = STATE.budgets.length ? STATE.budgets.map((budget) => { const spent = currentMonthExpenseForCategory(budget.category); const remaining = Number(budget.limit) - spent; const percent = Number(budget.limit) ? Math.round(spent / Number(budget.limit) * 100) : 0; return `<article class="planning-card"><div class="planning-card-head"><span class="list-kind">${escHtml(budget.category)}</span><div><button onclick="openBudgetModal('${budget.id}')">Edit</button><button onclick="deleteBudget('${budget.id}')">Delete</button></div></div><h4>${formatAmount(spent)} <small>of ${formatAmount(budget.limit)}</small></h4>${progressBarHtml(spent, budget.limit, budget.alertAt)}<p class="${remaining < 0 ? "alert-text" : ""}">${remaining >= 0 ? `${formatAmount(remaining)} remaining · ${percent}% used` : `${formatAmount(Math.abs(remaining))} over budget`}</p></article>`; }).join("") : emptyStateHtml("No budgets yet", "Add a category budget to receive remaining-budget alerts.");
@@ -1018,6 +1039,7 @@ function renderPlanning() {
   goalGrid.innerHTML = STATE.goals.length ? STATE.goals.map((goal) => { const percent = Number(goal.target) ? Math.round(Number(goal.current) / Number(goal.target) * 100) : 0; return `<article class="planning-card"><div class="planning-card-head"><span class="list-kind">${goal.type === "sinking" ? "Sinking fund" : "Savings goal"}</span><div><button onclick="openGoalModal('${goal.id}')">Update</button><button onclick="deleteGoal('${goal.id}')">Delete</button></div></div><h4>${escHtml(goal.name)}</h4>${progressBarHtml(goal.current, goal.target)}<p>${formatAmount(goal.current)} of ${formatAmount(goal.target)} · ${Math.min(100, percent)}%${goal.targetDate ? ` · Due ${formatDateShort(goal.targetDate)}` : ""}</p></article>`; }).join("") : emptyStateHtml("No savings goals yet", "Create a goal or sinking fund and update it as you save.");
   const recurring = STATE.transactions.filter((tx) => tx.recurring);
   document.getElementById("recurring-bills-list").innerHTML = recurring.length ? recurring.map((tx) => `<article class="list-item"><div class="tx-icon ${tx.type}">${tx.type === "income" ? "↑" : "↓"}</div><div class="list-item-main"><div><span class="list-kind ${tx.type === "expense" ? "pay" : ""}">${escHtml(tx.recurringFreq || "monthly")}</span><strong>${escHtml(tx.description || tx.category || "Recurring transaction")}</strong></div><p>${formatAmount(tx.amount, tx.currency)} · Starts ${formatDateShort(tx.date)}</p></div><div class="list-item-actions"><button class="btn-ghost btn-sm" onclick="openEditTransaction('${tx.id}')">Edit</button></div></article>`).join("") : emptyStateHtml("No recurring bills", "Add a bill or subscription and choose how often it repeats.");
+  setPlanningTab(STATE.planningTab);
 }
 function openBudgetModal(id = "") { const budget = STATE.budgets.find((item) => item.id === id); setEl("modal-budget-title", budget ? "Edit monthly budget" : "Add monthly budget"); document.getElementById("budget-id").value = budget?.id || ""; populateCategoryOptions("budget-category", budget?.category || ""); document.getElementById("budget-limit").value = budget?.limit || ""; document.getElementById("budget-alert").value = budget?.alertAt || 80; document.querySelectorAll(".budget-currency-symbol").forEach((el) => el.textContent = getCurrencySymbol()); openModal("modal-budget"); }
 function submitBudget(event) { event.preventDefault(); const id = document.getElementById("budget-id").value; const item = { id: id || generateId(), category: document.getElementById("budget-category").value, limit: Number(document.getElementById("budget-limit").value), alertAt: Number(document.getElementById("budget-alert").value) }; const index = STATE.budgets.findIndex((entry) => entry.id === id); if (index >= 0) STATE.budgets[index] = item; else STATE.budgets.push(item); persistBudgets(); closeModal("modal-budget"); renderPlanning(); showToast("Monthly budget saved.", "success"); }
@@ -2694,6 +2716,7 @@ function showToast(message, type = "info", duration = 3500) {
 // 17. NAVIGATION
 // ============================================================
 function navigate(page) {
+  if (page === "lists") { page = "planning"; STATE.planningTab = "checklist"; }
   if (STATE.currentPage === page) return;
   STATE.currentPage = page;
   if (page === "dashboard") STATE.dashboardBalancesHidden = STATE.hideDashboardBalances;
@@ -2736,8 +2759,7 @@ function updatePageTitle() {
     wallets: "Wallets",
     transactions: "Transactions",
     calendar: "Calendar",
-    lists: "Checklist",
-    planning: "Financial Planning",
+    planning: "Planning",
     reports: "Reports",
     settings: "Settings",
   };
@@ -2759,8 +2781,6 @@ function renderPage(page) {
     renderReports();
   } else if (page === "calendar") {
     renderCalendar();
-  } else if (page === "lists") {
-    renderLists();
   } else if (page === "planning") {
     renderPlanning();
   } else if (page === "settings") {
@@ -3352,6 +3372,7 @@ window.submitListItem = submitListItem;
 window.toggleListItem = toggleListItem;
 window.deleteListItem = deleteListItem;
 window.setListFilter = setListFilter;
+window.setPlanningTab = setPlanningTab;
 window.setListKind = setListKind;
 window.updateListCurrencySymbol = updateListCurrencySymbol;
 window.openBudgetModal = openBudgetModal;
