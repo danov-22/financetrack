@@ -1531,7 +1531,7 @@ async function accountApi(path = "", options = {}) {
   return data;
 }
 function renderSupportWhatsApp(value = "") {
-  const raw = String(value || (IS_DEMO_MODE ? "089504556187" : "")).trim();
+  const raw = String(value || "089504556187").trim();
   let digits = raw.replace(/\D/g, "");
   if (digits.startsWith("0")) digits = `62${digits.slice(1)}`;
   const wrapper = document.getElementById("guide-direct-support");
