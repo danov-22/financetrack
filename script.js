@@ -1359,9 +1359,6 @@ function renderOnboardingStep() {
   document.getElementById("onboarding-dots").innerHTML = ONBOARDING_STEPS.map((_, index) => `<i class="${index === ONBOARDING_STEP ? "active" : ""}"></i>`).join("");
   document.getElementById("onboarding-previous").hidden = ONBOARDING_STEP === 0;
   document.getElementById("onboarding-next").textContent = ONBOARDING_STEP === ONBOARDING_STEPS.length - 1 ? "Get Started" : "Next";
-  const personalize = document.getElementById("onboarding-personalize");
-  personalize.hidden = ONBOARDING_STEP !== ONBOARDING_STEPS.length - 1;
-  personalize.textContent = IS_DEMO_MODE ? "Explore Preferences" : "Set up sync & preferences";
   document.getElementById("onboarding-skip-top").hidden = ONBOARDING_STEP === ONBOARDING_STEPS.length - 1;
 }
 
@@ -1373,7 +1370,7 @@ function openOnboarding(replay = false) {
 }
 
 function changeOnboardingStep(direction) {
-  if (direction > 0 && ONBOARDING_STEP === ONBOARDING_STEPS.length - 1) return finishOnboarding("completed");
+  if (direction > 0 && ONBOARDING_STEP === ONBOARDING_STEPS.length - 1) return finishOnboarding("completed", "account");
   ONBOARDING_STEP = Math.max(0, Math.min(ONBOARDING_STEPS.length - 1, ONBOARDING_STEP + Number(direction || 0)));
   renderOnboardingStep();
 }
