@@ -490,11 +490,14 @@
               <details class="guide-topic"><summary><span>Sync, backup, and support</span><small>Keep data safe and ask for help</small></summary><div class="guide-topic-body"><p>Changes save on your device and synchronize with your Google Sheet when online. Bewlet creates safety backups; restore one only when you need to return to older data.</p><p>Use the floating feedback button to report an issue or suggestion, attach a screenshot, and see replies from Bewlet.</p></div></details>
             </div>
 
+            <div id="guide-direct-support" class="settings-card guide-card guide-direct-support hidden" data-settings-panel="guide"><span>Still need help?</span><div><p>For something urgent, you can message Bewlet support directly.</p><a id="support-whatsapp-link" href="#" target="_blank" rel="noopener noreferrer">Contact through WhatsApp</a></div></div>
+
             <div class="settings-card account-card" data-settings-panel="account">
               <h3>Bewlet account</h3>
               <div id="account-summary" class="managed-storage-status"><span>✓</span><div><strong>Approved account</strong><small>Loading account details…</small></div></div>
               <p class="settings-label">Personal account name</p><div class="input-row"><input id="account-display-name" class="input-field" maxlength="60" placeholder="e.g. Benny's account"/><button class="btn-secondary" onclick="saveAccountName()">Save</button></div>
               <div id="google-drive-status" class="account-connection"></div>
+              <div id="onboarding-account-hint" class="onboarding-account-hint hidden"><strong>First, connect Google Drive</strong><span>After the connection succeeds, Bewlet will guide you to Preferences.</span></div>
               <div class="btn-row account-actions"><button id="connect-google-drive" class="btn-primary" onclick="connectGoogleDrive()">Connect Google Drive</button><button class="btn-secondary" onclick="signOutBewlet()">Sign out</button></div>
             </div>
 
@@ -761,7 +764,7 @@
         <div class="onboarding-visual" id="onboarding-visual" aria-hidden="true"></div>
         <div class="onboarding-copy"><p id="onboarding-eyebrow" class="onboarding-eyebrow"></p><h2 id="onboarding-title"></h2><p id="onboarding-description"></p></div>
         <div class="onboarding-progress"><span id="onboarding-count"></span><div id="onboarding-dots" class="onboarding-dots" aria-hidden="true"></div></div>
-        <div class="onboarding-actions"><button id="onboarding-previous" class="btn-ghost" onclick="changeOnboardingStep(-1)">Previous</button><button id="onboarding-personalize" class="btn-secondary" onclick="finishOnboarding('completed','preferences')" hidden>Personalize Bewlet first</button><button id="onboarding-next" class="btn-primary" onclick="changeOnboardingStep(1)">Next</button></div>
+        <div class="onboarding-actions"><button id="onboarding-previous" class="btn-ghost" onclick="changeOnboardingStep(-1)">Previous</button><button id="onboarding-personalize" class="btn-secondary" onclick="finishOnboarding('completed','account')" hidden>Set up sync &amp; preferences</button><button id="onboarding-next" class="btn-primary" onclick="changeOnboardingStep(1)">Next</button></div>
       </div>
     </div>
 

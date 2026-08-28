@@ -25,6 +25,16 @@ alter table public.profiles add column if not exists registration_notified_at ti
 alter table public.profiles add column if not exists onboarding_completed_at timestamptz;
 create index if not exists profiles_region_license_idx on public.profiles (pricing_region, license_type);
 
+create table if not exists public.app_settings (
+  key text primary key,
+  value text not null default '',
+  updated_at timestamptz not null default now()
+);
+alter table public.app_settings enable row level security;
+insert into public.app_settings (key, value)
+values ('support_whatsapp', '089504556187')
+on conflict (key) do nothing;
+
 create table if not exists public.payment_submissions (
   id bigint generated always as identity primary key,
   user_id uuid not null references auth.users(id) on delete cascade,

@@ -1342,7 +1342,7 @@ const ONBOARDING_STEPS = [
   { eyebrow: "Track daily", title: "Record money in seconds", description: "Use the floating + button to add income, expenses, savings, or transfers—including transactions from another date or currency.", icon: '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M7 12h10"/></svg>' },
   { eyebrow: "Plan ahead", title: "Turn plans into progress", description: "Keep checklists, budgets, savings goals, and recurring bills together. Planned expenses count only after you confirm them.", icon: '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3v3M16 3v3M4 9h16M5 5h14a1 1 0 011 1v14H4V6a1 1 0 011-1z"/><path d="M8 14l2 2 5-5"/></svg>' },
   { eyebrow: "Make it yours", title: "Your Bewlet, your way", description: "Choose a theme, currency, privacy preference, and quick-access pages. On mobile, swipe between those pages or open the full drawer from the left edge.", icon: '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M6 14v6"/></svg>' },
-  { eyebrow: "Ready", title: "Your data stays with you", description: "Connect Google Drive once for your private Sheet and backups. Bewlet also keeps local changes available when your connection drops.", icon: '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 18h11a4 4 0 000-8 6 6 0 00-11.5-2A5 5 0 007 18z"/><path d="M9 14l2 2 4-4"/></svg>' },
+  { eyebrow: "Ready", title: "Connect first, personalize next", description: "Start by connecting Google Drive for your private Sheet and backups. Once it is ready, Bewlet will take you to Preferences.", icon: '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 18h11a4 4 0 000-8 6 6 0 00-11.5-2A5 5 0 007 18z"/><path d="M9 14l2 2 4-4"/></svg>' },
 ];
 let ONBOARDING_STEP = 0;
 let ONBOARDING_REPLAY = false;
@@ -1359,7 +1359,9 @@ function renderOnboardingStep() {
   document.getElementById("onboarding-dots").innerHTML = ONBOARDING_STEPS.map((_, index) => `<i class="${index === ONBOARDING_STEP ? "active" : ""}"></i>`).join("");
   document.getElementById("onboarding-previous").hidden = ONBOARDING_STEP === 0;
   document.getElementById("onboarding-next").textContent = ONBOARDING_STEP === ONBOARDING_STEPS.length - 1 ? "Get Started" : "Next";
-  document.getElementById("onboarding-personalize").hidden = ONBOARDING_STEP !== ONBOARDING_STEPS.length - 1;
+  const personalize = document.getElementById("onboarding-personalize");
+  personalize.hidden = ONBOARDING_STEP !== ONBOARDING_STEPS.length - 1;
+  personalize.textContent = IS_DEMO_MODE ? "Explore Preferences" : "Set up sync & preferences";
   document.getElementById("onboarding-skip-top").hidden = ONBOARDING_STEP === ONBOARDING_STEPS.length - 1;
 }
 
@@ -1386,7 +1388,17 @@ async function finishOnboarding(outcome = "completed", destination = "dashboard"
       if (window.BEWLET_AUTH?.account?.profile) window.BEWLET_AUTH.account.profile.onboarding_completed_at = result.onboarding_completed_at;
     }
     closeModal("modal-onboarding");
-    if (destination === "preferences") {
+    if (destination === "account") {
+      if (IS_DEMO_MODE || window.BEWLET_AUTH?.account?.google) {
+        navigate("settings");
+        setSettingsTab("preferences");
+      } else {
+        sessionStorage.setItem("bewlet_onboarding_setup", "1");
+        navigate("settings");
+        setSettingsTab("account");
+        document.getElementById("onboarding-account-hint")?.classList.remove("hidden");
+      }
+    } else if (destination === "preferences") {
       navigate("settings");
       setSettingsTab("preferences");
     } else if (!ONBOARDING_REPLAY) {
@@ -1489,11 +1501,22 @@ async function accountApi(path = "", options = {}) {
   if (!response.ok) throw new Error(data.error || "Account request failed");
   return data;
 }
+function renderSupportWhatsApp(value = "") {
+  const raw = String(value || (IS_DEMO_MODE ? "089504556187" : "")).trim();
+  let digits = raw.replace(/\D/g, "");
+  if (digits.startsWith("0")) digits = `62${digits.slice(1)}`;
+  const wrapper = document.getElementById("guide-direct-support");
+  const link = document.getElementById("support-whatsapp-link");
+  const valid = /^\d{8,15}$/.test(digits);
+  wrapper?.classList.toggle("hidden", !valid);
+  if (link && valid) link.href = `https://wa.me/${digits}?text=${encodeURIComponent("Hi Bewlet, I need help with the app.")}`;
+}
 async function renderAccountManagement() {
   if (!window.BEWLET_AUTH) return;
   try {
     const account = await accountApi();
     window.BEWLET_AUTH.account = account;
+    renderSupportWhatsApp(account.supportWhatsApp);
     const summary = document.getElementById("account-summary");
     const accountLabel = STATE.accountName || (account.admin ? "Admin" : account.profile.display_name) || account.user.email;
     if (summary) summary.innerHTML = `<span>✓</span><div><strong>${escHtml(accountLabel)}</strong><small>${escHtml(account.user.email)} · ${escHtml(account.profile.license_type || "Approved access")}</small></div>`;
@@ -3294,6 +3317,7 @@ function applyDemoState() {
   banner.innerHTML = '<span><strong>Demo mode</strong> — changes reset when you leave.</span><a href="/" onclick="sessionStorage.removeItem(\'bewlet_demo_mode\')">Exit demo</a>';
   document.body.prepend(banner);
   document.body.classList.add("demo-mode");
+  renderSupportWhatsApp("089504556187");
   const syncDemoBannerHeight = () => document.documentElement.style.setProperty("--demo-banner-h", `${banner.getBoundingClientRect().height}px`);
   requestAnimationFrame(syncDemoBannerHeight);
   if (window.ResizeObserver) new ResizeObserver(syncDemoBannerHeight).observe(banner);
@@ -3537,6 +3561,7 @@ function boot() {
 
   // Render initial page
   renderPage("dashboard");
+  renderSupportWhatsApp(window.BEWLET_AUTH?.account?.supportWhatsApp);
   updateExchangeRates();
   checkUpcomingPlannedTransactions();
   renderNotificationCenter();
@@ -3548,8 +3573,8 @@ function boot() {
   if (IS_DEMO_MODE || (onboardingReady && onboardingProfile.status === "approved" && !onboardingProfile.onboarding_completed_at)) setTimeout(openOnboarding, 650);
 
   const googleResult = new URLSearchParams(location.search).get("google");
-  if (googleResult === "connected") { showToast("Google Drive connected. Creating your Bewlet spreadsheet…", "success", 5000); history.replaceState(null, "", "/app"); setTimeout(syncNow, 500); }
-  if (googleResult === "error") { showToast(new URLSearchParams(location.search).get("message") || "Google Drive connection failed.", "error", 6000); history.replaceState(null, "", "/app"); }
+  if (googleResult === "connected") { const guidedSetup = sessionStorage.getItem("bewlet_onboarding_setup") === "1"; sessionStorage.removeItem("bewlet_onboarding_setup"); history.replaceState(null, "", "/app"); if (guidedSetup) { navigate("settings"); setSettingsTab("preferences"); showToast("Google Drive connected. Now make Bewlet yours.", "success", 5000); } else showToast("Google Drive connected. Creating your Bewlet spreadsheet…", "success", 5000); setTimeout(syncNow, 500); }
+  if (googleResult === "error") { const guidedSetup = sessionStorage.getItem("bewlet_onboarding_setup") === "1"; showToast(new URLSearchParams(location.search).get("message") || "Google Drive connection failed.", "error", 6000); history.replaceState(null, "", "/app"); if (guidedSetup) { navigate("settings"); setSettingsTab("account"); document.getElementById("onboarding-account-hint")?.classList.remove("hidden"); } }
 
   const calendarDate = new URLSearchParams(location.search).get("calendarDate");
   if (calendarDate && /^\d{4}-\d{2}-\d{2}$/.test(calendarDate)) {

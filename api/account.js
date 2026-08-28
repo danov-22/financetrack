@@ -14,6 +14,11 @@ async function isAdmin(token, email = "") {
   return Boolean(await supabase("/rest/v1/rpc/is_bewlet_admin", { method: "POST", body: "{}" }, token));
 }
 
+async function supportWhatsApp() {
+  const rows = await supabase("/rest/v1/app_settings?key=eq.support_whatsapp&select=value").catch(() => []);
+  return rows?.[0]?.value || "";
+}
+
 async function notifyDecision(profile, decision, reason) {
   if (!process.env.RESEND_API_KEY || !process.env.APP_FROM_EMAIL) return { sent: false, error: "Email notifications are not configured" };
   const approved = decision === "approved";
@@ -66,13 +71,13 @@ module.exports = async function handler(request, response) {
         let founderSlots = [];
         try { founderSlots = await supabase("/rest/v1/founder_slots?select=region,capacity,claimed"); }
         catch (error) { warnings.push(`Early-access counts: ${error.message}`); }
-        return send(response, 200, { profiles, founderSlots, warnings });
+        return send(response, 200, { profiles, founderSlots, supportWhatsApp: await supportWhatsApp(), warnings });
       }
       const [connections, backups] = await Promise.all([
         supabase(`/rest/v1/google_connections?user_id=eq.${session.user.id}&select=google_email,connected_at`).catch(() => []),
         session.profile.status === "approved" ? supabase(`/rest/v1/data_backups?user_id=eq.${session.user.id}&select=id,byte_size,spreadsheet_revision,created_at&order=created_at.desc&limit=20`).catch(() => []) : [],
       ]);
-      return send(response, 200, { user: { id: session.user.id, email: session.user.email }, profile: session.profile, admin, google: connections?.[0] || null, backups });
+      return send(response, 200, { user: { id: session.user.id, email: session.user.email }, profile: session.profile, admin, google: connections?.[0] || null, backups, supportWhatsApp: await supportWhatsApp() });
     }
     if (request.method !== "POST") return send(response, 405, { error: "Method not allowed" });
     const body = request.body || {};
@@ -139,6 +144,13 @@ module.exports = async function handler(request, response) {
       const completedAt = session.profile.onboarding_completed_at || new Date().toISOString();
       await supabase(`/rest/v1/profiles?id=eq.${encodeURIComponent(session.user.id)}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ onboarding_completed_at: completedAt, updated_at: new Date().toISOString() }) });
       return send(response, 200, { onboarding_completed_at: completedAt });
+    }
+    if (body.action === "update-support-whatsapp") {
+      if (!(await isAdmin(session.token, session.user.email))) return send(response, 403, { error: "Administrator access required" });
+      const value = String(body.value || "").trim().replace(/[\s().-]/g, "");
+      if (!/^\+?\d{8,15}$/.test(value)) return send(response, 400, { error: "Enter a valid WhatsApp number with country or local prefix" });
+      await supabase("/rest/v1/app_settings?on_conflict=key", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: "support_whatsapp", value, updated_at: new Date().toISOString() }) });
+      return send(response, 200, { supportWhatsApp: value });
     }
     if (body.action === "notify-payment-proof") {
       const payments = await supabase(`/rest/v1/payment_submissions?user_id=eq.${encodeURIComponent(session.user.id)}&status=eq.pending&select=id,amount_minor,currency,submitted_at&order=submitted_at.desc&limit=1`);

@@ -41,7 +41,7 @@ function render() {
 
 async function load() {
   statusEl.textContent = "Loading accounts…";
-  try { const data = await api("?action=admin-list"); profiles = data.profiles || []; founderSlots = data.founderSlots || []; render(); statusEl.textContent = `${profiles.length} total account${profiles.length === 1 ? "" : "s"}${data.warnings?.length ? ` · Setup warning: ${data.warnings.join(" | ")}` : ""}`; }
+  try { const data = await api("?action=admin-list"); profiles = data.profiles || []; founderSlots = data.founderSlots || []; const supportInput = document.getElementById("support-whatsapp"); if (supportInput && document.activeElement !== supportInput) supportInput.value = data.supportWhatsApp || ""; render(); statusEl.textContent = `${profiles.length} total account${profiles.length === 1 ? "" : "s"}${data.warnings?.length ? ` · Setup warning: ${data.warnings.join(" | ")}` : ""}`; }
   catch (error) { statusEl.textContent = error.message; }
 }
 
@@ -84,6 +84,7 @@ window.deleteAnnouncement = async (id) => { if (!confirm("Delete this announceme
 document.getElementById("feedback-admin-status").addEventListener("change", renderFeedbackTickets);
 document.getElementById("feedback-refresh").addEventListener("click", loadBeta);
 document.getElementById("announcement-form").addEventListener("submit", async (event) => { event.preventDefault(); const starts = document.getElementById("announcement-start").value, expires = document.getElementById("announcement-expiry").value; try { await betaApi("/api/notifications", { method:"POST", body:JSON.stringify({ action:"publish", kind:document.getElementById("announcement-kind").value, title:document.getElementById("announcement-title").value, message:document.getElementById("announcement-message").value, startsAt:starts ? new Date(starts).toISOString() : "", expiresAt:expires ? new Date(expires).toISOString() : "" }) }); event.target.reset(); document.getElementById("announcement-status").textContent = "Announcement published to users."; await loadBeta(); } catch (error) { document.getElementById("announcement-status").textContent = error.message; } });
+document.getElementById("support-whatsapp-form").addEventListener("submit", async (event) => { event.preventDefault(); const status = document.getElementById("support-whatsapp-status"); status.textContent = "Saving…"; try { const result = await api("", { method:"POST", body:JSON.stringify({ action:"update-support-whatsapp", value:document.getElementById("support-whatsapp").value }) }); document.getElementById("support-whatsapp").value = result.supportWhatsApp; status.textContent = "WhatsApp support number saved for all users."; } catch (error) { status.textContent = error.message; } });
 
 config = await fetch("/api/public-config", { cache:"no-store" }).then((response) => response.json());
 token = localStorage.getItem("bewlet_supabase_access_token") || await refreshToken();
