@@ -1726,6 +1726,18 @@ input, select, textarea { outline: none; }
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
   .modal-overlay.open .modal { transform: translateY(0); }
+  .modal-overlay.onboarding-overlay {
+    align-items: center;
+    padding: 14px;
+  }
+  .onboarding-overlay .onboarding-modal {
+    width: 100%;
+    max-width: 440px;
+    max-height: calc(100dvh - 28px);
+    border-radius: 20px;
+    transform: translateY(16px) scale(.98);
+  }
+  .onboarding-overlay.open .onboarding-modal { transform: translateY(0) scale(1); }
   /* drag handle */
   .modal-header::before {
     content: '';
