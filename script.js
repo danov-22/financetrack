@@ -1437,10 +1437,13 @@ function renderSettingsLists() {
   walletsList.innerHTML = STATE.wallets.length
     ? STATE.wallets
         .map(
-          (w) => `
-      <div class="settings-list-item">
-        <span>${escHtml(w)}</span>
+          (w, index) => `
+      <div class="settings-list-item" draggable="true" data-reorder-index="${index}">
+        <span class="settings-drag-handle" aria-hidden="true">☰</span>
+        <span class="settings-list-name">${escHtml(w)}</span>
         <div class="settings-list-item-actions">
+          <button class="btn-icon reorder" onclick="moveSettingsListItem('wallet',${index},-1)" title="Move up" aria-label="Move ${escHtml(w)} up" ${index === 0 ? "disabled" : ""}>↑</button>
+          <button class="btn-icon reorder" onclick="moveSettingsListItem('wallet',${index},1)" title="Move down" aria-label="Move ${escHtml(w)} down" ${index === STATE.wallets.length - 1 ? "disabled" : ""}>↓</button>
           <button class="btn-icon" onclick="openWalletModal('${escHtml(w)}')" title="Edit">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </button>
@@ -1456,10 +1459,13 @@ function renderSettingsLists() {
   catList.innerHTML = STATE.categories.length
     ? STATE.categories
         .map(
-          (c) => `
-      <div class="settings-list-item">
-        <span>${escHtml(c)}</span>
+          (c, index) => `
+      <div class="settings-list-item" draggable="true" data-reorder-index="${index}">
+        <span class="settings-drag-handle" aria-hidden="true">☰</span>
+        <span class="settings-list-name">${escHtml(c)}</span>
         <div class="settings-list-item-actions">
+          <button class="btn-icon reorder" onclick="moveSettingsListItem('category',${index},-1)" title="Move up" aria-label="Move ${escHtml(c)} up" ${index === 0 ? "disabled" : ""}>↑</button>
+          <button class="btn-icon reorder" onclick="moveSettingsListItem('category',${index},1)" title="Move down" aria-label="Move ${escHtml(c)} down" ${index === STATE.categories.length - 1 ? "disabled" : ""}>↓</button>
           <button class="btn-icon" onclick="openCategoryModal('${escHtml(c)}')" title="Edit">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </button>
@@ -1471,6 +1477,9 @@ function renderSettingsLists() {
         )
         .join("")
     : '<p style="font-size:.82rem;color:var(--text-3)">No categories added yet.</p>';
+
+  enableSettingsListDrag(walletsList, "wallet");
+  enableSettingsListDrag(catList, "category");
 
   const gasInput = document.getElementById("gas-url-input");
   if (gasInput) gasInput.value = STATE.gasUrl || "";
@@ -1484,6 +1493,34 @@ function renderSettingsLists() {
   updateReminderPermissionStatus();
   renderBottomNavSettings();
   renderAccountManagement();
+}
+
+function settingsListFor(kind) { return kind === "wallet" ? STATE.wallets : kind === "category" ? STATE.categories : null; }
+function persistSettingsList(kind) { if (kind === "wallet") persistWallets(); else if (kind === "category") persistCategories(); }
+function moveSettingsListItem(kind, index, direction) {
+  const list = settingsListFor(kind), target = Number(index) + Number(direction);
+  if (!list || index < 0 || target < 0 || target >= list.length) return;
+  [list[index], list[target]] = [list[target], list[index]];
+  persistSettingsList(kind);
+  renderSettingsLists();
+}
+function enableSettingsListDrag(container, kind) {
+  let draggedIndex = -1;
+  container.querySelectorAll(".settings-list-item").forEach((item) => {
+    item.addEventListener("dragstart", () => { draggedIndex = Number(item.dataset.reorderIndex); item.classList.add("dragging"); });
+    item.addEventListener("dragend", () => item.classList.remove("dragging"));
+    item.addEventListener("dragover", (event) => { event.preventDefault(); item.classList.add("drag-over"); });
+    item.addEventListener("dragleave", () => item.classList.remove("drag-over"));
+    item.addEventListener("drop", (event) => {
+      event.preventDefault();
+      const targetIndex = Number(item.dataset.reorderIndex), list = settingsListFor(kind);
+      if (!list || draggedIndex < 0 || draggedIndex === targetIndex) return;
+      const [moved] = list.splice(draggedIndex, 1);
+      list.splice(targetIndex, 0, moved);
+      persistSettingsList(kind);
+      renderSettingsLists();
+    });
+  });
 }
 
 async function accountApi(path = "", options = {}) {
@@ -3483,6 +3520,7 @@ window.deleteGoal = deleteGoal;
 window.openRecurringBillModal = openRecurringBillModal;
 window.toggleBottomNavPage = toggleBottomNavPage;
 window.moveBottomNavPage = moveBottomNavPage;
+window.moveSettingsListItem = moveSettingsListItem;
 window.connectGoogleDrive = connectGoogleDrive;
 window.saveAccountName = saveAccountName;
 window.signOutBewlet = signOutBewlet;
