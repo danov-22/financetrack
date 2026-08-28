@@ -479,6 +479,7 @@
                 <div><span>2</span><strong>Personalize</strong><small>Choose currency, theme, and shortcuts.</small></div>
                 <div><span>3</span><strong>Track</strong><small>Add transactions and review progress.</small></div>
               </div>
+              <button class="btn-secondary guide-replay" onclick="openOnboarding(true)">Replay welcome tour</button>
             </div>
 
             <div class="settings-card guide-card" data-settings-panel="guide">
@@ -752,6 +753,17 @@
     <!-- ============================================================ -->
     <!-- MODALS                                                       -->
     <!-- ============================================================ -->
+
+    <!-- Welcome Onboarding -->
+    <div id="modal-onboarding" class="modal-overlay onboarding-overlay" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
+      <div class="modal onboarding-modal">
+        <div class="onboarding-brand"><span><svg width="26" height="26" viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="8" fill="var(--accent)"/><path d="M7 18l5-5 4 4 5-6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Bewlet</span><button id="onboarding-skip-top" onclick="finishOnboarding('skipped')">Skip</button></div>
+        <div class="onboarding-visual" id="onboarding-visual" aria-hidden="true"></div>
+        <div class="onboarding-copy"><p id="onboarding-eyebrow" class="onboarding-eyebrow"></p><h2 id="onboarding-title"></h2><p id="onboarding-description"></p></div>
+        <div class="onboarding-progress"><span id="onboarding-count"></span><div id="onboarding-dots" class="onboarding-dots" aria-hidden="true"></div></div>
+        <div class="onboarding-actions"><button id="onboarding-previous" class="btn-ghost" onclick="changeOnboardingStep(-1)">Previous</button><button id="onboarding-next" class="btn-primary" onclick="changeOnboardingStep(1)">Next</button></div>
+      </div>
+    </div>
 
     <!-- Transaction Modal -->
     <div

@@ -15,12 +15,14 @@ create table if not exists public.profiles (
   approved_by uuid references auth.users(id),
   rejection_reason text,
   google_sheet_id text,
+  onboarding_completed_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
 create index if not exists profiles_status_created_idx on public.profiles (status, created_at desc);
 alter table public.profiles add column if not exists registration_notified_at timestamptz;
+alter table public.profiles add column if not exists onboarding_completed_at timestamptz;
 create index if not exists profiles_region_license_idx on public.profiles (pricing_region, license_type);
 
 create table if not exists public.payment_submissions (

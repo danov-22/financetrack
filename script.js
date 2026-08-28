@@ -1337,6 +1337,59 @@ function setSettingsTab(tab = "account") {
   document.querySelector(".settings-tabs")?.scrollTo({ left: document.querySelector(`[data-settings-tab="${ACTIVE_SETTINGS_TAB}"]`)?.offsetLeft || 0, behavior: "smooth" });
 }
 
+const ONBOARDING_STEPS = [
+  { eyebrow: "Welcome", title: "Welcome to Bewlet", description: "A private, manual money tracker made to feel personal, simple, and comfortable on every device.", icon: '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12l5-5 4 4 7-8"/><path d="M15 3h5v5"/><path d="M5 20h14"/></svg>' },
+  { eyebrow: "Track daily", title: "Record money in seconds", description: "Use the floating + button to add income, expenses, savings, or transfers—including transactions from another date or currency.", icon: '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M7 12h10"/></svg>' },
+  { eyebrow: "Plan ahead", title: "Turn plans into progress", description: "Keep checklists, budgets, savings goals, and recurring bills together. Planned expenses count only after you confirm them.", icon: '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3v3M16 3v3M4 9h16M5 5h14a1 1 0 011 1v14H4V6a1 1 0 011-1z"/><path d="M8 14l2 2 5-5"/></svg>' },
+  { eyebrow: "Make it yours", title: "Your Bewlet, your way", description: "Choose a theme, currency, privacy preference, and quick-access pages. On mobile, swipe between those pages or open the full drawer from the left edge.", icon: '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M6 14v6"/></svg>' },
+  { eyebrow: "Ready", title: "Your data stays with you", description: "Connect Google Drive once for your private Sheet and backups. Bewlet also keeps local changes available when your connection drops.", icon: '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 18h11a4 4 0 000-8 6 6 0 00-11.5-2A5 5 0 007 18z"/><path d="M9 14l2 2 4-4"/></svg>' },
+];
+let ONBOARDING_STEP = 0;
+
+function renderOnboardingStep() {
+  const step = ONBOARDING_STEPS[ONBOARDING_STEP];
+  if (!step) return;
+  const owner = dashboardOwnerName();
+  document.getElementById("onboarding-eyebrow").textContent = step.eyebrow;
+  document.getElementById("onboarding-title").textContent = ONBOARDING_STEP === 0 && owner ? `Welcome to Bewlet, ${owner}` : step.title;
+  document.getElementById("onboarding-description").textContent = step.description;
+  document.getElementById("onboarding-visual").innerHTML = step.icon;
+  document.getElementById("onboarding-count").textContent = `${ONBOARDING_STEP + 1} of ${ONBOARDING_STEPS.length}`;
+  document.getElementById("onboarding-dots").innerHTML = ONBOARDING_STEPS.map((_, index) => `<i class="${index === ONBOARDING_STEP ? "active" : ""}"></i>`).join("");
+  document.getElementById("onboarding-previous").hidden = ONBOARDING_STEP === 0;
+  document.getElementById("onboarding-next").textContent = ONBOARDING_STEP === ONBOARDING_STEPS.length - 1 ? "Get Started" : "Next";
+  document.getElementById("onboarding-skip-top").hidden = ONBOARDING_STEP === ONBOARDING_STEPS.length - 1;
+}
+
+function openOnboarding() {
+  ONBOARDING_STEP = 0;
+  renderOnboardingStep();
+  openModal("modal-onboarding");
+}
+
+function changeOnboardingStep(direction) {
+  if (direction > 0 && ONBOARDING_STEP === ONBOARDING_STEPS.length - 1) return finishOnboarding("completed");
+  ONBOARDING_STEP = Math.max(0, Math.min(ONBOARDING_STEPS.length - 1, ONBOARDING_STEP + Number(direction || 0)));
+  renderOnboardingStep();
+}
+
+async function finishOnboarding(outcome = "completed") {
+  const button = document.getElementById("onboarding-next");
+  if (button) button.disabled = true;
+  try {
+    const alreadyCompleted = Boolean(window.BEWLET_AUTH?.account?.profile?.onboarding_completed_at);
+    if (!IS_DEMO_MODE && !alreadyCompleted) {
+      const result = await accountApi("", { method: "POST", body: JSON.stringify({ action: "complete-onboarding", outcome }) });
+      if (window.BEWLET_AUTH?.account?.profile) window.BEWLET_AUTH.account.profile.onboarding_completed_at = result.onboarding_completed_at;
+    }
+    closeModal("modal-onboarding");
+  } catch (error) {
+    showToast(`Could not save onboarding progress: ${error.message}`, "error");
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
 function applyDashboardPrivacy() {
   document.getElementById("page-dashboard")?.classList.toggle("privacy-mode", STATE.dashboardBalancesHidden);
   const toggle = document.getElementById("dashboard-privacy-toggle");
@@ -3434,6 +3487,9 @@ window.handleFeedbackScreenshot = handleFeedbackScreenshot;
 window.removeFeedbackScreenshot = removeFeedbackScreenshot;
 window.openNotificationCenter = openNotificationCenter;
 window.readNotification = readNotification;
+window.openOnboarding = openOnboarding;
+window.changeOnboardingStep = changeOnboardingStep;
+window.finishOnboarding = finishOnboarding;
 
 // ============================================================
 // BOOT
@@ -3469,6 +3525,9 @@ function boot() {
   if (!IS_DEMO_MODE && window.BEWLET_AUTH) setTimeout(() => loadNotifications(true), 700);
   if (!IS_DEMO_MODE && window.BEWLET_AUTH) setInterval(() => loadNotifications(true), 5 * 60 * 1000);
   setTimeout(checkBudgetAlerts, 400);
+  const onboardingProfile = window.BEWLET_AUTH?.account?.profile;
+  const onboardingReady = Boolean(onboardingProfile && Object.prototype.hasOwnProperty.call(onboardingProfile, "onboarding_completed_at"));
+  if (IS_DEMO_MODE || (onboardingReady && onboardingProfile.status === "approved" && !onboardingProfile.onboarding_completed_at)) setTimeout(openOnboarding, 650);
 
   const googleResult = new URLSearchParams(location.search).get("google");
   if (googleResult === "connected") { showToast("Google Drive connected. Creating your Bewlet spreadsheet…", "success", 5000); history.replaceState(null, "", "/app"); setTimeout(syncNow, 500); }

@@ -134,6 +134,12 @@ module.exports = async function handler(request, response) {
       await supabase(`/rest/v1/profiles?id=eq.${session.user.id}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ registration_notified_at: new Date().toISOString() }) });
       return send(response, 200, { notified: true });
     }
+    if (body.action === "complete-onboarding") {
+      if (session.profile.status !== "approved") return send(response, 403, { error: "Approved access required" });
+      const completedAt = session.profile.onboarding_completed_at || new Date().toISOString();
+      await supabase(`/rest/v1/profiles?id=eq.${encodeURIComponent(session.user.id)}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ onboarding_completed_at: completedAt, updated_at: new Date().toISOString() }) });
+      return send(response, 200, { onboarding_completed_at: completedAt });
+    }
     if (body.action === "notify-payment-proof") {
       const payments = await supabase(`/rest/v1/payment_submissions?user_id=eq.${encodeURIComponent(session.user.id)}&status=eq.pending&select=id,amount_minor,currency,submitted_at&order=submitted_at.desc&limit=1`);
       const payment = payments?.[0];
