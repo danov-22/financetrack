@@ -3285,6 +3285,15 @@ function applyDemoState() {
   banner.innerHTML = '<span><strong>Demo mode</strong> — changes reset when you leave.</span><a href="/" onclick="sessionStorage.removeItem(\'bewlet_demo_mode\')">Exit demo</a>';
   document.body.prepend(banner);
   document.body.classList.add("demo-mode");
+  const syncDemoBannerHeight = () => document.documentElement.style.setProperty("--demo-banner-h", `${banner.getBoundingClientRect().height}px`);
+  requestAnimationFrame(syncDemoBannerHeight);
+  if (window.ResizeObserver) new ResizeObserver(syncDemoBannerHeight).observe(banner);
+  const demoExit = document.getElementById("sidebar-signout");
+  if (demoExit) {
+    demoExit.title = "Exit demo";
+    demoExit.querySelector("span").textContent = "Exit demo";
+    demoExit.onclick = () => { sessionStorage.removeItem("bewlet_demo_mode"); location.assign("/"); };
+  }
 }
 
 function initEventListeners() {
