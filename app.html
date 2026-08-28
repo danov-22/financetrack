@@ -498,6 +498,7 @@
               <p class="settings-label">Personal account name</p><div class="input-row"><input id="account-display-name" class="input-field" maxlength="60" placeholder="e.g. Benny's account"/><button class="btn-secondary" onclick="saveAccountName()">Save</button></div>
               <div id="google-drive-status" class="account-connection"></div>
               <div id="onboarding-account-hint" class="onboarding-account-hint hidden"><strong>First, connect Google Drive</strong><span>After the connection succeeds, Bewlet will guide you to Preferences.</span></div>
+              <button id="onboarding-preferences-next" class="btn-secondary onboarding-preferences-next hidden" onclick="continueOnboardingToPreferences()">Continue to Preferences</button>
               <div class="btn-row account-actions"><button id="connect-google-drive" class="btn-primary" onclick="connectGoogleDrive()">Connect Google Drive</button><button class="btn-secondary" onclick="signOutBewlet()">Sign out</button></div>
             </div>
 
@@ -546,6 +547,7 @@
 
             <div class="settings-card" data-settings-panel="organize">
               <h3>Wallets</h3>
+              <p class="settings-desc">Create places for your money, such as cash, a bank account, savings, or a travel fund.</p>
               <div id="settings-wallets-list" class="settings-list"></div>
               <button class="btn-secondary btn-sm" onclick="openWalletModal()">
                 + Add Wallet
@@ -600,6 +602,7 @@
 
             <div class="settings-card" data-settings-panel="organize">
               <h3>Categories</h3>
+              <p class="settings-desc">Group transactions by purpose so spending, budgets, and reports are easier to understand.</p>
               <div id="settings-categories-list" class="settings-list"></div>
               <button
                 class="btn-secondary btn-sm"

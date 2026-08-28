@@ -1386,15 +1386,10 @@ async function finishOnboarding(outcome = "completed", destination = "dashboard"
     }
     closeModal("modal-onboarding");
     if (destination === "account") {
-      if (IS_DEMO_MODE || window.BEWLET_AUTH?.account?.google) {
-        navigate("settings");
-        setSettingsTab("preferences");
-      } else {
-        sessionStorage.setItem("bewlet_onboarding_setup", "1");
-        navigate("settings");
-        setSettingsTab("account");
-        document.getElementById("onboarding-account-hint")?.classList.remove("hidden");
-      }
+      if (!IS_DEMO_MODE && !window.BEWLET_AUTH?.account?.google) sessionStorage.setItem("bewlet_onboarding_setup", "1");
+      navigate("settings");
+      setSettingsTab("account");
+      renderOnboardingAccountStep();
     } else if (destination === "preferences") {
       navigate("settings");
       setSettingsTab("preferences");
@@ -1507,6 +1502,18 @@ function renderSupportWhatsApp(value = "") {
   const valid = /^\d{8,15}$/.test(digits);
   wrapper?.classList.toggle("hidden", !valid);
   if (link && valid) link.href = `https://wa.me/${digits}?text=${encodeURIComponent("Hi Bewlet, I need help with the app.")}`;
+}
+function renderOnboardingAccountStep() {
+  const hint = document.getElementById("onboarding-account-hint");
+  const next = document.getElementById("onboarding-preferences-next");
+  const connected = IS_DEMO_MODE || Boolean(window.BEWLET_AUTH?.account?.google);
+  hint?.classList.remove("hidden");
+  if (hint) hint.innerHTML = connected ? "<strong>Google Drive setup</strong><span>Your connection is ready. Continue to Preferences to personalize Bewlet.</span>" : "<strong>First, connect Google Drive</strong><span>After the connection succeeds, Bewlet will guide you to Preferences.</span>";
+  next?.classList.toggle("hidden", !connected);
+}
+function continueOnboardingToPreferences() {
+  sessionStorage.removeItem("bewlet_onboarding_setup");
+  setSettingsTab("preferences");
 }
 async function renderAccountManagement() {
   if (!window.BEWLET_AUTH) return;
@@ -3529,6 +3536,7 @@ window.readNotification = readNotification;
 window.openOnboarding = openOnboarding;
 window.changeOnboardingStep = changeOnboardingStep;
 window.finishOnboarding = finishOnboarding;
+window.continueOnboardingToPreferences = continueOnboardingToPreferences;
 
 // ============================================================
 // BOOT
