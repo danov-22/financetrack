@@ -1345,6 +1345,7 @@ const ONBOARDING_STEPS = [
   { eyebrow: "Ready", title: "Your data stays with you", description: "Connect Google Drive once for your private Sheet and backups. Bewlet also keeps local changes available when your connection drops.", icon: '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 18h11a4 4 0 000-8 6 6 0 00-11.5-2A5 5 0 007 18z"/><path d="M9 14l2 2 4-4"/></svg>' },
 ];
 let ONBOARDING_STEP = 0;
+let ONBOARDING_REPLAY = false;
 
 function renderOnboardingStep() {
   const step = ONBOARDING_STEPS[ONBOARDING_STEP];
@@ -1358,10 +1359,12 @@ function renderOnboardingStep() {
   document.getElementById("onboarding-dots").innerHTML = ONBOARDING_STEPS.map((_, index) => `<i class="${index === ONBOARDING_STEP ? "active" : ""}"></i>`).join("");
   document.getElementById("onboarding-previous").hidden = ONBOARDING_STEP === 0;
   document.getElementById("onboarding-next").textContent = ONBOARDING_STEP === ONBOARDING_STEPS.length - 1 ? "Get Started" : "Next";
+  document.getElementById("onboarding-personalize").hidden = ONBOARDING_STEP !== ONBOARDING_STEPS.length - 1;
   document.getElementById("onboarding-skip-top").hidden = ONBOARDING_STEP === ONBOARDING_STEPS.length - 1;
 }
 
-function openOnboarding() {
+function openOnboarding(replay = false) {
+  ONBOARDING_REPLAY = Boolean(replay);
   ONBOARDING_STEP = 0;
   renderOnboardingStep();
   openModal("modal-onboarding");
@@ -1373,7 +1376,7 @@ function changeOnboardingStep(direction) {
   renderOnboardingStep();
 }
 
-async function finishOnboarding(outcome = "completed") {
+async function finishOnboarding(outcome = "completed", destination = "dashboard") {
   const button = document.getElementById("onboarding-next");
   if (button) button.disabled = true;
   try {
@@ -1383,6 +1386,12 @@ async function finishOnboarding(outcome = "completed") {
       if (window.BEWLET_AUTH?.account?.profile) window.BEWLET_AUTH.account.profile.onboarding_completed_at = result.onboarding_completed_at;
     }
     closeModal("modal-onboarding");
+    if (destination === "preferences") {
+      navigate("settings");
+      setSettingsTab("preferences");
+    } else if (!ONBOARDING_REPLAY) {
+      navigate("dashboard");
+    }
   } catch (error) {
     showToast(`Could not save onboarding progress: ${error.message}`, "error");
   } finally {
