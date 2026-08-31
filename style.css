@@ -94,7 +94,7 @@ body {
 .demo-banner a { color: white; font-weight: 700; text-decoration: underline; }
 .demo-mode .sidebar { top: var(--demo-banner-h, 38px); height: calc(100vh - var(--demo-banner-h, 38px)); height: calc(100dvh - var(--demo-banner-h, 38px)); min-height: 0; }
 .demo-mode .topbar { top: var(--demo-banner-h, 38px); }
-.demo-mode #app { margin-top: var(--demo-banner-h, 38px); }
+.demo-mode #app { padding-top: var(--demo-banner-h, 38px); }
 .demo-mode .gas-banner,
 .demo-mode .sync-status { display: none !important; }
 
