@@ -149,6 +149,15 @@
           <article class="price-card"><span class="price-badge">First 100 international users</span><h3>International</h3><div class="price"><strong>US$19</strong><span>one time</span></div><p>Then US$29 after the early-access allocation.</p><button class="button secondary" data-login data-auth-mode="register">Claim early access</button></article>
         </div>
       </section>
+
+      <section class="section brand-story" aria-labelledby="brand-story-title">
+        <div class="brand-story-intro"><div><span class="eyebrow">A SMALL PART OF THE STORY</span><h2 id="brand-story-title">Why is it called Bewlet?</h2></div><button id="brand-story-toggle" class="brand-story-toggle" type="button" aria-expanded="false" aria-controls="brand-story-details"><span>See how the name was made</span><i aria-hidden="true">⌄</i></button></div>
+        <div id="brand-story-details" class="brand-story-details" hidden>
+          <div class="name-formula" aria-label="Web reversed becomes Bew, combined with let from wallet, becomes Bewlet"><span class="formula-word formula-web"><i>W</i><i>E</i><i>B</i></span><b>+</b><span class="formula-word formula-wallet">WAL<i>LET</i></span><b>→</b><span class="formula-result"><img src="favicon.svg" alt=""/>BEWLET</span></div>
+          <div class="brand-story-copy"><p><strong>Bewlet began with “Web Wallet.”</strong> The letters in <em>WEB</em> were reversed to form <em>BEW</em>, then joined with the <em>‑LET</em> ending from wallet: <strong>BEW + LET = BEWLET.</strong></p><p>“Weblet” was the more obvious first idea, but it was already taken. Reversing the word gave Bewlet a name of its own while keeping its connection to a wallet made for the web.</p></div>
+          <button id="brand-story-close" class="brand-story-close" type="button">Close brand story <span aria-hidden="true">⌃</span></button>
+        </div>
+      </section>
     </main>
 
     <footer><span>© 2026 Bewlet</span><span>Private financial tracking, owned by you.</span></footer>
@@ -197,6 +206,16 @@
         differenceToggle.setAttribute("aria-expanded", String(opening));
         differenceToggle.querySelector("span").textContent = opening ? "Hide Bewlet differences" : "See what makes Bewlet different";
       });
+      const brandStoryToggle = document.getElementById("brand-story-toggle");
+      const brandStoryDetails = document.getElementById("brand-story-details");
+      const setBrandStory = (opening) => {
+        brandStoryDetails.hidden = !opening;
+        brandStoryToggle.setAttribute("aria-expanded", String(opening));
+        brandStoryToggle.querySelector("span").textContent = opening ? "Hide the name story" : "See how the name was made";
+        if (opening) { brandStoryDetails.classList.remove("animate"); requestAnimationFrame(() => brandStoryDetails.classList.add("animate")); }
+      };
+      brandStoryToggle?.addEventListener("click", () => setBrandStory(brandStoryDetails.hidden));
+      document.getElementById("brand-story-close")?.addEventListener("click", () => { setBrandStory(false); brandStoryToggle.focus(); });
     </script>
   </body>
 </html>
