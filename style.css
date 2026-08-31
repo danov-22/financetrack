@@ -76,8 +76,10 @@ body {
 }
 
 .demo-banner {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 500;
   min-height: 38px;
   padding: 7px 16px;
@@ -92,6 +94,7 @@ body {
 .demo-banner a { color: white; font-weight: 700; text-decoration: underline; }
 .demo-mode .sidebar { top: var(--demo-banner-h, 38px); height: calc(100vh - var(--demo-banner-h, 38px)); height: calc(100dvh - var(--demo-banner-h, 38px)); min-height: 0; }
 .demo-mode .topbar { top: var(--demo-banner-h, 38px); }
+.demo-mode #app { margin-top: var(--demo-banner-h, 38px); }
 .demo-mode .gas-banner,
 .demo-mode .sync-status { display: none !important; }
 
@@ -1738,6 +1741,19 @@ input, select, textarea { outline: none; }
     transform: translateY(16px) scale(.98);
   }
   .onboarding-overlay.open .onboarding-modal { transform: translateY(0) scale(1); }
+  .modal-overlay.notification-overlay {
+    align-items: center;
+    padding: 14px;
+  }
+  .notification-overlay .notification-modal {
+    width: 100%;
+    max-width: 480px;
+    max-height: calc(100dvh - 28px);
+    border-radius: 20px;
+    transform: translateY(16px) scale(.98);
+  }
+  .notification-overlay.open .notification-modal { transform: translateY(0) scale(1); }
+  .notification-overlay .notification-list { max-height: min(62dvh, 520px); }
   /* drag handle */
   .modal-header::before {
     content: '';
@@ -1789,6 +1805,7 @@ input, select, textarea { outline: none; }
   .custom-theme-row .btn-primary { grid-column: 1 / -1; min-height: 42px; }
 }
 @media (max-width: 768px){.settings-tabs{top:calc(var(--topbar-h) + 4px)}.demo-mode .settings-tabs{top:calc(var(--topbar-h) + 42px)}.calendar-tx-actions{opacity:1;pointer-events:auto}}
+@media (max-width:768px){.notification-overlay .notification-modal .modal-header{padding:20px 22px 0;margin-bottom:18px}.notification-overlay .notification-modal .modal-header::before{display:none}.notification-overlay .notification-modal .modal-close{top:18px;right:18px}.notification-overlay .notification-modal .notification-list{max-height:min(62dvh,520px);padding:4px 18px 20px}}
 
 /* Sidebar overlay for mobile */
 .sidebar-overlay {
