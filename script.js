@@ -144,7 +144,7 @@ function loadStateFromLS() {
   STATE.dashboardBalancesHidden = STATE.hideDashboardBalances;
   STATE.dashboardWalletScope = LS.get("fin_dashboard_wallet_scope", "all") || "all";
   const savedCategoryChart = LS.get("fin_category_chart_type", "doughnut");
-  STATE.categoryChartType = ["doughnut", "bar", "polarArea"].includes(savedCategoryChart) ? savedCategoryChart : "doughnut";
+  STATE.categoryChartType = ["doughnut", "bar", "breakdown"].includes(savedCategoryChart) ? savedCategoryChart : (savedCategoryChart === "polarArea" ? "breakdown" : "doughnut");
   const savedBottomNav = LS.get("fin_bottom_nav_pages", null);
   if (Array.isArray(savedBottomNav)) STATE.bottomNavPages = normalizeBottomNavPages(savedBottomNav);
   if (STATE.bottomNavPages.length < 2) STATE.bottomNavPages = ["dashboard", "calendar"];
@@ -409,7 +409,8 @@ function applyManagedSnapshot(snapshot) {
     STATE.dashboardBalancesHidden = settings.hideDashboardBalances;
   }
   if (typeof settings.dashboardWalletScope === "string") STATE.dashboardWalletScope = settings.dashboardWalletScope;
-  if (["doughnut", "bar", "polarArea"].includes(settings.categoryChartType)) STATE.categoryChartType = settings.categoryChartType;
+  if (["doughnut", "bar", "breakdown"].includes(settings.categoryChartType)) STATE.categoryChartType = settings.categoryChartType;
+  else if (settings.categoryChartType === "polarArea") STATE.categoryChartType = "breakdown";
   if (settings.bottomNavPages?.length >= 2) STATE.bottomNavPages = normalizeBottomNavPages(settings.bottomNavPages);
   STATE.syncRevision = snapshot.revision || STATE.syncRevision;
   persistTransactions(); persistWallets(); persistCategories(); persistListItems(); persistBudgets(); persistGoals(); persistSettings();
@@ -2139,6 +2140,7 @@ function renderDoughnutChart(categoryData) {
   const chartType = STATE.categoryChartType;
   const wrapper = document.getElementById("category-chart-wrapper");
   if (wrapper) wrapper.className = `chart-wrapper chart-wrapper--category chart-wrapper--category-${chartType}`;
+  if (wrapper) wrapper.hidden = chartType === "breakdown";
   document.querySelectorAll("[data-category-chart]").forEach((button) => button.classList.toggle("active", button.dataset.categoryChart === chartType));
 
   if (!categoryData.length) {
@@ -2151,6 +2153,24 @@ function renderDoughnutChart(categoryData) {
     (_, i) => CHART_COLORS[i % CHART_COLORS.length],
   );
   const total = categoryData.reduce((s, c) => s + c.amount, 0);
+  if (chartType === "breakdown") {
+    if (legendEl) {
+      legendEl.className = "category-legend category-breakdown";
+      legendEl.innerHTML = categoryData.map((category, index) => {
+        const percentage = total > 0 ? (category.amount / total) * 100 : 0;
+        return `<div class="category-breakdown-item">
+          <div class="category-breakdown-rank">${index + 1}</div>
+          <div class="category-breakdown-main">
+            <div class="category-breakdown-heading"><span><i style="background:${colors[index]}"></i>${escHtml(category.label)}</span><strong>${formatAmount(category.amount)}</strong></div>
+            <div class="category-breakdown-track"><span style="width:${percentage.toFixed(1)}%;background:${colors[index]}"></span></div>
+          </div>
+          <div class="category-breakdown-percent">${percentage.toFixed(1)}%</div>
+        </div>`;
+      }).join("");
+    }
+    return;
+  }
+  if (legendEl) legendEl.className = "category-legend";
   STATE.doughnutChartInst = new Chart(ctx, {
     type: chartType,
     data: {
@@ -2183,7 +2203,7 @@ function renderDoughnutChart(categoryData) {
       scales: chartType === "bar" ? {
         x: { grid: { color: getChartGridColor() }, ticks: { color: textColor, callback: (value) => formatAmount(value) } },
         y: { grid: { display: false }, ticks: { color: textColor } },
-      } : chartType === "polarArea" ? { r: { grid: { color: getChartGridColor() }, ticks: { display: false } } } : undefined,
+      } : undefined,
     },
   });
 
@@ -2201,7 +2221,7 @@ function renderDoughnutChart(categoryData) {
 }
 
 function setCategoryChartType(type) {
-  if (!["doughnut", "bar", "polarArea"].includes(type)) return;
+  if (!["doughnut", "bar", "breakdown"].includes(type)) return;
   STATE.categoryChartType = type;
   persistSettings();
   renderReports();
