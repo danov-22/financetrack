@@ -496,6 +496,7 @@ input, select, textarea { outline: none; }
 
 .chart-wrapper--bar { height: 280px; }
 .chart-wrapper--doughnut { height: 240px; }
+.dashboard-wallet-scope{display:flex;align-items:center;gap:8px;margin-left:auto}.dashboard-wallet-scope span{font-size:.75rem;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em}.chart-view-switch{display:flex;gap:3px;padding:3px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px}.chart-view-switch button{border:0;background:transparent;color:var(--text-2);padding:6px 9px;border-radius:7px;font:inherit;font-size:.72rem;font-weight:700;cursor:pointer}.chart-view-switch button.active{background:var(--accent);color:#fff}.chart-wrapper--category{height:240px}.chart-wrapper--category-bar{height:300px}
 
 /* ============================================================
    DATE RANGE QUICK BUTTONS
@@ -1667,6 +1668,7 @@ input, select, textarea { outline: none; }
     gap: 10px;
   }
   .dashboard-title-row{width:100%;justify-content:space-between}.dashboard-privacy-button{min-height:36px;padding-inline:11px}.page-header .dashboard-title-row+.date-range-quick{width:100%}
+  .dashboard-wallet-scope{width:100%;margin-left:0}.dashboard-wallet-scope .filter-select{flex:1;min-width:0}.category-chart-header{align-items:flex-start;gap:10px}.chart-view-switch{width:100%}.chart-view-switch button{flex:1;padding:7px 5px}
   .page-actions { flex-wrap: wrap; width: 100%; }
   .page-actions > * { flex: 1 1 auto; text-align: center; justify-content: center; }
   .page-title { font-size: 1rem; }

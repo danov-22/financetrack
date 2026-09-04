@@ -69,6 +69,8 @@ const STATE = {
   accountName: "",
   currentPage: "dashboard",
   dashRange: "month",
+  dashboardWalletScope: "all",
+  categoryChartType: "doughnut",
   calendarMonth: "",
   calendarSelectedDate: "",
   reminderDays: 3,
@@ -140,6 +142,9 @@ function loadStateFromLS() {
   STATE.reminderDays = Number(LS.get("fin_reminder_days", 3)) || 3;
   STATE.hideDashboardBalances = Boolean(LS.get("fin_hide_dashboard_balances", false));
   STATE.dashboardBalancesHidden = STATE.hideDashboardBalances;
+  STATE.dashboardWalletScope = LS.get("fin_dashboard_wallet_scope", "all") || "all";
+  const savedCategoryChart = LS.get("fin_category_chart_type", "doughnut");
+  STATE.categoryChartType = ["doughnut", "bar", "polarArea"].includes(savedCategoryChart) ? savedCategoryChart : "doughnut";
   const savedBottomNav = LS.get("fin_bottom_nav_pages", null);
   if (Array.isArray(savedBottomNav)) STATE.bottomNavPages = normalizeBottomNavPages(savedBottomNav);
   if (STATE.bottomNavPages.length < 2) STATE.bottomNavPages = ["dashboard", "calendar"];
@@ -188,6 +193,8 @@ function persistSettings() {
   LS.set("fin_account_name", STATE.accountName);
   LS.set("fin_reminder_days", STATE.reminderDays);
   LS.set("fin_hide_dashboard_balances", STATE.hideDashboardBalances);
+  LS.set("fin_dashboard_wallet_scope", STATE.dashboardWalletScope);
+  LS.set("fin_category_chart_type", STATE.categoryChartType);
   LS.set("fin_bottom_nav_pages", STATE.bottomNavPages);
   markCloudDirty();
 }
@@ -378,7 +385,7 @@ function buildManagedSnapshot() {
   return {
     transactions: STATE.transactions, wallets: STATE.wallets, categories: STATE.categories,
     listItems: STATE.listItems, budgets: STATE.budgets, goals: STATE.goals,
-    settings: { currency: STATE.currency, favoriteCurrencies: STATE.favoriteCurrencies, theme: STATE.theme, themePreset: STATE.themePreset, customThemeColor: STATE.customThemeColor, accountName: STATE.accountName, reminderDays: STATE.reminderDays, hideDashboardBalances: STATE.hideDashboardBalances, bottomNavPages: STATE.bottomNavPages },
+    settings: { currency: STATE.currency, favoriteCurrencies: STATE.favoriteCurrencies, theme: STATE.theme, themePreset: STATE.themePreset, customThemeColor: STATE.customThemeColor, accountName: STATE.accountName, reminderDays: STATE.reminderDays, hideDashboardBalances: STATE.hideDashboardBalances, dashboardWalletScope: STATE.dashboardWalletScope, categoryChartType: STATE.categoryChartType, bottomNavPages: STATE.bottomNavPages },
   };
 }
 function applyManagedSnapshot(snapshot) {
@@ -401,6 +408,8 @@ function applyManagedSnapshot(snapshot) {
     STATE.hideDashboardBalances = settings.hideDashboardBalances;
     STATE.dashboardBalancesHidden = settings.hideDashboardBalances;
   }
+  if (typeof settings.dashboardWalletScope === "string") STATE.dashboardWalletScope = settings.dashboardWalletScope;
+  if (["doughnut", "bar", "polarArea"].includes(settings.categoryChartType)) STATE.categoryChartType = settings.categoryChartType;
   if (settings.bottomNavPages?.length >= 2) STATE.bottomNavPages = normalizeBottomNavPages(settings.bottomNavPages);
   STATE.syncRevision = snapshot.revision || STATE.syncRevision;
   persistTransactions(); persistWallets(); persistCategories(); persistListItems(); persistBudgets(); persistGoals(); persistSettings();
@@ -417,6 +426,7 @@ async function managedPull() {
   if (!response.ok) throw Object.assign(new Error(data.error || "Sync pull failed"), { code: data.code });
   if (!data.snapshot.revision && (STATE.transactions.length || STATE.wallets.length || STATE.categories.length)) return managedPush(true);
   applyManagedSnapshot(data.snapshot);
+  checkRecurringTransactions();
   return data;
 }
 async function managedPush(force = false) {
@@ -637,6 +647,7 @@ async function syncNow() {
       persistWallets();
       persistCategories();
     }
+    checkRecurringTransactions();
 
     STATE.lastSynced = Date.now();
     LS.set("fin_last_synced", STATE.lastSynced);
@@ -1847,9 +1858,14 @@ function renderDashboard() {
   applyDashboardPrivacy();
   const range = STATE.dashRange;
   const { from, to } = getDateRangeBounds(range);
-  const periodTxs = STATE.transactions.filter(
-    (tx) => tx.date >= from && tx.date <= to,
-  );
+  if (STATE.dashboardWalletScope !== "all" && !STATE.wallets.includes(STATE.dashboardWalletScope)) STATE.dashboardWalletScope = "all";
+  const scopeSelect = document.getElementById("dashboard-wallet-scope");
+  if (scopeSelect) {
+    scopeSelect.innerHTML = `<option value="all">All wallets</option>${STATE.wallets.map((wallet) => `<option value="${escHtml(wallet)}">${escHtml(wallet)}</option>`).join("")}`;
+    scopeSelect.value = STATE.dashboardWalletScope;
+  }
+  const inScope = (tx) => STATE.dashboardWalletScope === "all" || tx.wallet === STATE.dashboardWalletScope;
+  const periodTxs = STATE.transactions.filter((tx) => tx.date >= from && tx.date <= to && inScope(tx));
 
   const income = periodTxs
     .filter((t) => t.type === "income")
@@ -1860,19 +1876,21 @@ function renderDashboard() {
   const savings = income - expenses;
   const savingsRate = income > 0 ? Math.round((savings / income) * 100) : 0;
 
-  const totalBalance = STATE.wallets.reduce(
+  const scopedWallets = STATE.dashboardWalletScope === "all" ? STATE.wallets : [STATE.dashboardWalletScope];
+  const totalBalance = scopedWallets.reduce(
     (s, w) => s + getWalletBalance(w),
     0,
   );
 
   setEl("dash-total-balance", formatAmount(totalBalance));
+  setEl("dash-balance-label", STATE.dashboardWalletScope === "all" ? "Total Balance" : `${STATE.dashboardWalletScope} Balance`);
   setEl("dash-income", formatAmount(income));
   setEl("dash-expenses", formatAmount(expenses));
   setEl("dash-savings", formatAmount(savings));
   setEl("dash-savings-rate", `${savingsRate}% savings rate`);
   setEl(
     "dash-balance-wallets",
-    `${STATE.wallets.length} wallet${STATE.wallets.length !== 1 ? "s" : ""}`,
+    STATE.dashboardWalletScope === "all" ? `Across ${STATE.wallets.length} wallet${STATE.wallets.length !== 1 ? "s" : ""}` : STATE.dashboardWalletScope,
   );
 
   // Wallet breakdown
@@ -1884,7 +1902,7 @@ function renderDashboard() {
         "Add wallets in Settings.",
       );
     } else {
-      breakdown.innerHTML = STATE.wallets
+      breakdown.innerHTML = scopedWallets
         .map(
           (w) => `
         <div class="wallet-breakdown-item">
@@ -1899,7 +1917,7 @@ function renderDashboard() {
   // Recent transactions (last 5)
   const recent = document.getElementById("recent-transactions");
   if (recent) {
-    const latest = [...STATE.transactions]
+    const latest = STATE.transactions.filter(inScope)
       .sort((a, b) => new Date(b.date) - new Date(a.date))
       .slice(0, 5);
     if (!latest.length) {
@@ -1914,6 +1932,12 @@ function renderDashboard() {
 
   // Charts
   renderBalanceChart();
+}
+
+function setDashboardWalletScope(wallet) {
+  STATE.dashboardWalletScope = wallet === "all" || STATE.wallets.includes(wallet) ? wallet : "all";
+  persistSettings();
+  renderDashboard();
 }
 
 function setEl(id, text) {
@@ -1986,7 +2010,7 @@ function renderBalanceChart() {
 
   const { from } = getDateRangeBounds(STATE.dashRange);
   const sorted = [...STATE.transactions]
-    .filter((tx) => tx.date >= from)
+    .filter((tx) => tx.date >= from && (STATE.dashboardWalletScope === "all" || tx.wallet === STATE.dashboardWalletScope))
     .sort((a, b) => a.date.localeCompare(b.date));
 
   // Build cumulative balance by date
@@ -2112,6 +2136,11 @@ function renderDoughnutChart(categoryData) {
 
   STATE.doughnutChartInst = destroyChart(STATE.doughnutChartInst);
 
+  const chartType = STATE.categoryChartType;
+  const wrapper = document.getElementById("category-chart-wrapper");
+  if (wrapper) wrapper.className = `chart-wrapper chart-wrapper--category chart-wrapper--category-${chartType}`;
+  document.querySelectorAll("[data-category-chart]").forEach((button) => button.classList.toggle("active", button.dataset.categoryChart === chartType));
+
   if (!categoryData.length) {
     if (legendEl) legendEl.innerHTML = "";
     return;
@@ -2122,9 +2151,8 @@ function renderDoughnutChart(categoryData) {
     (_, i) => CHART_COLORS[i % CHART_COLORS.length],
   );
   const total = categoryData.reduce((s, c) => s + c.amount, 0);
-
   STATE.doughnutChartInst = new Chart(ctx, {
-    type: "doughnut",
+    type: chartType,
     data: {
       labels: categoryData.map((c) => c.label),
       datasets: [
@@ -2132,6 +2160,7 @@ function renderDoughnutChart(categoryData) {
           data: categoryData.map((c) => c.amount),
           backgroundColor: colors,
           borderWidth: 0,
+          borderRadius: chartType === "bar" ? 6 : 0,
           hoverOffset: 6,
         },
       ],
@@ -2139,6 +2168,7 @@ function renderDoughnutChart(categoryData) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      indexAxis: chartType === "bar" ? "y" : "x",
       plugins: {
         legend: { display: false },
         tooltip: {
@@ -2150,6 +2180,10 @@ function renderDoughnutChart(categoryData) {
           },
         },
       },
+      scales: chartType === "bar" ? {
+        x: { grid: { color: getChartGridColor() }, ticks: { color: textColor, callback: (value) => formatAmount(value) } },
+        y: { grid: { display: false }, ticks: { color: textColor } },
+      } : chartType === "polarArea" ? { r: { grid: { color: getChartGridColor() }, ticks: { display: false } } } : undefined,
     },
   });
 
@@ -2164,6 +2198,13 @@ function renderDoughnutChart(categoryData) {
       )
       .join("");
   }
+}
+
+function setCategoryChartType(type) {
+  if (!["doughnut", "bar", "polarArea"].includes(type)) return;
+  STATE.categoryChartType = type;
+  persistSettings();
+  renderReports();
 }
 
 // ============================================================
@@ -2280,26 +2321,30 @@ function checkRecurringTransactions() {
   const added = [];
 
   STATE.transactions.forEach((tx) => {
-    if (!tx.recurring || !tx.recurringFreq) return;
+    if (!tx.recurring || !tx.recurringFreq || tx.recurringSourceId || /\s\(auto\)$/.test(tx.description || "")) return;
 
-    const lastDate = tx.lastRecurring || tx.date;
-    const nextDate = getNextRecurringDate(lastDate, tx.recurringFreq);
-
-    if (nextDate <= today) {
+    let nextDate = getNextRecurringDate(tx.lastRecurring || tx.date, tx.recurringFreq);
+    let guard = 0;
+    while (nextDate <= today && guard < 120) {
+      const alreadyExists = STATE.transactions.some((item) => item.recurringSourceId === tx.id && item.date === nextDate)
+        || added.some((item) => item.recurringSourceId === tx.id && item.date === nextDate);
+      if (!alreadyExists) {
       const newTx = {
         ...tx,
         id: generateId(),
         date: nextDate,
         lastRecurring: undefined,
-        recurring: true,
+        recurring: false,
         recurringFreq: tx.recurringFreq,
+        recurringSourceId: tx.id,
         createdTime: new Date().toISOString(),
         description: (tx.description || "") + " (auto)",
       };
       added.push(newTx);
-
-      // Update lastRecurring on original
+      }
       tx.lastRecurring = nextDate;
+      nextDate = getNextRecurringDate(nextDate, tx.recurringFreq);
+      guard += 1;
     }
   });
 
@@ -2324,8 +2369,17 @@ function getNextRecurringDate(fromDate, freq) {
   const d = new Date(fromDate + "T00:00:00");
   if (freq === "daily") d.setDate(d.getDate() + 1);
   else if (freq === "weekly") d.setDate(d.getDate() + 7);
-  else if (freq === "monthly") d.setMonth(d.getMonth() + 1);
-  else if (freq === "yearly") d.setFullYear(d.getFullYear() + 1);
+  else if (freq === "monthly") {
+    const day = d.getDate();
+    d.setDate(1);
+    d.setMonth(d.getMonth() + 1);
+    const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    d.setDate(Math.min(day, lastDay));
+  } else if (freq === "yearly") {
+    const month = d.getMonth();
+    d.setFullYear(d.getFullYear() + 1);
+    if (d.getMonth() !== month) d.setDate(0);
+  }
   return formatLocalISODate(d);
 }
 
@@ -3333,20 +3387,37 @@ function applyDemoState() {
     value.setDate(value.getDate() - daysAgo);
     return formatLocalISODate(value);
   };
+  const monthDate = (monthsAgo, preferredDay) => {
+    const value = new Date(today.getFullYear(), today.getMonth() - monthsAgo, 1);
+    const lastDay = new Date(value.getFullYear(), value.getMonth() + 1, 0).getDate();
+    const availableDay = monthsAgo === 0 ? today.getDate() : lastDay;
+    value.setDate(Math.min(preferredDay, lastDay, availableDay));
+    return formatLocalISODate(value);
+  };
   STATE.gasUrl = "";
   STATE.pendingQueue = [];
   STATE.lastSynced = null;
   STATE.isSyncing = false;
   STATE.wallets = ["Everyday", "Savings", "Travel"];
   STATE.categories = ["Salary", "Food", "Transport", "Housing", "Health", "Leisure"];
-  STATE.transactions = [
-    { id:"demo1", date:date(17), wallet:"Everyday", type:"income", category:"Salary", description:"Monthly salary", amount:8500000, currency:"IDR", createdTime:new Date().toISOString() },
-    { id:"demo2", date:date(14), wallet:"Everyday", type:"expense", category:"Housing", description:"Rent", amount:2400000, currency:"IDR", recurring:true, recurringFreq:"monthly", createdTime:new Date().toISOString() },
-    { id:"demo3", date:date(10), wallet:"Everyday", type:"expense", category:"Food", description:"Groceries", amount:725000, currency:"IDR", createdTime:new Date().toISOString() },
-    { id:"demo4", date:date(7), wallet:"Travel", type:"expense", category:"Leisure", description:"Travel booking", amount:95, currency:"USD", createdTime:new Date().toISOString() },
-    { id:"demo5", date:date(4), wallet:"Everyday", type:"expense", category:"Transport", description:"Fuel and parking", amount:390000, currency:"IDR", createdTime:new Date().toISOString() },
-    { id:"demo6", date:date(2), wallet:"Savings", type:"income", category:"Salary", description:"Freelance project", amount:2100000, currency:"IDR", createdTime:new Date().toISOString() },
-  ];
+  STATE.transactions = [];
+  for (let monthsAgo = 11; monthsAgo >= 0; monthsAgo -= 1) {
+    const suffix = String(monthsAgo).padStart(2, "0");
+    const createdTime = new Date().toISOString();
+    const salary = 8500000 - (monthsAgo * 50000);
+    const groceries = 640000 + ((11 - monthsAgo) % 4) * 55000;
+    const transport = 310000 + ((11 - monthsAgo) % 3) * 45000;
+    STATE.transactions.push(
+      { id:`demo-salary-${suffix}`, date:monthDate(monthsAgo, 1), wallet:"Everyday", type:"income", category:"Salary", description:"Monthly salary", amount:salary, currency:"IDR", createdTime },
+      { id:`demo-rent-${suffix}`, date:monthDate(monthsAgo, 3), wallet:"Everyday", type:"expense", category:"Housing", description:"Rent", amount:2400000, currency:"IDR", recurring:monthsAgo === 0, recurringFreq:monthsAgo === 0 ? "monthly" : undefined, createdTime },
+      { id:`demo-food-${suffix}`, date:monthDate(monthsAgo, 9), wallet:"Everyday", type:"expense", category:"Food", description:"Groceries", amount:groceries, currency:"IDR", createdTime },
+      { id:`demo-transport-${suffix}`, date:monthDate(monthsAgo, 16), wallet:"Everyday", type:"expense", category:"Transport", description:"Fuel and parking", amount:transport, currency:"IDR", createdTime },
+      { id:`demo-saving-${suffix}`, date:monthDate(monthsAgo, 20), wallet:"Savings", type:"income", category:"Salary", description:"Savings contribution", amount:1250000 + ((11 - monthsAgo) % 3) * 250000, currency:"IDR", createdTime },
+    );
+    if (monthsAgo % 2 === 0) STATE.transactions.push({ id:`demo-freelance-${suffix}`, date:monthDate(monthsAgo, 24), wallet:"Savings", type:"income", category:"Salary", description:"Freelance project", amount:1750000 + ((11 - monthsAgo) % 4) * 200000, currency:"IDR", createdTime });
+    if (monthsAgo % 3 === 0) STATE.transactions.push({ id:`demo-leisure-${suffix}`, date:monthDate(monthsAgo, 26), wallet:"Travel", type:"expense", category:"Leisure", description:"Weekend trip", amount:950000 + ((11 - monthsAgo) % 3) * 175000, currency:"IDR", createdTime });
+    if (monthsAgo % 4 === 1) STATE.transactions.push({ id:`demo-health-${suffix}`, date:monthDate(monthsAgo, 12), wallet:"Everyday", type:"expense", category:"Health", description:"Health and pharmacy", amount:285000, currency:"IDR", createdTime });
+  }
   STATE.listItems = [
     { id:"demolist1", kind:"pay", title:"Electricity bill", amount:425000, currency:"IDR", dueDate:date(-3), showOnCalendar:true, notes:"Pay before the due date", completed:false, createdTime:new Date().toISOString() },
     { id:"demolist2", kind:"buy", title:"Monthly groceries", amount:850000, currency:"IDR", dueDate:"", showOnCalendar:false, notes:"", completed:false, createdTime:new Date().toISOString() },
