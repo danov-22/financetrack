@@ -75,6 +75,7 @@ async function signOutLanding() {
   if (token && config?.supabaseUrl) await fetch(`${config.supabaseUrl}/auth/v1/logout`, { method: "POST", headers: { apikey: config.supabasePublishableKey, Authorization: `Bearer ${token}` } }).catch(() => {});
   localStorage.removeItem("bewlet_supabase_access_token");
   localStorage.removeItem("bewlet_supabase_refresh_token");
+  localStorage.removeItem("bewlet_offline_approved_account");
   location.replace("/");
 }
 

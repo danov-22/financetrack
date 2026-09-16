@@ -824,12 +824,13 @@
               <div class="input-with-currency">
                 <span id="tx-currency-symbol" class="currency-symbol">Rp</span>
                 <input
-                  type="number"
+                  type="text"
                   id="tx-amount"
                   class="input-field"
                   placeholder="0"
-                  min="0"
-                  step="any"
+                  inputmode="decimal"
+                  autocomplete="off"
+                  oninput="formatTransactionAmountInput(this)"
                   required
                 />
               </div>

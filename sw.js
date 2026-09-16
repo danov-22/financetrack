@@ -1,4 +1,4 @@
-const CACHE_NAME = "bewlet-shell-v62";
+const CACHE_NAME = "bewlet-shell-v63";
 const CHART_URL = "https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js";
 const APP_SHELL = [
   "/", "/index.html", "/landing.css", "/auth.js", "/favicon.svg",
@@ -7,7 +7,9 @@ const APP_SHELL = [
 ];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => Promise.allSettled(
+    APP_SHELL.map((asset) => cache.add(asset))
+  )));
   self.skipWaiting();
 });
 

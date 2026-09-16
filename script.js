@@ -351,13 +351,23 @@ function getCurrencySymbol(cur = null) {
 }
 
 function parseAmount(str) {
-  return (
-    parseFloat(
-      String(str)
-        .replace(/[^0-9.,-]/g, "")
-        .replace(",", "."),
-    ) || 0
-  );
+  const cleaned = String(str).replace(/[^0-9.,-]/g, "");
+  if (cleaned.includes(",") && cleaned.includes(".")) {
+    const decimalSeparator = cleaned.lastIndexOf(",") > cleaned.lastIndexOf(".") ? "," : ".";
+    const groupingSeparator = decimalSeparator === "," ? /\./g : /,/g;
+    return parseFloat(cleaned.replace(groupingSeparator, "").replace(decimalSeparator, ".")) || 0;
+  }
+  if (cleaned.includes(",")) {
+    return parseFloat(/^[-]?\d{1,3}(,\d{3})+$/.test(cleaned) ? cleaned.replace(/,/g, "") : cleaned.replace(",", ".")) || 0;
+  }
+  return parseFloat(cleaned) || 0;
+}
+
+function formatTransactionAmountInput(input) {
+  const raw = String(input.value || "").replace(/,/g, "").replace(/[^0-9.]/g, "");
+  const [integerPart = "", ...decimalParts] = raw.split(".");
+  const grouped = integerPart ? Number(integerPart).toLocaleString("en-US") : "";
+  input.value = decimalParts.length ? `${grouped}.${decimalParts.join("")}` : grouped;
 }
 
 function normalizeDateValue(value) {
@@ -1587,7 +1597,7 @@ async function renderAccountManagement() {
 }
 async function connectGoogleDrive() { try { const response = await window.bewletAuthFetch("/api/google-oauth", { method: "POST", body: "{}" }); const data = await response.json(); if (!response.ok) throw new Error(data.error); location.assign(data.url); } catch (error) { showToast(error.message, "error"); } }
 function saveAccountName() { const input = document.getElementById("account-display-name"); STATE.accountName = (input?.value || "").trim().slice(0, 60); persistSettings(); updatePageTitle(); renderAccountManagement(); showToast(STATE.accountName ? `Account name saved as “${STATE.accountName}”.` : "Custom account name removed.", "success"); }
-async function signOutBewlet() { const token = localStorage.getItem("bewlet_supabase_access_token"); const config = window.BEWLET_AUTH?.config; if (token && config?.supabaseUrl) await fetch(`${config.supabaseUrl}/auth/v1/logout`, { method: "POST", headers: { apikey: config.supabasePublishableKey, Authorization: `Bearer ${token}` } }).catch(() => {}); localStorage.removeItem("bewlet_supabase_access_token"); localStorage.removeItem("bewlet_supabase_refresh_token"); location.replace("/"); }
+async function signOutBewlet() { const token = localStorage.getItem("bewlet_supabase_access_token"); const config = window.BEWLET_AUTH?.config; if (token && config?.supabaseUrl) await fetch(`${config.supabaseUrl}/auth/v1/logout`, { method: "POST", headers: { apikey: config.supabasePublishableKey, Authorization: `Bearer ${token}` } }).catch(() => {}); localStorage.removeItem("bewlet_supabase_access_token"); localStorage.removeItem("bewlet_supabase_refresh_token"); localStorage.removeItem("bewlet_offline_approved_account"); location.replace("/"); }
 async function createCloudBackup() { try { const response = await window.bewletAuthFetch("/api/sync", { method: "POST", body: JSON.stringify({ action: "backup" }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error); showToast("Backup saved to your Google Drive.", "success"); renderAccountManagement(); } catch (error) { showToast(error.message, "error"); } }
 async function restoreCloudBackup(backupId) { if (!confirm("Restore this older version? Your current Bewlet data will be backed up first, then replaced with the selected recovery point. Use this only to recover from an unwanted change.")) return; try { const response = await window.bewletAuthFetch("/api/sync", { method: "POST", body: JSON.stringify({ action: "restore", backupId }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error); applyManagedSnapshot({ ...data.snapshot, revision: data.revision }); showToast("Older Bewlet version restored successfully.", "success"); refreshCurrentPage(); } catch (error) { showToast(error.message, "error"); } }
 function exportAllData() { const payload = { format: "bewlet-export", version: 1, exportedAt: new Date().toISOString(), account: window.BEWLET_AUTH ? { email: window.BEWLET_AUTH.account?.user?.email } : null, data: buildManagedSnapshot() }; const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `bewlet-export-${getTodayISO()}.json`; link.click(); URL.revokeObjectURL(link.href); showToast("Complete data export downloaded.", "success"); }
@@ -2650,6 +2660,7 @@ function openTransactionModal(tx = null, presetDate = null) {
     : "Add Transaction";
   document.getElementById("tx-id").value = tx?.id || "";
   document.getElementById("tx-amount").value = tx?.amount || "";
+  formatTransactionAmountInput(document.getElementById("tx-amount"));
   document.getElementById("tx-currency").value = tx?.currency || STATE.currency;
   document.getElementById("tx-date").value = tx?.date || presetDate || getTodayISO();
   document.getElementById("tx-description").value = tx?.description || "";
@@ -2707,7 +2718,7 @@ function toggleRecurring() {
 async function submitTransaction(event) {
   event.preventDefault();
 
-  const amount = parseFloat(document.getElementById("tx-amount").value);
+  const amount = parseAmount(document.getElementById("tx-amount").value);
   const wallet = document.getElementById("tx-wallet").value;
 
   let valid = true;
@@ -3636,6 +3647,7 @@ window.submitCategory = submitCategory;
 window.submitTransfer = submitTransfer;
 window.setTxType = setTxType;
 window.updateTxCurrencySymbol = updateTxCurrencySymbol;
+window.formatTransactionAmountInput = formatTransactionAmountInput;
 window.toggleRecurring = toggleRecurring;
 window.confirmDelete = confirmDelete;
 window.clearFilters = clearFilters;
