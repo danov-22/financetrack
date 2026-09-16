@@ -821,7 +821,7 @@
           <div class="form-row">
             <div class="form-group">
               <label>Amount <span class="required">*</span></label>
-              <div class="input-with-currency">
+              <div class="input-with-currency has-calculator">
                 <span id="tx-currency-symbol" class="currency-symbol">Rp</span>
                 <input
                   type="text"
@@ -833,6 +833,10 @@
                   oninput="formatTransactionAmountInput(this)"
                   required
                 />
+                <button class="transaction-calculator-toggle" type="button" onclick="toggleTransactionCalculator()" aria-controls="tx-calculator" aria-expanded="false" title="Open calculator">
+                  <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15h.01M8 19h.01M12 19h.01M16 19h.01"/></svg>
+                  <span>Calculate</span>
+                </button>
               </div>
               <div class="field-error" id="err-amount"></div>
             </div>
@@ -847,6 +851,22 @@
                 <option value="USD">USD</option>
                 <option value="EUR">EUR</option>
               </select>
+            </div>
+          </div>
+          <div id="tx-calculator" class="transaction-calculator hidden">
+            <div class="transaction-calculator-display">
+              <small>Calculator</small>
+              <output id="tx-calculator-display" aria-live="polite">0</output>
+            </div>
+            <div class="transaction-calculator-grid">
+              <button type="button" class="calculator-command" onclick="calculatorClear()">C</button>
+              <button type="button" class="calculator-command" onclick="calculatorBackspace()" aria-label="Backspace">⌫</button>
+              <button type="button" class="calculator-operator" onclick="calculatorInput('/')">÷</button>
+              <button type="button" class="calculator-operator" onclick="calculatorInput('*')">×</button>
+              <button type="button" onclick="calculatorInput('7')">7</button><button type="button" onclick="calculatorInput('8')">8</button><button type="button" onclick="calculatorInput('9')">9</button><button type="button" class="calculator-operator" onclick="calculatorInput('-')">−</button>
+              <button type="button" onclick="calculatorInput('4')">4</button><button type="button" onclick="calculatorInput('5')">5</button><button type="button" onclick="calculatorInput('6')">6</button><button type="button" class="calculator-operator" onclick="calculatorInput('+')">+</button>
+              <button type="button" onclick="calculatorInput('1')">1</button><button type="button" onclick="calculatorInput('2')">2</button><button type="button" onclick="calculatorInput('3')">3</button><button type="button" class="calculator-equals" onclick="calculatorEquals()">=</button>
+              <button type="button" class="calculator-zero" onclick="calculatorInput('0')">0</button><button type="button" onclick="calculatorInput('.')">.</button><button type="button" class="calculator-use" onclick="calculatorUseResult()">Use amount</button>
             </div>
           </div>
           <div class="form-row">

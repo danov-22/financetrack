@@ -1203,6 +1203,7 @@ input, select, textarea { outline: none; }
 }
 
 .input-with-currency .input-field { padding-left: 34px; }
+.input-with-currency.has-calculator .input-field{padding-right:108px}.transaction-calculator-toggle{position:absolute;right:5px;top:5px;bottom:5px;display:inline-flex;align-items:center;gap:5px;padding:0 8px;border-left:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:.7rem;font-weight:700}.transaction-calculator-toggle:hover{background:var(--accent-light)}.transaction-calculator{margin:-2px 0 16px;padding:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-2)}.transaction-calculator-display{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;min-height:48px;margin-bottom:9px;padding:8px 11px;border:1px solid var(--border);border-radius:8px;background:var(--surface)}.transaction-calculator-display small{color:var(--text-3);font-size:.68rem}.transaction-calculator-display output{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);font-size:1.15rem;font-weight:750}.transaction-calculator-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.transaction-calculator-grid button{min-height:38px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:.88rem;font-weight:650}.transaction-calculator-grid button:hover{border-color:var(--accent);color:var(--accent)}.transaction-calculator-grid .calculator-command{color:var(--expense)}.transaction-calculator-grid .calculator-operator{background:var(--accent-light);color:var(--accent)}.transaction-calculator-grid .calculator-equals{grid-row:span 2;background:var(--accent);color:#fff;border-color:var(--accent)}.transaction-calculator-grid .calculator-zero{grid-column:span 2}.transaction-calculator-grid .calculator-use{grid-column:1/-1;background:var(--accent);color:#fff;border-color:var(--accent);font-size:.72rem}
 
 .form-group {
   margin-bottom: 14px;
@@ -1576,6 +1577,7 @@ input, select, textarea { outline: none; }
   input, select, textarea {
     font-size: 16px !important;
   }
+  .transaction-calculator-toggle span{display:none}.input-with-currency.has-calculator .input-field{padding-right:48px}.transaction-calculator-grid button{min-height:42px}
 
   /* ── Sidebar slides in as drawer ── */
   .sidebar {

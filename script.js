@@ -370,6 +370,123 @@ function formatTransactionAmountInput(input) {
   input.value = decimalParts.length ? `${grouped}.${decimalParts.join("")}` : grouped;
 }
 
+let _txCalculatorExpression = "";
+let _txCalculatorResult = null;
+let _txCalculatorJustEvaluated = false;
+
+function renderTransactionCalculator(message = "") {
+  const display = document.getElementById("tx-calculator-display");
+  if (!display) return;
+  const value = message || _txCalculatorExpression || "0";
+  display.textContent = value.replace(/\*/g, " × ").replace(/\//g, " ÷ ").replace(/\+/g, " + ").replace(/-/g, " − ");
+}
+
+function resetTransactionCalculator(amount = "") {
+  _txCalculatorExpression = amount === "" ? "" : String(amount);
+  _txCalculatorResult = amount === "" ? null : Number(amount);
+  _txCalculatorJustEvaluated = false;
+  document.getElementById("tx-calculator")?.classList.add("hidden");
+  const toggle = document.querySelector(".transaction-calculator-toggle");
+  toggle?.setAttribute("aria-expanded", "false");
+  renderTransactionCalculator();
+}
+
+function toggleTransactionCalculator() {
+  const calculator = document.getElementById("tx-calculator");
+  if (!calculator) return;
+  const opening = calculator.classList.contains("hidden");
+  calculator.classList.toggle("hidden", !opening);
+  document.querySelector(".transaction-calculator-toggle")?.setAttribute("aria-expanded", String(opening));
+  if (opening && !_txCalculatorExpression) {
+    const currentAmount = parseAmount(document.getElementById("tx-amount")?.value || "");
+    if (currentAmount) _txCalculatorExpression = String(currentAmount);
+  }
+  renderTransactionCalculator();
+}
+
+function calculatorInput(value) {
+  const isOperator = /^[+\-*/]$/.test(value);
+  if (_txCalculatorJustEvaluated && !isOperator) _txCalculatorExpression = "";
+  _txCalculatorJustEvaluated = false;
+  _txCalculatorResult = null;
+  if (isOperator) {
+    if (!_txCalculatorExpression) return;
+    _txCalculatorExpression = /[+\-*/]$/.test(_txCalculatorExpression)
+      ? _txCalculatorExpression.slice(0, -1) + value
+      : _txCalculatorExpression + value;
+  } else if (value === ".") {
+    const currentNumber = _txCalculatorExpression.split(/[+\-*/]/).pop();
+    if (currentNumber.includes(".")) return;
+    _txCalculatorExpression += currentNumber ? "." : "0.";
+  } else if (_txCalculatorExpression.length < 48) {
+    _txCalculatorExpression += value;
+  }
+  renderTransactionCalculator();
+}
+
+function evaluateCalculatorExpression() {
+  const expression = _txCalculatorExpression.replace(/[+\-*/]+$/, "");
+  const tokens = expression.match(/\d*\.?\d+|[+\-*/]/g) || [];
+  if (!tokens.length || tokens.join("") !== expression) return null;
+  const values = [];
+  const operators = [];
+  const precedence = { "+": 1, "-": 1, "*": 2, "/": 2 };
+  const applyOperator = () => {
+    const operator = operators.pop();
+    const right = values.pop();
+    const left = values.pop();
+    if (!Number.isFinite(left) || !Number.isFinite(right) || (operator === "/" && right === 0)) return false;
+    values.push(operator === "+" ? left + right : operator === "-" ? left - right : operator === "*" ? left * right : left / right);
+    return true;
+  };
+  for (const token of tokens) {
+    if (!Number.isNaN(Number(token))) values.push(Number(token));
+    else {
+      while (operators.length && precedence[operators.at(-1)] >= precedence[token]) {
+        if (!applyOperator()) return null;
+      }
+      operators.push(token);
+    }
+  }
+  while (operators.length) if (!applyOperator()) return null;
+  return values.length === 1 && Number.isFinite(values[0]) ? values[0] : null;
+}
+
+function calculatorEquals() {
+  const result = evaluateCalculatorExpression();
+  if (result === null) { renderTransactionCalculator("Cannot calculate"); return; }
+  _txCalculatorResult = result;
+  _txCalculatorExpression = String(Number(result.toFixed(8)));
+  _txCalculatorJustEvaluated = true;
+  renderTransactionCalculator();
+}
+
+function calculatorClear() {
+  _txCalculatorExpression = "";
+  _txCalculatorResult = null;
+  _txCalculatorJustEvaluated = false;
+  renderTransactionCalculator();
+}
+
+function calculatorBackspace() {
+  _txCalculatorExpression = _txCalculatorExpression.slice(0, -1);
+  _txCalculatorResult = null;
+  _txCalculatorJustEvaluated = false;
+  renderTransactionCalculator();
+}
+
+function calculatorUseResult() {
+  const result = _txCalculatorResult ?? evaluateCalculatorExpression();
+  if (result === null || result <= 0) { renderTransactionCalculator("Enter a valid positive amount"); return; }
+  const amountInput = document.getElementById("tx-amount");
+  amountInput.value = String(Number(result.toFixed(8)));
+  formatTransactionAmountInput(amountInput);
+  document.getElementById("err-amount").textContent = "";
+  _txCalculatorResult = result;
+  _txCalculatorExpression = String(Number(result.toFixed(8)));
+  renderTransactionCalculator();
+}
+
 function normalizeDateValue(value) {
   if (!value) return "";
   const text = String(value);
@@ -2661,6 +2778,7 @@ function openTransactionModal(tx = null, presetDate = null) {
   document.getElementById("tx-id").value = tx?.id || "";
   document.getElementById("tx-amount").value = tx?.amount || "";
   formatTransactionAmountInput(document.getElementById("tx-amount"));
+  resetTransactionCalculator(tx?.amount || "");
   document.getElementById("tx-currency").value = tx?.currency || STATE.currency;
   document.getElementById("tx-date").value = tx?.date || presetDate || getTodayISO();
   document.getElementById("tx-description").value = tx?.description || "";
@@ -3648,6 +3766,12 @@ window.submitTransfer = submitTransfer;
 window.setTxType = setTxType;
 window.updateTxCurrencySymbol = updateTxCurrencySymbol;
 window.formatTransactionAmountInput = formatTransactionAmountInput;
+window.toggleTransactionCalculator = toggleTransactionCalculator;
+window.calculatorInput = calculatorInput;
+window.calculatorEquals = calculatorEquals;
+window.calculatorClear = calculatorClear;
+window.calculatorBackspace = calculatorBackspace;
+window.calculatorUseResult = calculatorUseResult;
 window.toggleRecurring = toggleRecurring;
 window.confirmDelete = confirmDelete;
 window.clearFilters = clearFilters;
