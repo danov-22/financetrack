@@ -75,7 +75,7 @@ module.exports = async function handler(request, response) {
       }
       const [connections, backups] = await Promise.all([
         supabase(`/rest/v1/google_connections?user_id=eq.${session.user.id}&select=google_email,connected_at`).catch(() => []),
-        session.profile.status === "approved" ? supabase(`/rest/v1/data_backups?user_id=eq.${session.user.id}&select=id,byte_size,spreadsheet_revision,created_at&order=created_at.desc&limit=20`).catch(() => []) : [],
+        session.profile.status === "approved" ? supabase(`/rest/v1/data_backups?user_id=eq.${session.user.id}&select=id,byte_size,spreadsheet_revision,created_at&order=created_at.desc&limit=3`).catch(() => []) : [],
       ]);
       return send(response, 200, { user: { id: session.user.id, email: session.user.email }, profile: session.profile, admin, google: connections?.[0] || null, backups, supportWhatsApp: await supportWhatsApp() });
     }

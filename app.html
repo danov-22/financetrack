@@ -838,6 +838,7 @@
                   <span>Calculate</span>
                 </button>
               </div>
+              <button class="amount-thousands-button" type="button" onclick="appendAmountThousands()">+000</button>
               <div class="field-error" id="err-amount"></div>
             </div>
             <div class="form-group">
@@ -884,9 +885,8 @@
           </div>
           <div class="form-group">
             <label>Category</label>
-            <select id="tx-category" class="input-field">
-              <option value="">Select category</option>
-            </select>
+            <input id="tx-category" class="input-field" type="text" list="tx-category-list" placeholder="Type to search categories" autocomplete="off" />
+            <datalist id="tx-category-list"></datalist>
           </div>
           <div class="form-group">
             <label>Description</label>
@@ -894,9 +894,13 @@
               type="text"
               id="tx-description"
               class="input-field"
+              list="tx-description-list"
               placeholder="What was this for?"
+              autocomplete="off"
               maxlength="200"
             />
+            <datalist id="tx-description-list"></datalist>
+            <label class="checkbox-label save-description-option"><input id="tx-save-description" type="checkbox" /> Save this description for quicker use</label>
           </div>
           <div class="form-group">
             <label class="checkbox-label">
@@ -927,6 +931,7 @@
             </div>
           </div>
           <div class="modal-footer">
+            <button type="button" class="btn-danger hidden" id="btn-delete-tx" onclick="deleteEditingTransaction()">Delete</button>
             <button
               type="button"
               class="btn-ghost"

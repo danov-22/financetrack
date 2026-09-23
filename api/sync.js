@@ -53,7 +53,7 @@ async function createBackup(userId, access, snapshot, revision, force = false) {
   const file = await response.json();
   if (!response.ok) throw new Error(file?.error?.message || "Could not create backup");
   await supabase("/rest/v1/data_backups", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ user_id: userId, drive_file_id: file.id, spreadsheet_revision: revision || null, byte_size: Buffer.byteLength(content) }) });
-  const older = await supabase(`/rest/v1/data_backups?user_id=eq.${userId}&select=id,drive_file_id&order=created_at.desc&offset=30`);
+  const older = await supabase(`/rest/v1/data_backups?user_id=eq.${userId}&select=id,drive_file_id&order=created_at.desc&offset=3`);
   for (const backup of older || []) {
     await googleFetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(backup.drive_file_id)}`, access, { method: "DELETE" }).catch(() => {});
     await supabase(`/rest/v1/data_backups?id=eq.${backup.id}`, { method: "DELETE", headers: { Prefer: "return=minimal" } });

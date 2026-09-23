@@ -57,6 +57,7 @@ const STATE = {
   planningTab: "checklist",
   budgets: [],
   goals: [],
+  savedDescriptions: [],
   installationId: "",
   gasUrl: "",
   currency: "IDR",
@@ -124,6 +125,7 @@ function loadStateFromLS() {
   STATE.listItems = LS.get("fin_list_items", []);
   STATE.budgets = LS.get("fin_budgets", []);
   STATE.goals = LS.get("fin_goals", []);
+  STATE.savedDescriptions = LS.get("fin_saved_descriptions", []);
   STATE.installationId = LS.get("fin_installation_id", "") || generateId();
   LS.set("fin_installation_id", STATE.installationId);
   STATE.gasUrl = window.BEWLET_AUTH ? "managed" : (LS.get("fin_gas_url", "") || DEFAULT_GAS_URL);
@@ -196,6 +198,7 @@ function persistSettings() {
   LS.set("fin_dashboard_wallet_scope", STATE.dashboardWalletScope);
   LS.set("fin_category_chart_type", STATE.categoryChartType);
   LS.set("fin_bottom_nav_pages", STATE.bottomNavPages);
+  LS.set("fin_saved_descriptions", STATE.savedDescriptions);
   markCloudDirty();
 }
 
@@ -512,7 +515,7 @@ function buildManagedSnapshot() {
   return {
     transactions: STATE.transactions, wallets: STATE.wallets, categories: STATE.categories,
     listItems: STATE.listItems, budgets: STATE.budgets, goals: STATE.goals,
-    settings: { currency: STATE.currency, favoriteCurrencies: STATE.favoriteCurrencies, theme: STATE.theme, themePreset: STATE.themePreset, customThemeColor: STATE.customThemeColor, accountName: STATE.accountName, reminderDays: STATE.reminderDays, hideDashboardBalances: STATE.hideDashboardBalances, dashboardWalletScope: STATE.dashboardWalletScope, categoryChartType: STATE.categoryChartType, bottomNavPages: STATE.bottomNavPages },
+    settings: { currency: STATE.currency, favoriteCurrencies: STATE.favoriteCurrencies, theme: STATE.theme, themePreset: STATE.themePreset, customThemeColor: STATE.customThemeColor, accountName: STATE.accountName, reminderDays: STATE.reminderDays, hideDashboardBalances: STATE.hideDashboardBalances, dashboardWalletScope: STATE.dashboardWalletScope, categoryChartType: STATE.categoryChartType, bottomNavPages: STATE.bottomNavPages, savedDescriptions: STATE.savedDescriptions },
   };
 }
 function applyManagedSnapshot(snapshot) {
@@ -539,6 +542,7 @@ function applyManagedSnapshot(snapshot) {
   if (["doughnut", "bar", "breakdown"].includes(settings.categoryChartType)) STATE.categoryChartType = settings.categoryChartType;
   else if (settings.categoryChartType === "polarArea") STATE.categoryChartType = "breakdown";
   if (settings.bottomNavPages?.length >= 2) STATE.bottomNavPages = normalizeBottomNavPages(settings.bottomNavPages);
+  if (Array.isArray(settings.savedDescriptions)) STATE.savedDescriptions = settings.savedDescriptions.slice(0, 100);
   STATE.syncRevision = snapshot.revision || STATE.syncRevision;
   persistTransactions(); persistWallets(); persistCategories(); persistListItems(); persistBudgets(); persistGoals(); persistSettings();
   LS.set("fin_sync_revision", STATE.syncRevision);
@@ -1229,7 +1233,7 @@ function txItemHtml(tx) {
   const desc = tx.description || tx.category || tx.type;
   const dateStr = formatDateShort(tx.date);
 
-  return `<div class="tx-item${isPlanned ? " planned" : ""}${isOverdue ? " overdue" : ""}" ondblclick="openEditTransaction('${tx.id}')">
+  return `<div class="tx-item${isPlanned ? " planned" : ""}${isOverdue ? " overdue" : ""}" onclick="openEditTransaction('${tx.id}')">
     <div class="tx-icon ${cls}">${icon}</div>
     <div class="tx-info">
       <div class="tx-desc">${escHtml(desc)}</div>
@@ -1245,10 +1249,10 @@ function txItemHtml(tx) {
     <div class="tx-amount ${cls}">${isPlanned ? "Planned " : sign}${amt}${isConverted ? `<small>≈ ${sign}${convertedAmt}</small>` : ""}</div>
     <div class="tx-actions">
       ${isPlanned ? `<button class="tx-action-btn complete" onclick="event.stopPropagation(); completePlannedTransaction('${tx.id}')" title="Mark completed" aria-label="Mark completed">✓</button>` : ""}
-      <button class="tx-action-btn" onclick="openEditTransaction('${tx.id}')" title="Edit">
+      <button class="tx-action-btn" onclick="event.stopPropagation();openEditTransaction('${tx.id}')" title="Edit">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       </button>
-      <button class="tx-action-btn delete" onclick="confirmDelete('transaction','${tx.id}','${escHtml(desc)}')" title="Delete">
+      <button class="tx-action-btn delete" onclick="event.stopPropagation();confirmDelete('transaction','${tx.id}','${escHtml(desc)}')" title="Delete">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
       </button>
     </div>
@@ -1707,7 +1711,7 @@ async function renderAccountManagement() {
     const connect = document.getElementById("connect-google-drive");
     if (connect) connect.textContent = account.google ? "Reconnect Google Drive" : "Connect Google Drive";
     const history = document.getElementById("backup-history");
-    if (history) history.innerHTML = account.backups?.length ? `<p class="backup-history-label">Available recovery points</p>${account.backups.map((backup) => `<div class="backup-item"><div><strong>${new Date(backup.created_at).toLocaleString()}</strong><small>${Math.max(1, Math.round(Number(backup.byte_size || 0) / 1024))} KB · Stored in your Drive</small></div><button class="btn-secondary btn-sm" onclick="restoreCloudBackup('${backup.id}')">Restore this version</button></div>`).join("")}` : '<p class="settings-desc">No recovery points yet. Bewlet will create one automatically when needed.</p>';
+    if (history) history.innerHTML = account.backups?.length ? `<p class="backup-history-label">Latest 3 recovery points</p>${account.backups.slice(0, 3).map((backup) => `<div class="backup-item"><div><strong>${new Date(backup.created_at).toLocaleString()}</strong><small>${Math.max(1, Math.round(Number(backup.byte_size || 0) / 1024))} KB · Stored in your Drive</small></div><button class="btn-secondary btn-sm" onclick="restoreCloudBackup('${backup.id}')">Restore</button></div>`).join("")}` : '<p class="settings-desc">No recovery points yet. Bewlet will create one automatically when needed.</p>';
     document.getElementById("admin-approval-card")?.classList.toggle("hidden", !account.admin);
     if (account.admin) renderAdminAccounts();
   } catch (error) { showToast(error.message, "error"); }
@@ -2767,7 +2771,18 @@ function populateCategoryOptions(selectId, currentValue = "") {
         `<option value="${escHtml(c)}" ${c === currentValue ? "selected" : ""}>${escHtml(c)}</option>`,
     )
     .join("");
-  sel.innerHTML = `<option value="">Select category</option>${opts}`;
+  if (sel.tagName === "INPUT") {
+    sel.value = currentValue;
+    const list = document.getElementById(sel.getAttribute("list"));
+    if (list) list.innerHTML = STATE.categories.map((category) => `<option value="${escHtml(category)}"></option>`).join("");
+  } else sel.innerHTML = `<option value="">Select category</option>${opts}`;
+}
+
+function renderTransactionDescriptionSuggestions() {
+  const descriptions = [...STATE.savedDescriptions, ...STATE.transactions.map((tx) => tx.description).filter(Boolean)];
+  const unique = [...new Set(descriptions.map((value) => String(value).trim()).filter(Boolean))].slice(0, 100);
+  const list = document.getElementById("tx-description-list");
+  if (list) list.innerHTML = unique.map((description) => `<option value="${escHtml(description)}"></option>`).join("");
 }
 
 function openTransactionModal(tx = null, presetDate = null) {
@@ -2782,6 +2797,8 @@ function openTransactionModal(tx = null, presetDate = null) {
   document.getElementById("tx-currency").value = tx?.currency || STATE.currency;
   document.getElementById("tx-date").value = tx?.date || presetDate || getTodayISO();
   document.getElementById("tx-description").value = tx?.description || "";
+  document.getElementById("tx-save-description").checked = false;
+  document.getElementById("btn-delete-tx").classList.toggle("hidden", !isEdit);
   document.getElementById("tx-recurring").checked = tx?.recurring || false;
   document.getElementById("tx-planned").checked = tx?.status === "planned";
   document
@@ -2795,11 +2812,27 @@ function openTransactionModal(tx = null, presetDate = null) {
   updateTxCurrencySymbol();
   populateWalletOptions("tx-wallet", tx?.wallet || "");
   populateCategoryOptions("tx-category", tx?.category || "");
+  renderTransactionDescriptionSuggestions();
 
   document.getElementById("err-amount").textContent = "";
   document.getElementById("err-wallet").textContent = "";
 
   openModal("modal-transaction");
+}
+
+function appendAmountThousands() {
+  const input = document.getElementById("tx-amount");
+  const current = parseAmount(input.value);
+  input.value = String(current > 0 ? current * 1000 : 1000);
+  formatTransactionAmountInput(input);
+}
+
+function deleteEditingTransaction() {
+  const id = document.getElementById("tx-id").value;
+  if (!id) return;
+  const transaction = STATE.transactions.find((item) => item.id === id);
+  closeModal("modal-transaction");
+  confirmDelete("transaction", id, transaction?.description || transaction?.category || "transaction");
 }
 
 function openEditTransaction(id) {
@@ -2863,6 +2896,11 @@ async function submitTransaction(event) {
   const recurringFreq = document.getElementById("tx-recurring-freq").value;
   const isPlanned = document.getElementById("tx-planned").checked;
   const type = getCurrentTxType();
+  if (description && document.getElementById("tx-save-description").checked && !STATE.savedDescriptions.includes(description)) {
+    STATE.savedDescriptions.unshift(description);
+    STATE.savedDescriptions = STATE.savedDescriptions.slice(0, 100);
+    persistSettings();
+  }
 
   const txData = {
     id: id || generateId(),
@@ -3030,9 +3068,7 @@ function showToast(message, type = "info", duration = 3500) {
   const toast = document.createElement("div");
   toast.className = `toast ${type}`;
 
-  const icon =
-    { success: "✓", error: "✕", info: "ℹ", warning: "⚠" }[type] || "ℹ";
-  toast.innerHTML = `<span>${icon}</span><span>${escHtml(message)}</span>`;
+  toast.innerHTML = `<span>${escHtml(message)}</span>`;
   container.appendChild(toast);
 
   setTimeout(() => {
@@ -3766,6 +3802,8 @@ window.submitTransfer = submitTransfer;
 window.setTxType = setTxType;
 window.updateTxCurrencySymbol = updateTxCurrencySymbol;
 window.formatTransactionAmountInput = formatTransactionAmountInput;
+window.appendAmountThousands = appendAmountThousands;
+window.deleteEditingTransaction = deleteEditingTransaction;
 window.toggleTransactionCalculator = toggleTransactionCalculator;
 window.calculatorInput = calculatorInput;
 window.calculatorEquals = calculatorEquals;
