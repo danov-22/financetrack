@@ -1924,12 +1924,12 @@ async function showPlannedSystemNotification(title, body, date) {
     if (registration) {
       await registration.showNotification(title, {
         body,
-        icon: "/favicon.svg",
-        badge: "/favicon.svg",
+        icon: STATE.theme === "dark" ? "/bewlet_dark.svg" : "/bewlet.svg",
+        badge: STATE.theme === "dark" ? "/bewlet_dark.svg" : "/bewlet.svg",
         tag: `bewlet-planned-${date}`,
         data: { url: `/app?calendarDate=${date}` },
       });
-    } else new Notification(title, { body, icon: "/favicon.svg" });
+    } else new Notification(title, { body, icon: STATE.theme === "dark" ? "/bewlet_dark.svg" : "/bewlet.svg" });
   } catch {}
 }
 

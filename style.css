@@ -161,6 +161,7 @@ input, select, textarea { outline: none; }
   min-width: 0;
 }
 .bewlet-wordmark{display:block;width:126px;height:34px;object-fit:contain;object-position:left center}.brand-logo-dark{display:none}html[data-theme="dark"] .brand-logo-light{display:none}html[data-theme="dark"] .brand-logo-dark{display:block}.sidebar.collapsed .bewlet-wordmark{width:30px;object-fit:cover;object-position:left center}
+.brand-lockup{display:flex;align-items:center;gap:7px;min-width:0}.brand-lockup .brand-symbol{display:block;width:31px;height:31px;object-fit:contain;flex:0 0 auto}.brand-lockup .brand-text{display:block;width:82px;height:24px;object-fit:contain;flex:0 0 auto}.brand-lockup-dark{display:none}html[data-theme="dark"] .brand-lockup-light{display:none}html[data-theme="dark"] .brand-lockup-dark{display:flex}.sidebar.collapsed .brand-lockup .brand-text{display:none}.sidebar.collapsed .brand-lockup{width:31px}.onboarding-brand .brand-lockup .brand-symbol{width:27px;height:27px}.onboarding-brand .brand-lockup .brand-text{width:72px;height:22px}
 
 .sidebar-title {
   font-weight: 700;

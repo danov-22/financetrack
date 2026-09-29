@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#4f46e5" />
     <title>Bewlet — Personal finance on every device</title>
-    <link rel="icon" href="favicon.svg" type="image/svg+xml" sizes="any" />
+    <link rel="icon" href="bewlet.svg" type="image/svg+xml" sizes="any" media="(prefers-color-scheme: light)" />
+    <link rel="icon" href="bewlet_dark.svg" type="image/svg+xml" sizes="any" media="(prefers-color-scheme: dark)" />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -15,7 +16,7 @@
   <body>
     <header class="site-header">
       <a class="brand" href="/" aria-label="Bewlet home">
-        <img class="landing-wordmark" src="bewlet_light.svg" alt="Bewlet" />
+        <span class="landing-lockup"><img class="landing-symbol" src="bewlet.svg" alt=""/><img class="landing-textlogo" src="textlogo.svg" alt="Bewlet"/></span>
       </a>
       <nav>
         <a href="#features">Features</a>
@@ -128,9 +129,9 @@
         <div class="section-heading device-heading"><span>BEWLET GOES WITH YOU</span><h2>Install it beside the apps you already use</h2><p>Bewlet can live on your home screen for quick, app-like access without an app-store download.</p><button id="device-preview-toggle" class="device-preview-toggle" type="button" aria-expanded="false" aria-controls="device-preview"><span>See installed preview</span><i aria-hidden="true">⌄</i></button></div>
         <div id="device-preview" class="install-preview" hidden>
           <div class="install-devices">
-          <div class="install-device install-desktop"><div class="install-screen"><div class="install-status"><span>9:41</span><i></i></div><div class="install-icons"><i></i><i></i><i></i><i></i><div class="bewlet-installed"><img src="favicon.svg" alt="" /><b>Bewlet</b></div><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="install-dock"><i></i><i></i><i></i><i></i></div></div><p>Desktop</p></div>
-          <div class="install-device install-tablet"><div class="install-screen"><div class="install-status"><span>9:41</span><i></i></div><div class="install-icons"><i></i><i></i><i></i><i></i><div class="bewlet-installed"><img src="favicon.svg" alt="" /><b>Bewlet</b></div><i></i><i></i><i></i><i></i></div><div class="install-dock"><i></i><i></i><i></i><i></i></div></div><p>Tablet</p></div>
-          <div class="install-device install-phone"><div class="install-screen"><div class="install-status"><span>9:41</span><i></i></div><div class="install-icons"><i></i><i></i><i></i><i></i><div class="bewlet-installed"><img src="favicon.svg" alt="" /><b>Bewlet</b></div><i></i><i></i><i></i></div><div class="install-dock"><i></i><i></i><i></i><i></i></div></div><p>Phone</p></div>
+          <div class="install-device install-desktop"><div class="install-screen"><div class="install-status"><span>9:41</span><i></i></div><div class="install-icons"><i></i><i></i><i></i><i></i><div class="bewlet-installed"><img src="bewlet.svg" alt="" /><b>Bewlet</b></div><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="install-dock"><i></i><i></i><i></i><i></i></div></div><p>Desktop</p></div>
+          <div class="install-device install-tablet"><div class="install-screen"><div class="install-status"><span>9:41</span><i></i></div><div class="install-icons"><i></i><i></i><i></i><i></i><div class="bewlet-installed"><img src="bewlet.svg" alt="" /><b>Bewlet</b></div><i></i><i></i><i></i><i></i></div><div class="install-dock"><i></i><i></i><i></i><i></i></div></div><p>Tablet</p></div>
+          <div class="install-device install-phone"><div class="install-screen"><div class="install-status"><span>9:41</span><i></i></div><div class="install-icons"><i></i><i></i><i></i><i></i><div class="bewlet-installed"><img src="bewlet.svg" alt="" /><b>Bewlet</b></div><i></i><i></i><i></i></div><div class="install-dock"><i></i><i></i><i></i><i></i></div></div><p>Phone</p></div>
           </div>
           <div class="install-guide"><span class="eyebrow">QUICK INSTALL GUIDE</span><h3>Add Bewlet to your device</h3><div class="install-guide-grid"><article><b>Android · Chrome</b><p>Open the browser menu <strong>⋮</strong>, choose <strong>Install app</strong> or <strong>Add to Home screen</strong>, then confirm.</p></article><article><b>iPhone or iPad · Safari</b><p>Tap <strong>Share</strong>, choose <strong>Add to Home Screen</strong>, then tap <strong>Add</strong>.</p></article><article><b>Desktop · Chrome or Edge</b><p>Open Bewlet, select the install icon in the address bar—or open the browser menu and choose <strong>Install Bewlet</strong>.</p></article></div><p class="install-guide-note">The wording may vary slightly depending on your browser and device.</p><button id="device-preview-close" class="device-preview-close" type="button">Close installed preview <span aria-hidden="true">⌃</span></button></div>
         </div>
@@ -152,9 +153,9 @@
       <section class="section brand-story" aria-labelledby="brand-story-title">
         <div class="brand-story-intro"><div><span class="eyebrow">A SMALL PART OF THE STORY</span><h2 id="brand-story-title">Why is it called Bewlet?</h2></div><button id="brand-story-toggle" class="brand-story-toggle" type="button" aria-expanded="false" aria-controls="brand-story-details"><span>See how the name was made</span><i aria-hidden="true">⌄</i></button></div>
         <div id="brand-story-details" class="brand-story-details" hidden>
-          <div class="name-formula" aria-label="Web reversed becomes Bew, combined with let from wallet, becomes Bewlet"><span class="formula-word formula-web"><i>W</i><i>E</i><i>B</i></span><b>+</b><span class="formula-word formula-wallet">WAL<i>LET</i></span><b>→</b><span class="formula-result"><img src="favicon.svg" alt=""/>BEWLET</span></div>
+          <div class="name-formula" aria-label="Web reversed becomes Bew, combined with let from wallet, becomes Bewlet"><span class="formula-word formula-web"><i>W</i><i>E</i><i>B</i></span><b>+</b><span class="formula-word formula-wallet">WAL<i>LET</i></span><b>→</b><span class="formula-result"><img src="bewlet.svg" alt=""/>BEWLET</span></div>
           <div class="brand-story-copy"><p><strong>Bewlet began with “Web Wallet.”</strong> The letters in <em>WEB</em> were reversed to form <em>BEW</em>, then joined with the <em>‑LET</em> ending from wallet: <strong>BEW + LET = BEWLET.</strong></p><p>“Weblet” was the more obvious first idea, but it was already taken. Reversing the word gave Bewlet a name of its own while keeping its connection to a wallet made for the web.</p></div>
-          <div class="brand-symbols"><article><div class="brand-mark-demo"><img src="favicon.svg" alt=""/></div><div><h3>Why a rising line?</h3><p>The upward line represents forward movement: clearer habits, better awareness, and progress toward healthier finances. It is an aspiration—not a promise of financial gain.</p></div></article><article><div class="brand-purple-demo" aria-hidden="true"><i></i><i></i><i></i></div><div><h3>Why purple?</h3><p>Purple combines the calm trust often associated with blue and a sense of ambition. Its historic connection with royalty gives Bewlet a confident, premium identity without relying on the usual “finance” colors.</p></div></article></div>
+          <div class="brand-symbols"><article><div class="brand-mark-demo"><img src="bewlet.svg" alt=""/></div><div><h3>Why a wallet?</h3><p>The layered wallet represents one organized place for everyday spending, savings, plans, and financial records—kept clear and within your control.</p></div></article><article><div class="brand-purple-demo" aria-hidden="true"><i></i><i></i><i></i></div><div><h3>Why purple?</h3><p>Purple combines the calm trust often associated with blue and a sense of ambition. Its historic connection with royalty gives Bewlet a confident, premium identity without relying on the usual “finance” colors.</p></div></article></div>
           <button id="brand-story-close" class="brand-story-close" type="button">Close brand story <span aria-hidden="true">⌃</span></button>
         </div>
       </section>
@@ -165,7 +166,7 @@
     <div id="auth-modal" class="auth-overlay" aria-hidden="true">
       <div class="auth-card" role="dialog" aria-modal="true" aria-labelledby="auth-title">
         <button id="auth-close" class="auth-close" aria-label="Close">×</button>
-        <img src="favicon.svg" alt="" />
+        <img src="bewlet.svg" alt="" />
         <div class="auth-mode-switch" role="tablist" aria-label="Account access"><span></span><button id="auth-mode-login" type="button" role="tab">Sign in</button><button id="auth-mode-register" type="button" role="tab">Register</button></div>
         <h2 id="auth-title">Join Bewlet</h2>
         <p id="auth-message">Sign in with Gmail to register. New accounts require approval before accessing the finance dashboard.</p>

@@ -1,0 +1,30 @@
+.admin-brand-lockup,
+.legal-brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.admin-brand-lockup img:first-child,
+.legal-brand-lockup img:first-child {
+  width: 31px;
+  height: 31px;
+  object-fit: contain;
+}
+
+.admin-brand-lockup img:last-child,
+.legal-brand-lockup img:last-child {
+  width: 82px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.brand > small {
+  color: var(--muted);
+  font-size: .7rem;
+}
+
+@media (max-width: 520px) {
+  .admin-brand-lockup img:last-child { width: 68px; }
+  .brand > small { display: none; }
+}
