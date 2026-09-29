@@ -13,7 +13,7 @@ body { font-family:Inter,system-ui,sans-serif; color:var(--ink); background:#fff
 button,a { font:inherit; } button { cursor:pointer; }
 .site-header { height:72px; max-width:1160px; margin:auto; padding:0 24px; display:flex; align-items:center; justify-content:space-between; }
 .brand { display:flex; align-items:center; gap:10px; color:var(--ink); text-decoration:none; font-size:1.15rem; font-weight:800; }
-.brand img { width:34px; height:34px; }
+.brand img { width:34px; height:34px; }.brand .landing-wordmark{width:142px;height:40px;object-fit:contain;object-position:left center}
 nav { display:flex; align-items:center; gap:26px; } nav a { color:var(--muted); text-decoration:none; font-size:.9rem; font-weight:600; }
 .nav-login { border:1px solid var(--line); border-radius:9px; background:#fff; color:var(--ink); padding:8px 14px; font-weight:700; }
 .hero { max-width:1160px; min-height:650px; margin:auto; padding:80px 24px 90px; display:grid; grid-template-columns:1.05fr .95fr; align-items:center; gap:70px; }

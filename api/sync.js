@@ -14,7 +14,7 @@ async function ensureSpreadsheet(session, access) {
 
 function snapshotToRanges(snapshot, revision) {
   const transactions = [TX_HEADERS, ...(snapshot.transactions || []).map((tx) => [tx.id, tx.date, tx.wallet || "", tx.type, tx.category || "", tx.description || "", Number(tx.amount) || 0, tx.currency || snapshot.settings?.currency || "IDR", tx.createdTime || "", tx.status || "completed", Boolean(tx.recurring), tx.recurringFreq || "", tx.lastRecurring || ""])];
-  const appData = [["Key", "JSON"], ...["wallets", "categories", "listItems", "budgets", "goals", "settings"].map((key) => [key, JSON.stringify(snapshot[key] ?? (key === "settings" ? {} : []))])];
+  const appData = [["Key", "JSON"], ...["wallets", "categories", "listItems", "budgets", "goals", "planners", "settings"].map((key) => [key, JSON.stringify(snapshot[key] ?? (key === "settings" ? {} : []))])];
   const metadata = [["Key", "Value"], ["schemaVersion", String(SHEET_SCHEMA)], ["revision", revision], ["updatedAt", new Date().toISOString()]];
   return [{ range: "Transactions!A1:M", values: transactions }, { range: "AppData!A1:B", values: appData }, { range: "Metadata!A1:B", values: metadata }];
 }
@@ -28,7 +28,7 @@ async function readSnapshot(sheetId, access) {
   const app = {};
   (appRange?.values || []).slice(1).forEach(([key, json]) => { try { app[key] = JSON.parse(json || "null"); } catch {} });
   const metadata = Object.fromEntries((metaRange?.values || []).slice(1).map(([key, value]) => [key, value]));
-  return { transactions, wallets: app.wallets || [], categories: app.categories || [], listItems: app.listItems || [], budgets: app.budgets || [], goals: app.goals || [], settings: app.settings || {}, revision: metadata.revision || "", updatedAt: metadata.updatedAt || null, schemaVersion: Number(metadata.schemaVersion) || SHEET_SCHEMA };
+  return { transactions, wallets: app.wallets || [], categories: app.categories || [], listItems: app.listItems || [], budgets: app.budgets || [], goals: app.goals || [], planners: app.planners || [], settings: app.settings || {}, revision: metadata.revision || "", updatedAt: metadata.updatedAt || null, schemaVersion: Number(metadata.schemaVersion) || SHEET_SCHEMA };
 }
 
 async function writeSnapshot(sheetId, access, snapshot, expectedRevision, force = false) {

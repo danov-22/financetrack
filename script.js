@@ -57,6 +57,7 @@ const STATE = {
   planningTab: "checklist",
   budgets: [],
   goals: [],
+  planners: [],
   savedDescriptions: [],
   installationId: "",
   gasUrl: "",
@@ -125,6 +126,7 @@ function loadStateFromLS() {
   STATE.listItems = LS.get("fin_list_items", []);
   STATE.budgets = LS.get("fin_budgets", []);
   STATE.goals = LS.get("fin_goals", []);
+  STATE.planners = LS.get("fin_planners", []);
   STATE.savedDescriptions = LS.get("fin_saved_descriptions", []);
   STATE.installationId = LS.get("fin_installation_id", "") || generateId();
   LS.set("fin_installation_id", STATE.installationId);
@@ -185,6 +187,7 @@ function persistFeedback() {
 function persistListItems() { LS.set("fin_list_items", STATE.listItems); markCloudDirty(); }
 function persistBudgets() { LS.set("fin_budgets", STATE.budgets); markCloudDirty(); }
 function persistGoals() { LS.set("fin_goals", STATE.goals); markCloudDirty(); }
+function persistPlanners() { LS.set("fin_planners", STATE.planners); markCloudDirty(); }
 function persistSettings() {
   LS.set("fin_gas_url", STATE.gasUrl);
   LS.set("fin_currency", STATE.currency);
@@ -514,7 +517,7 @@ function isManagedSync() { return Boolean(window.BEWLET_AUTH && window.bewletAut
 function buildManagedSnapshot() {
   return {
     transactions: STATE.transactions, wallets: STATE.wallets, categories: STATE.categories,
-    listItems: STATE.listItems, budgets: STATE.budgets, goals: STATE.goals,
+    listItems: STATE.listItems, budgets: STATE.budgets, goals: STATE.goals, planners: STATE.planners,
     settings: { currency: STATE.currency, favoriteCurrencies: STATE.favoriteCurrencies, theme: STATE.theme, themePreset: STATE.themePreset, customThemeColor: STATE.customThemeColor, accountName: STATE.accountName, reminderDays: STATE.reminderDays, hideDashboardBalances: STATE.hideDashboardBalances, dashboardWalletScope: STATE.dashboardWalletScope, categoryChartType: STATE.categoryChartType, bottomNavPages: STATE.bottomNavPages, savedDescriptions: STATE.savedDescriptions },
   };
 }
@@ -526,6 +529,7 @@ function applyManagedSnapshot(snapshot) {
   STATE.listItems = snapshot.listItems || [];
   STATE.budgets = snapshot.budgets || [];
   STATE.goals = snapshot.goals || [];
+  STATE.planners = snapshot.planners || [];
   const settings = snapshot.settings || {};
   if (settings.currency) STATE.currency = settings.currency;
   if (settings.favoriteCurrencies) STATE.favoriteCurrencies = settings.favoriteCurrencies;
@@ -544,7 +548,7 @@ function applyManagedSnapshot(snapshot) {
   if (settings.bottomNavPages?.length >= 2) STATE.bottomNavPages = normalizeBottomNavPages(settings.bottomNavPages);
   if (Array.isArray(settings.savedDescriptions)) STATE.savedDescriptions = settings.savedDescriptions.slice(0, 100);
   STATE.syncRevision = snapshot.revision || STATE.syncRevision;
-  persistTransactions(); persistWallets(); persistCategories(); persistListItems(); persistBudgets(); persistGoals(); persistSettings();
+  persistTransactions(); persistWallets(); persistCategories(); persistListItems(); persistBudgets(); persistGoals(); persistPlanners(); persistSettings();
   LS.set("fin_sync_revision", STATE.syncRevision);
   populateCurrencySelects();
   if (document.getElementById("currency-select")) document.getElementById("currency-select").value = STATE.currency;
@@ -1160,7 +1164,7 @@ function checkBudgetAlerts() {
   });
 }
 function setPlanningTab(tab = "checklist") {
-  const valid = ["checklist", "budgets", "goals", "recurring"];
+  const valid = ["checklist", "budgets", "goals", "recurring", "planner"];
   STATE.planningTab = valid.includes(tab) ? tab : "checklist";
   document.querySelectorAll("[data-planning-tab]").forEach((button) => {
     const active = button.dataset.planningTab === STATE.planningTab;
@@ -1175,6 +1179,7 @@ function setPlanningTab(tab = "checklist") {
 }
 function renderPlanning() {
   renderLists();
+  renderPlanners();
   const budgetGrid = document.getElementById("budgets-grid");
   if (!budgetGrid) return;
   budgetGrid.innerHTML = STATE.budgets.length ? STATE.budgets.map((budget) => { const spent = currentMonthExpenseForCategory(budget.category); const remaining = Number(budget.limit) - spent; const percent = Number(budget.limit) ? Math.round(spent / Number(budget.limit) * 100) : 0; return `<article class="planning-card"><div class="planning-card-head"><span class="list-kind">${escHtml(budget.category)}</span><div><button onclick="openBudgetModal('${budget.id}')">Edit</button><button onclick="deleteBudget('${budget.id}')">Delete</button></div></div><h4>${formatAmount(spent)} <small>of ${formatAmount(budget.limit)}</small></h4>${progressBarHtml(spent, budget.limit, budget.alertAt)}<p class="${remaining < 0 ? "alert-text" : ""}">${remaining >= 0 ? `${formatAmount(remaining)} remaining · ${percent}% used` : `${formatAmount(Math.abs(remaining))} over budget`}</p></article>`; }).join("") : emptyStateHtml("No budgets yet", "Add a category budget to receive remaining-budget alerts.");
@@ -1191,6 +1196,121 @@ function openGoalModal(id = "") { const goal = STATE.goals.find((item) => item.i
 function submitGoal(event) { event.preventDefault(); const id = document.getElementById("goal-id").value; const item = { id: id || generateId(), name: document.getElementById("goal-name").value.trim(), target: Number(document.getElementById("goal-target").value), current: Number(document.getElementById("goal-current").value) || 0, type: document.getElementById("goal-type").value, targetDate: document.getElementById("goal-date").value }; const index = STATE.goals.findIndex((entry) => entry.id === id); if (index >= 0) STATE.goals[index] = item; else STATE.goals.push(item); persistGoals(); closeModal("modal-goal"); renderPlanning(); showToast("Savings goal saved.", "success"); }
 function deleteGoal(id) { STATE.goals = STATE.goals.filter((item) => item.id !== id); persistGoals(); renderPlanning(); }
 function openRecurringBillModal() { openTransactionModal(); document.getElementById("tx-recurring").checked = true; document.getElementById("recurring-options").classList.remove("hidden"); document.getElementById("tx-description").placeholder = "Netflix, electricity, insurance…"; }
+
+function plannerTotal(plan) {
+  return (plan?.items || []).reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+}
+
+function plannerPeriodLabel(plan) {
+  if (plan.period === "custom") return `${plan.startDate ? formatDateShort(plan.startDate) : "No start"} - ${plan.endDate ? formatDateShort(plan.endDate) : "No end"}`;
+  if (!plan.month) return "Monthly";
+  const [year, month] = plan.month.split("-").map(Number);
+  return new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" }).format(new Date(year, month - 1, 1));
+}
+
+function renderPlanners() {
+  const grid = document.getElementById("planners-grid");
+  if (!grid) return;
+  grid.innerHTML = STATE.planners.length ? STATE.planners.map((plan) => `<article class="planning-card">
+    <div class="planning-card-head"><span class="list-kind">${escHtml(plan.period === "custom" ? "Custom period" : "Monthly")}</span><div><button onclick="openPlannerModal('${plan.id}')">Edit</button><button onclick="deletePlanner('${plan.id}')">Delete</button></div></div>
+    <h4>${escHtml(plan.name)}</h4><p>${escHtml(plannerPeriodLabel(plan))}${plan.convertedTo ? ` · Added to ${escHtml(plan.convertedTo)}` : ""}</p>
+    <div class="planner-card-items">${(plan.items || []).slice(0, 4).map((item) => `<span><em>${escHtml(item.name)}</em><b>${formatAmount(item.amount)}</b></span>`).join("")}${plan.items?.length > 4 ? `<span><em>+${plan.items.length - 4} more</em></span>` : ""}</div>
+    <h4 class="planner-card-total">${formatAmount(plannerTotal(plan))}</h4>
+    <div class="planner-card-actions"><button onclick="convertPlanner('${plan.id}','budget')">To budget</button><button onclick="convertPlanner('${plan.id}','goal')">To savings goal</button><button onclick="convertPlanner('${plan.id}','recurring')">To recurring bills</button></div>
+  </article>`).join("") : emptyStateHtml("No spending plans yet", "Build a monthly or custom-period estimate before committing it elsewhere.");
+}
+
+function updatePlannerPeriodFields() {
+  const custom = document.getElementById("planner-period").value === "custom";
+  document.getElementById("planner-month-field").classList.toggle("hidden", custom);
+  document.getElementById("planner-custom-dates").classList.toggle("hidden", !custom);
+}
+
+function addPlannerItemRow(item = {}) {
+  const row = document.createElement("div");
+  row.className = "planner-item-row";
+  row.innerHTML = `<input class="input-field planner-item-name" maxlength="100" required placeholder="Item or expense" value="${escHtml(item.name || "")}"/><input class="input-field planner-item-amount" type="number" min="0" step="any" inputmode="decimal" required placeholder="Amount" value="${Number(item.amount) || ""}" oninput="updatePlannerTotal()"/><button type="button" onclick="removePlannerItemRow(this)" aria-label="Remove item">×</button>`;
+  document.getElementById("planner-items").appendChild(row);
+  updatePlannerTotal();
+}
+
+function removePlannerItemRow(button) {
+  button.closest(".planner-item-row")?.remove();
+  if (!document.querySelector(".planner-item-row")) addPlannerItemRow();
+  updatePlannerTotal();
+}
+
+function updatePlannerTotal() {
+  const total = [...document.querySelectorAll(".planner-item-amount")].reduce((sum, input) => sum + (Number(input.value) || 0), 0);
+  setEl("planner-total", formatAmount(total));
+}
+
+function openPlannerModal(id = "") {
+  const plan = STATE.planners.find((entry) => entry.id === id);
+  setEl("modal-planner-title", plan ? "Edit spending plan" : "New spending plan");
+  document.getElementById("planner-id").value = plan?.id || "";
+  document.getElementById("planner-name").value = plan?.name || "";
+  document.getElementById("planner-period").value = plan?.period || "monthly";
+  document.getElementById("planner-month").value = plan?.month || getTodayISO().slice(0, 7);
+  document.getElementById("planner-start").value = plan?.startDate || getTodayISO();
+  document.getElementById("planner-end").value = plan?.endDate || "";
+  populateCategoryOptions("planner-category", plan?.category || STATE.categories[0] || "");
+  populateWalletOptions("planner-wallet", plan?.wallet || STATE.wallets[0] || "");
+  document.getElementById("planner-destination").value = "planner";
+  document.getElementById("planner-delete").classList.toggle("hidden", !plan);
+  document.getElementById("planner-items").innerHTML = "";
+  (plan?.items?.length ? plan.items : [{}]).forEach(addPlannerItemRow);
+  updatePlannerPeriodFields();
+  updatePlannerTotal();
+  openModal("modal-planner");
+}
+
+function submitPlanner(event) {
+  event.preventDefault();
+  const period = document.getElementById("planner-period").value;
+  const startDate = document.getElementById("planner-start").value;
+  const endDate = document.getElementById("planner-end").value;
+  if (period === "custom" && (!startDate || !endDate || endDate < startDate)) { showToast("Choose a valid planner date range.", "warning"); return; }
+  const id = document.getElementById("planner-id").value || generateId();
+  const existing = STATE.planners.find((entry) => entry.id === id);
+  const items = [...document.querySelectorAll(".planner-item-row")].map((row) => ({ id: generateId(), name: row.querySelector(".planner-item-name").value.trim(), amount: Number(row.querySelector(".planner-item-amount").value) || 0 })).filter((item) => item.name && item.amount > 0);
+  if (!items.length) { showToast("Add at least one planned cost.", "warning"); return; }
+  const plan = { id, name: document.getElementById("planner-name").value.trim(), period, month: document.getElementById("planner-month").value, startDate: period === "custom" ? startDate : "", endDate: period === "custom" ? endDate : "", category: document.getElementById("planner-category").value, wallet: document.getElementById("planner-wallet").value, items, createdTime: existing?.createdTime || new Date().toISOString(), convertedTo: existing?.convertedTo || "" };
+  const index = STATE.planners.findIndex((entry) => entry.id === id);
+  if (index >= 0) STATE.planners[index] = plan; else STATE.planners.push(plan);
+  persistPlanners();
+  const destination = document.getElementById("planner-destination").value;
+  closeModal("modal-planner");
+  renderPlanning();
+  if (destination !== "planner") convertPlanner(id, destination); else showToast("Spending plan saved.", "success");
+}
+
+function convertPlanner(id, destination) {
+  const plan = STATE.planners.find((entry) => entry.id === id);
+  if (!plan) return;
+  const total = plannerTotal(plan);
+  const category = plan.category || STATE.categories[0] || "Other";
+  const firstDate = plan.period === "custom" ? plan.startDate : `${plan.month || getTodayISO().slice(0, 7)}-01`;
+  if (destination === "budget") {
+    const existing = STATE.budgets.find((item) => item.category === category);
+    if (existing) existing.limit = total; else STATE.budgets.push({ id: generateId(), category, limit: total, alertAt: 80 });
+    persistBudgets(); plan.convertedTo = "Budgets";
+  }
+  if (destination === "goal") {
+    STATE.goals.push({ id: generateId(), name: plan.name, target: total, current: 0, type: "sinking", targetDate: plan.period === "custom" ? plan.endDate : "" });
+    persistGoals(); plan.convertedTo = "Savings goals";
+  }
+  if (destination === "recurring") {
+    if (!plan.wallet) { showToast("Choose a wallet before creating recurring bills.", "warning"); return; }
+    plan.items.forEach((item) => STATE.transactions.push({ id: generateId(), date: firstDate, wallet: plan.wallet, type: "expense", category, description: item.name, amount: item.amount, currency: STATE.currency, recurring: true, recurringFreq: "monthly", status: "completed", createdTime: new Date().toISOString() }));
+    persistTransactions(); plan.convertedTo = "Recurring bills";
+  }
+  persistPlanners(); renderPlanning(); showToast(`Plan added to ${plan.convertedTo}.`, "success");
+}
+
+function deletePlanner(id) { STATE.planners = STATE.planners.filter((entry) => entry.id !== id); persistPlanners(); renderPlanning(); showToast("Spending plan deleted.", "info"); }
+function deletePlannerFromModal() { const id = document.getElementById("planner-id").value; if (!id) return; closeModal("modal-planner"); deletePlanner(id); }
+function openPlannerQuickAccess() { navigate("planning"); setPlanningTab("planner"); openPlannerModal(); }
 
 function selectCalendarDate(date) {
   STATE.calendarSelectedDate = date;
@@ -1483,7 +1603,7 @@ function setSettingsTab(tab = "account") {
 const ONBOARDING_STEPS = [
   { eyebrow: "Welcome", title: "Welcome to Bewlet", description: "A private, manual money tracker made to feel personal, simple, and comfortable on every device.", icon: '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12l5-5 4 4 7-8"/><path d="M15 3h5v5"/><path d="M5 20h14"/></svg>' },
   { eyebrow: "Track daily", title: "Record money in seconds", description: "Use the floating + button to add income, expenses, savings, or transfers—including transactions from another date or currency.", icon: '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M7 12h10"/></svg>' },
-  { eyebrow: "Plan ahead", title: "Turn plans into progress", description: "Keep checklists, budgets, savings goals, and recurring bills together. Planned expenses count only after you confirm them.", icon: '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3v3M16 3v3M4 9h16M5 5h14a1 1 0 011 1v14H4V6a1 1 0 011-1z"/><path d="M8 14l2 2 5-5"/></svg>' },
+  { eyebrow: "Plan ahead", title: "Turn plans into progress", description: "Build spending estimates, then keep them as drafts or turn them into budgets, savings goals, and recurring bills. Planned expenses count only after you confirm them.", icon: '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3v3M16 3v3M4 9h16M5 5h14a1 1 0 011 1v14H4V6a1 1 0 011-1z"/><path d="M8 14l2 2 5-5"/></svg>' },
   { eyebrow: "Make it yours", title: "Your Bewlet, your way", description: "Choose a theme, currency, privacy preference, and quick-access pages. On mobile, swipe between those pages or open the full drawer from the left edge.", icon: '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M6 14v6"/></svg>' },
   { eyebrow: "Ready", title: "Connect first, personalize next", description: "Start by connecting Google Drive for your private Sheet and backups. Once it is ready, Bewlet will take you to Preferences.", icon: '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 18h11a4 4 0 000-8 6 6 0 00-11.5-2A5 5 0 007 18z"/><path d="M9 14l2 2 4-4"/></svg>' },
 ];
@@ -1945,6 +2065,7 @@ function confirmReset() {
       STATE.listItems = [];
       STATE.budgets = [];
       STATE.goals = [];
+      STATE.planners = [];
       persistTransactions();
       persistWallets();
       persistCategories();
@@ -1952,6 +2073,7 @@ function confirmReset() {
       persistListItems();
       persistBudgets();
       persistGoals();
+      persistPlanners();
       showToast("All local data has been reset.", "info");
       refreshCurrentPage();
     },
@@ -3609,6 +3731,7 @@ function applyDemoState() {
   ];
   STATE.budgets = [{ id:"demobudget1", category:"Food", limit:1500000, alertAt:80 }];
   STATE.goals = [{ id:"demogoal1", name:"Emergency fund", target:12000000, current:4500000, type:"goal", targetDate:date(-120) }];
+  STATE.planners = [{ id:"demoplanner1", name:"Next month essentials", period:"monthly", month:monthDate(-1, 1).slice(0, 7), startDate:"", endDate:"", category:"Housing", wallet:"Everyday", items:[{ id:"demoplanitem1", name:"Rent", amount:2400000 },{ id:"demoplanitem2", name:"Utilities", amount:550000 },{ id:"demoplanitem3", name:"Groceries", amount:900000 }], createdTime:new Date().toISOString(), convertedTo:"" }];
   const banner = document.createElement("div");
   banner.className = "demo-banner";
   banner.innerHTML = '<span><strong>Demo mode</strong> — changes reset when you leave.</span><a href="/" onclick="sessionStorage.removeItem(\'bewlet_demo_mode\')">Exit demo</a>';
@@ -3776,6 +3899,16 @@ window.openGoalModal = openGoalModal;
 window.submitGoal = submitGoal;
 window.deleteGoal = deleteGoal;
 window.openRecurringBillModal = openRecurringBillModal;
+window.openPlannerModal = openPlannerModal;
+window.openPlannerQuickAccess = openPlannerQuickAccess;
+window.updatePlannerPeriodFields = updatePlannerPeriodFields;
+window.addPlannerItemRow = addPlannerItemRow;
+window.removePlannerItemRow = removePlannerItemRow;
+window.updatePlannerTotal = updatePlannerTotal;
+window.submitPlanner = submitPlanner;
+window.convertPlanner = convertPlanner;
+window.deletePlanner = deletePlanner;
+window.deletePlannerFromModal = deletePlannerFromModal;
 window.toggleBottomNavPage = toggleBottomNavPage;
 window.moveBottomNavPage = moveBottomNavPage;
 window.moveSettingsListItem = moveSettingsListItem;

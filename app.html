@@ -34,17 +34,8 @@
       <aside id="sidebar" class="sidebar">
         <div class="sidebar-header">
           <div class="sidebar-logo">
-            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-              <rect width="28" height="28" rx="8" fill="var(--accent)" />
-              <path
-                d="M7 18l5-5 4 4 5-6"
-                stroke="white"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-            <span class="sidebar-title">Bewlet</span>
+            <img class="bewlet-wordmark brand-logo-light" src="bewlet_light.svg" alt="Bewlet" />
+            <img class="bewlet-wordmark brand-logo-dark" src="bewlet_dark.svg" alt="Bewlet" />
           </div>
           <button
             id="sidebar-collapse"
@@ -425,17 +416,19 @@
         </section>
 
         <section id="page-planning" class="page">
-          <div class="page-header"><div><p class="page-description">Keep everyday checklists, budgets, savings targets, and recurring bills together.</p></div></div>
+          <div class="page-header"><div><p class="page-description">Keep checklists, budgets, savings targets, recurring bills, and spending plans together.</p></div></div>
           <nav class="planning-tabs" aria-label="Planning sections">
             <button class="planning-tab active" data-planning-tab="checklist" onclick="setPlanningTab('checklist')">Checklist</button>
             <button class="planning-tab" data-planning-tab="budgets" onclick="setPlanningTab('budgets')">Budgets</button>
             <button class="planning-tab" data-planning-tab="goals" onclick="setPlanningTab('goals')">Savings goals</button>
             <button class="planning-tab" data-planning-tab="recurring" onclick="setPlanningTab('recurring')">Recurring bills</button>
+            <button class="planning-tab" data-planning-tab="planner" onclick="setPlanningTab('planner')">Planner</button>
           </nav>
           <section class="planning-tab-panel" data-planning-panel="checklist"><div class="planning-section"><div class="panel-header"><div><h3>Checklist</h3><p class="page-description">Keep a simple checklist, or give an item a due date and show it on your calendar.</p></div><button class="btn-primary" onclick="openListItemModal()">+ Add item</button></div><div class="list-summary" id="list-summary"></div><div class="list-toolbar"><button class="list-filter active" data-list-filter="open" onclick="setListFilter('open')">Open</button><button class="list-filter" data-list-filter="all" onclick="setListFilter('all')">All</button><button class="list-filter" data-list-filter="buy" onclick="setListFilter('buy')">To buy</button><button class="list-filter" data-list-filter="pay" onclick="setListFilter('pay')">To pay</button><button class="list-filter" data-list-filter="completed" onclick="setListFilter('completed')">Completed</button></div><div id="buy-pay-list" class="buy-pay-list"></div></div></section>
           <section class="planning-tab-panel" data-planning-panel="budgets" hidden><div class="planning-section"><div class="panel-header"><div><h3>Monthly category budgets</h3><p class="page-description">Bewlet warns you as spending approaches or passes each limit.</p></div><button class="btn-primary" onclick="openBudgetModal()">+ Add budget</button></div><div id="budgets-grid" class="planning-grid"></div></div></section>
           <section class="planning-tab-panel" data-planning-panel="goals" hidden><div class="planning-section"><div class="panel-header"><div><h3>Savings goals &amp; sinking funds</h3><p class="page-description">Track progress toward planned purchases, emergencies, or annual expenses.</p></div><button class="btn-primary" onclick="openGoalModal()">+ Add goal</button></div><div id="goals-grid" class="planning-grid"></div></div></section>
           <section class="planning-tab-panel" data-planning-panel="recurring" hidden><div class="planning-section"><div class="panel-header"><div><h3>Recurring bills &amp; subscriptions</h3><p class="page-description">These use Bewlet’s recurring transactions and are included in your financial records.</p></div><button class="btn-primary" onclick="openRecurringBillModal()">+ Add recurring bill</button></div><div id="recurring-bills-list" class="buy-pay-list"></div></div></section>
+          <section class="planning-tab-panel" data-planning-panel="planner" hidden><div class="planning-section"><div class="panel-header"><div><h3>Spending planner</h3><p class="page-description">Calculate a monthly or custom-period plan before turning it into a budget, savings goal, or recurring bills.</p></div><button class="btn-primary" onclick="openPlannerModal()">+ New plan</button></div><div id="planners-grid" class="planning-grid planner-grid"></div></div></section>
         </section>
 
         <!-- REPORTS PAGE -->
@@ -500,7 +493,7 @@
               <details class="guide-topic" open><summary><span>Getting started</span><small>Your one-time setup</small></summary><div class="guide-topic-body"><p><strong>Connect Google Drive</strong> in Account. Bewlet creates and manages your private Google Sheet automatically.</p><p>Then choose your main currency, quick currencies, theme, and preferred bottom navigation in Settings.</p></div></details>
               <details class="guide-topic"><summary><span>Move around Bewlet</span><small>Drawer, tabs, and swipe</small></summary><div class="guide-topic-body"><p><strong>Swipe right from the left edge</strong> to open the full menu, and swipe left to close it.</p><p><strong>Swipe left or right on the page</strong> to move between pages in your chosen bottom navigation. Horizontal tab rows can be swiped separately.</p></div></details>
               <details class="guide-topic"><summary><span>Everyday tracking</span><small>Transactions, calendar, and privacy</small></summary><div class="guide-topic-body"><p>Tap the floating <strong>+</strong> button to record income, expenses, savings, or transfers. Pick a different date when entering an older or future transaction.</p><p>Use Calendar for a daily summary. Use the eye button on Dashboard to quickly hide or reveal financial amounts.</p></div></details>
-              <details class="guide-topic"><summary><span>Plan ahead</span><small>Checklist, budgets, goals, and bills</small></summary><div class="guide-topic-body"><p>Planning brings together your checklist, category budgets, savings goals, and recurring bills.</p><p>A planned transaction does not affect your totals until you confirm that it happened.</p></div></details>
+              <details class="guide-topic"><summary><span>Plan ahead</span><small>Checklist, budgets, goals, bills, and estimates</small></summary><div class="guide-topic-body"><p>Planning brings together your checklist, category budgets, savings goals, recurring bills, and a flexible spending planner.</p><p>Use Planner to total a monthly or custom-period estimate first. Keep it as a draft or turn it into a budget, savings goal, or recurring bills when ready.</p><p>A planned transaction does not affect your totals until you confirm that it happened.</p></div></details>
               <details class="guide-topic"><summary><span>Sync, backup, and support</span><small>Keep data safe and ask for help</small></summary><div class="guide-topic-body"><p>Changes save on your device and synchronize with your Google Sheet when online. Bewlet creates safety backups; restore one only when you need to return to older data.</p><p>Use the floating feedback button to report an issue or suggestion, attach a screenshot, and see replies from Bewlet.</p></div></details>
             </div>
 
@@ -770,6 +763,10 @@
       </svg>
     </button>
 
+    <button id="planner-fab" class="fab planner-fab" onclick="openPlannerQuickAccess()" title="Open spending planner" aria-label="Open spending planner">
+      <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/><path d="M19 4v6M16 7h6"/></svg>
+    </button>
+
     <!-- ============================================================ -->
     <!-- MODALS                                                       -->
     <!-- ============================================================ -->
@@ -943,6 +940,28 @@
               Save
             </button>
           </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Spending Planner Modal -->
+    <div id="modal-planner" class="modal-overlay" onclick="closeModalOutside(event, 'modal-planner')">
+      <div class="modal planner-modal">
+        <div class="modal-header"><div><h3 id="modal-planner-title">New spending plan</h3><p>Calculate first, then decide where the plan belongs.</p></div><button class="modal-close" onclick="closeModal('modal-planner')">&times;</button></div>
+        <form onsubmit="submitPlanner(event)">
+          <input id="planner-id" type="hidden" />
+          <div class="form-group"><label>Plan name <span class="required">*</span></label><input id="planner-name" class="input-field" maxlength="100" required placeholder="Holiday, monthly living costs…" /></div>
+          <div class="form-row">
+            <div class="form-group"><label>Period</label><select id="planner-period" class="input-field" onchange="updatePlannerPeriodFields()"><option value="monthly">Monthly</option><option value="custom">Custom dates</option></select></div>
+            <div id="planner-month-field" class="form-group"><label>Month</label><input id="planner-month" class="input-field" type="month" /></div>
+          </div>
+          <div id="planner-custom-dates" class="form-row hidden"><div class="form-group"><label>Starts</label><input id="planner-start" class="input-field" type="date" /></div><div class="form-group"><label>Ends</label><input id="planner-end" class="input-field" type="date" /></div></div>
+          <div class="form-row"><div class="form-group"><label>Category</label><select id="planner-category" class="input-field"></select></div><div class="form-group"><label>Wallet</label><select id="planner-wallet" class="input-field"></select></div></div>
+          <div class="planner-items-head"><div><strong>Planned spending</strong><p>Add each expected cost to calculate the total.</p></div><button type="button" class="btn-ghost btn-sm" onclick="addPlannerItemRow()">+ Add item</button></div>
+          <div id="planner-items" class="planner-items"></div>
+          <div class="planner-total"><span>Estimated total</span><strong id="planner-total">Rp0</strong></div>
+          <div class="form-group"><label>After saving</label><select id="planner-destination" class="input-field"><option value="planner">Keep in Planner</option><option value="budget">Create a monthly budget</option><option value="goal">Create a savings goal</option><option value="recurring">Create recurring bills</option></select><p class="form-help">You can keep it as a draft and convert it later.</p></div>
+          <div class="modal-footer"><button type="button" id="planner-delete" class="btn-danger hidden" onclick="deletePlannerFromModal()">Delete</button><button type="button" class="btn-ghost" onclick="closeModal('modal-planner')">Cancel</button><button class="btn-primary" type="submit">Save plan</button></div>
         </form>
       </div>
     </div>
