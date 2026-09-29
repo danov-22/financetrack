@@ -75,6 +75,7 @@ const STATE = {
   categoryChartType: "doughnut",
   financeGuideTemplate: "503020",
   financeGuideIncome: 0,
+  financeGuideCustom: { needs: 50, wants: 30, savings: 20 },
   calendarMonth: "",
   calendarSelectedDate: "",
   reminderDays: 3,
@@ -151,7 +152,16 @@ function loadStateFromLS() {
   STATE.dashboardWalletScope = LS.get("fin_dashboard_wallet_scope", "all") || "all";
   const savedCategoryChart = LS.get("fin_category_chart_type", "doughnut");
   STATE.categoryChartType = ["doughnut", "bar", "breakdown"].includes(savedCategoryChart) ? savedCategoryChart : (savedCategoryChart === "polarArea" ? "breakdown" : "doughnut");
-  STATE.financeGuideTemplate = LS.get("fin_finance_guide_template", "503020") === "751015" ? "751015" : "503020";
+  const savedFinanceGuideTemplate = LS.get("fin_finance_guide_template", "503020");
+  STATE.financeGuideTemplate = ["503020", "751015", "8020", "702010", "custom"].includes(savedFinanceGuideTemplate) ? savedFinanceGuideTemplate : "503020";
+  const savedFinanceGuideCustom = LS.get("fin_finance_guide_custom", null);
+  if (savedFinanceGuideCustom && typeof savedFinanceGuideCustom === "object") {
+    STATE.financeGuideCustom = {
+      needs: Math.max(0, Math.min(100, Number(savedFinanceGuideCustom.needs) || 0)),
+      wants: Math.max(0, Math.min(100, Number(savedFinanceGuideCustom.wants) || 0)),
+      savings: Math.max(0, Math.min(100, Number(savedFinanceGuideCustom.savings) || 0)),
+    };
+  }
   const savedBottomNav = LS.get("fin_bottom_nav_pages", null);
   if (Array.isArray(savedBottomNav)) STATE.bottomNavPages = normalizeBottomNavPages(savedBottomNav);
   if (STATE.bottomNavPages.length < 2) STATE.bottomNavPages = ["dashboard", "calendar"];
@@ -204,6 +214,7 @@ function persistSettings() {
   LS.set("fin_dashboard_wallet_scope", STATE.dashboardWalletScope);
   LS.set("fin_category_chart_type", STATE.categoryChartType);
   LS.set("fin_finance_guide_template", STATE.financeGuideTemplate);
+  LS.set("fin_finance_guide_custom", STATE.financeGuideCustom);
   LS.set("fin_bottom_nav_pages", STATE.bottomNavPages);
   LS.set("fin_saved_descriptions", STATE.savedDescriptions);
   markCloudDirty();
@@ -522,7 +533,7 @@ function buildManagedSnapshot() {
   return {
     transactions: STATE.transactions, wallets: STATE.wallets, categories: STATE.categories,
     listItems: STATE.listItems, budgets: STATE.budgets, goals: STATE.goals, planners: STATE.planners,
-    settings: { currency: STATE.currency, favoriteCurrencies: STATE.favoriteCurrencies, theme: STATE.theme, themePreset: STATE.themePreset, customThemeColor: STATE.customThemeColor, accountName: STATE.accountName, reminderDays: STATE.reminderDays, hideDashboardBalances: STATE.hideDashboardBalances, dashboardWalletScope: STATE.dashboardWalletScope, categoryChartType: STATE.categoryChartType, bottomNavPages: STATE.bottomNavPages, savedDescriptions: STATE.savedDescriptions },
+    settings: { currency: STATE.currency, favoriteCurrencies: STATE.favoriteCurrencies, theme: STATE.theme, themePreset: STATE.themePreset, customThemeColor: STATE.customThemeColor, accountName: STATE.accountName, reminderDays: STATE.reminderDays, hideDashboardBalances: STATE.hideDashboardBalances, dashboardWalletScope: STATE.dashboardWalletScope, categoryChartType: STATE.categoryChartType, financeGuideTemplate: STATE.financeGuideTemplate, financeGuideCustom: STATE.financeGuideCustom, bottomNavPages: STATE.bottomNavPages, savedDescriptions: STATE.savedDescriptions },
   };
 }
 function applyManagedSnapshot(snapshot) {
@@ -549,6 +560,14 @@ function applyManagedSnapshot(snapshot) {
   if (typeof settings.dashboardWalletScope === "string") STATE.dashboardWalletScope = settings.dashboardWalletScope;
   if (["doughnut", "bar", "breakdown"].includes(settings.categoryChartType)) STATE.categoryChartType = settings.categoryChartType;
   else if (settings.categoryChartType === "polarArea") STATE.categoryChartType = "breakdown";
+  if (["503020", "751015", "8020", "702010", "custom"].includes(settings.financeGuideTemplate)) STATE.financeGuideTemplate = settings.financeGuideTemplate;
+  if (settings.financeGuideCustom && typeof settings.financeGuideCustom === "object") {
+    STATE.financeGuideCustom = {
+      needs: Math.max(0, Math.min(100, Number(settings.financeGuideCustom.needs) || 0)),
+      wants: Math.max(0, Math.min(100, Number(settings.financeGuideCustom.wants) || 0)),
+      savings: Math.max(0, Math.min(100, Number(settings.financeGuideCustom.savings) || 0)),
+    };
+  }
   if (settings.bottomNavPages?.length >= 2) STATE.bottomNavPages = normalizeBottomNavPages(settings.bottomNavPages);
   if (Array.isArray(settings.savedDescriptions)) STATE.savedDescriptions = settings.savedDescriptions.slice(0, 100);
   STATE.syncRevision = snapshot.revision || STATE.syncRevision;
@@ -1622,18 +1641,61 @@ const FINANCE_GUIDE_TEMPLATES = {
       { name: "Savings & Future", percent: 15, items: [["Emergency Fund", 6], ["Investments", 4], ["Financial Goals", 3], ["Long-Term Savings", 2]] },
     ],
   },
+  "8020": {
+    label: "80 / 20",
+    sections: [
+      { name: "Spending", percent: 80, items: [["Housing", 30], ["Food", 15], ["Transportation", 10], ["Utilities", 7], ["Insurance/Healthcare", 5], ["Other Essentials", 8], ["Dining & Entertainment", 3], ["Flexible", 2]] },
+      { name: "Savings & Future", percent: 20, items: [["Emergency Fund", 7], ["Investments", 5], ["Financial Goals", 5], ["Long-Term Savings", 3]] },
+    ],
+  },
+  "702010": {
+    label: "70 / 20 / 10",
+    sections: [
+      { name: "Needs", percent: 70, items: [["Housing", 28], ["Food", 14], ["Transportation", 9], ["Utilities", 7], ["Insurance/Healthcare", 5], ["Other Essentials", 7]] },
+      { name: "Savings & Future", percent: 20, items: [["Emergency Fund", 7], ["Investments", 5], ["Financial Goals", 5], ["Long-Term Savings", 3]] },
+      { name: "Wants", percent: 10, items: [["Dining/Coffee", 3], ["Entertainment", 2], ["Shopping", 2], ["Hobbies", 2], ["Flexible", 1]] },
+    ],
+  },
 };
+
+const FINANCE_GUIDE_CUSTOM_ITEMS = {
+  needs: [["Housing", 20], ["Food", 10], ["Transportation", 7], ["Utilities", 5], ["Insurance/Healthcare", 5], ["Other Essentials", 3]],
+  wants: [["Dining/Coffee", 7], ["Entertainment", 5], ["Shopping", 5], ["Hobbies", 5], ["Travel", 5], ["Flexible", 3]],
+  savings: [["Emergency Fund", 7], ["Investments", 5], ["Financial Goals", 5], ["Long-Term Savings", 3]],
+};
+
+function scaledFinanceGuideItems(items, originalTotal, newTotal) {
+  return items.map(([name, percent]) => [name, Number((percent * newTotal / originalTotal).toFixed(1))]);
+}
+
+function getFinanceGuideTemplate() {
+  if (STATE.financeGuideTemplate !== "custom") return FINANCE_GUIDE_TEMPLATES[STATE.financeGuideTemplate] || FINANCE_GUIDE_TEMPLATES["503020"];
+  const custom = STATE.financeGuideCustom;
+  return {
+    label: "Custom",
+    sections: [
+      { name: "Needs", percent: custom.needs, items: scaledFinanceGuideItems(FINANCE_GUIDE_CUSTOM_ITEMS.needs, 50, custom.needs) },
+      { name: "Wants", percent: custom.wants, items: scaledFinanceGuideItems(FINANCE_GUIDE_CUSTOM_ITEMS.wants, 30, custom.wants) },
+      { name: "Savings & Future", percent: custom.savings, items: scaledFinanceGuideItems(FINANCE_GUIDE_CUSTOM_ITEMS.savings, 20, custom.savings) },
+    ],
+  };
+}
+
+function financeGuidePercent(value) {
+  return Number.isInteger(Number(value)) ? String(Number(value)) : Number(value).toFixed(1).replace(/\.0$/, "");
+}
 
 function financeGuideAmount(percent) {
   return (Number(STATE.financeGuideIncome) || 0) * Number(percent) / 100;
 }
 
 function renderFinanceGuide() {
-  const template = FINANCE_GUIDE_TEMPLATES[STATE.financeGuideTemplate] || FINANCE_GUIDE_TEMPLATES["503020"];
+  const template = getFinanceGuideTemplate();
   const input = document.getElementById("finance-guide-income");
   const symbol = document.getElementById("finance-guide-currency-symbol");
   const summary = document.getElementById("finance-guide-summary");
   const breakdown = document.getElementById("finance-guide-breakdown");
+  const customEditor = document.getElementById("finance-custom-editor");
   if (!summary || !breakdown) return;
   if (symbol) symbol.textContent = getCurrencySymbol();
   if (input && document.activeElement !== input) input.value = STATE.financeGuideIncome ? Number(STATE.financeGuideIncome).toLocaleString("en-US") : "";
@@ -1642,14 +1704,35 @@ function renderFinanceGuide() {
     button.classList.toggle("active", active);
     button.setAttribute("aria-pressed", String(active));
   });
-  summary.innerHTML = template.sections.map((section, index) => `<article class="finance-summary-${index}"><span>${escHtml(section.name)}</span><strong>${section.percent}%</strong><small>${formatAmount(financeGuideAmount(section.percent))}</small></article>`).join("");
-  breakdown.innerHTML = template.sections.map((section) => `<section><header><div><strong>${escHtml(section.name)}</strong><span>${section.percent}% of income</span></div><b>${formatAmount(financeGuideAmount(section.percent))}</b></header><div>${section.items.map(([name, percent]) => `<p><span>${escHtml(name)} <small>${percent}%</small></span><strong>${formatAmount(financeGuideAmount(percent))}</strong></p>`).join("")}</div></section>`).join("");
+  if (customEditor) customEditor.hidden = STATE.financeGuideTemplate !== "custom";
+  if (STATE.financeGuideTemplate === "custom") {
+    const custom = STATE.financeGuideCustom;
+    for (const key of ["needs", "wants", "savings"]) {
+      const customInput = document.getElementById(`finance-custom-${key}`);
+      if (customInput && document.activeElement !== customInput) customInput.value = custom[key];
+    }
+    const total = custom.needs + custom.wants + custom.savings;
+    const totalElement = document.getElementById("finance-custom-total");
+    if (totalElement) {
+      totalElement.textContent = total === 100 ? "Total: 100% - ready to use" : `Total: ${financeGuidePercent(total)}% - adjust the values to reach 100%`;
+      totalElement.classList.toggle("valid", total === 100);
+    }
+  }
+  summary.innerHTML = template.sections.map((section, index) => `<article class="finance-summary-${index}"><span>${escHtml(section.name)}</span><strong>${financeGuidePercent(section.percent)}%</strong><small>${formatAmount(financeGuideAmount(section.percent))}</small></article>`).join("");
+  breakdown.innerHTML = template.sections.map((section) => `<section><header><div><strong>${escHtml(section.name)}</strong><span>${financeGuidePercent(section.percent)}% of income</span></div><b>${formatAmount(financeGuideAmount(section.percent))}</b></header><div>${section.items.map(([name, percent]) => `<p><span>${escHtml(name)} <small>${financeGuidePercent(percent)}%</small></span><strong>${formatAmount(financeGuideAmount(percent))}</strong></p>`).join("")}</div></section>`).join("");
 }
 
 function setFinanceGuideTemplate(template) {
-  if (!FINANCE_GUIDE_TEMPLATES[template]) return;
+  if (![...Object.keys(FINANCE_GUIDE_TEMPLATES), "custom"].includes(template)) return;
   STATE.financeGuideTemplate = template;
-  LS.set("fin_finance_guide_template", template);
+  persistSettings();
+  renderFinanceGuide();
+}
+
+function updateFinanceGuideCustom(key, value) {
+  if (!["needs", "wants", "savings"].includes(key)) return;
+  STATE.financeGuideCustom[key] = Math.max(0, Math.min(100, Number(value) || 0));
+  persistSettings();
   renderFinanceGuide();
 }
 
@@ -4024,6 +4107,7 @@ window.saveReminderDays = saveReminderDays;
 window.setSettingsTab = setSettingsTab;
 window.setFinanceGuideTemplate = setFinanceGuideTemplate;
 window.updateFinanceGuideIncome = updateFinanceGuideIncome;
+window.updateFinanceGuideCustom = updateFinanceGuideCustom;
 window.saveDashboardPrivacy = saveDashboardPrivacy;
 window.toggleDashboardPrivacy = toggleDashboardPrivacy;
 window.enablePlannedReminders = enablePlannedReminders;

@@ -497,6 +497,16 @@
               <div class="finance-template-switch" role="group" aria-label="Budgeting template">
                 <button type="button" data-finance-template="503020" onclick="setFinanceGuideTemplate('503020')"><strong>50 / 30 / 20</strong><small>Balanced everyday budget</small></button>
                 <button type="button" data-finance-template="751015" onclick="setFinanceGuideTemplate('751015')"><strong>75 / 15 / 10</strong><small>Higher essential expenses</small></button>
+                <button type="button" data-finance-template="8020" onclick="setFinanceGuideTemplate('8020')"><strong>80 / 20</strong><small>Simple spending and saving</small></button>
+                <button type="button" data-finance-template="702010" onclick="setFinanceGuideTemplate('702010')"><strong>70 / 20 / 10</strong><small>Needs, savings, and wants</small></button>
+                <button type="button" data-finance-template="custom" onclick="setFinanceGuideTemplate('custom')"><strong>Custom</strong><small>Choose your own percentages</small></button>
+              </div>
+
+              <div id="finance-custom-editor" class="finance-custom-editor" hidden>
+                <div><label for="finance-custom-needs">Needs</label><span><input id="finance-custom-needs" type="number" min="0" max="100" step="1" oninput="updateFinanceGuideCustom('needs', this.value)"/><b>%</b></span></div>
+                <div><label for="finance-custom-wants">Wants</label><span><input id="finance-custom-wants" type="number" min="0" max="100" step="1" oninput="updateFinanceGuideCustom('wants', this.value)"/><b>%</b></span></div>
+                <div><label for="finance-custom-savings">Savings &amp; Future</label><span><input id="finance-custom-savings" type="number" min="0" max="100" step="1" oninput="updateFinanceGuideCustom('savings', this.value)"/><b>%</b></span></div>
+                <p id="finance-custom-total" role="status"></p>
               </div>
 
               <div id="finance-guide-summary" class="finance-guide-summary" aria-live="polite"></div>
