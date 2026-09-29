@@ -73,6 +73,8 @@ const STATE = {
   dashRange: "month",
   dashboardWalletScope: "all",
   categoryChartType: "doughnut",
+  financeGuideTemplate: "503020",
+  financeGuideIncome: 0,
   calendarMonth: "",
   calendarSelectedDate: "",
   reminderDays: 3,
@@ -149,6 +151,7 @@ function loadStateFromLS() {
   STATE.dashboardWalletScope = LS.get("fin_dashboard_wallet_scope", "all") || "all";
   const savedCategoryChart = LS.get("fin_category_chart_type", "doughnut");
   STATE.categoryChartType = ["doughnut", "bar", "breakdown"].includes(savedCategoryChart) ? savedCategoryChart : (savedCategoryChart === "polarArea" ? "breakdown" : "doughnut");
+  STATE.financeGuideTemplate = LS.get("fin_finance_guide_template", "503020") === "751015" ? "751015" : "503020";
   const savedBottomNav = LS.get("fin_bottom_nav_pages", null);
   if (Array.isArray(savedBottomNav)) STATE.bottomNavPages = normalizeBottomNavPages(savedBottomNav);
   if (STATE.bottomNavPages.length < 2) STATE.bottomNavPages = ["dashboard", "calendar"];
@@ -200,6 +203,7 @@ function persistSettings() {
   LS.set("fin_hide_dashboard_balances", STATE.hideDashboardBalances);
   LS.set("fin_dashboard_wallet_scope", STATE.dashboardWalletScope);
   LS.set("fin_category_chart_type", STATE.categoryChartType);
+  LS.set("fin_finance_guide_template", STATE.financeGuideTemplate);
   LS.set("fin_bottom_nav_pages", STATE.bottomNavPages);
   LS.set("fin_saved_descriptions", STATE.savedDescriptions);
   markCloudDirty();
@@ -1587,7 +1591,7 @@ function deleteCategory(name) {
 let ACTIVE_SETTINGS_TAB = "account";
 
 function setSettingsTab(tab = "account") {
-  const valid = ["account", "preferences", "organize", "data", "guide"];
+  const valid = ["account", "preferences", "organize", "data", "guide", "finance-guide"];
   ACTIVE_SETTINGS_TAB = valid.includes(tab) ? tab : "account";
   document.querySelectorAll("[data-settings-tab]").forEach((button) => {
     const active = button.dataset.settingsTab === ACTIVE_SETTINGS_TAB;
@@ -1598,6 +1602,61 @@ function setSettingsTab(tab = "account") {
     panel.hidden = panel.dataset.settingsPanel !== ACTIVE_SETTINGS_TAB;
   });
   document.querySelector(".settings-tabs")?.scrollTo({ left: document.querySelector(`[data-settings-tab="${ACTIVE_SETTINGS_TAB}"]`)?.offsetLeft || 0, behavior: "smooth" });
+  if (ACTIVE_SETTINGS_TAB === "finance-guide") renderFinanceGuide();
+}
+
+const FINANCE_GUIDE_TEMPLATES = {
+  "503020": {
+    label: "50 / 30 / 20",
+    sections: [
+      { name: "Needs", percent: 50, items: [["Housing", 20], ["Food", 10], ["Transportation", 7], ["Utilities", 5], ["Insurance/Healthcare", 5], ["Other Essentials", 3]] },
+      { name: "Wants", percent: 30, items: [["Dining/Coffee", 7], ["Entertainment", 5], ["Shopping", 5], ["Hobbies", 5], ["Travel", 5], ["Flexible", 3]] },
+      { name: "Savings & Future", percent: 20, items: [["Emergency Fund", 7], ["Investments", 5], ["Financial Goals", 5], ["Long-Term Savings", 3]] },
+    ],
+  },
+  "751015": {
+    label: "75 / 15 / 10",
+    sections: [
+      { name: "Needs", percent: 75, items: [["Housing", 30], ["Food", 15], ["Transportation", 10], ["Utilities", 7], ["Insurance/Healthcare", 5], ["Other Essentials", 8]] },
+      { name: "Wants", percent: 10, items: [["Dining/Coffee", 3], ["Entertainment", 2], ["Shopping", 2], ["Hobbies", 2], ["Flexible", 1]] },
+      { name: "Savings & Future", percent: 15, items: [["Emergency Fund", 6], ["Investments", 4], ["Financial Goals", 3], ["Long-Term Savings", 2]] },
+    ],
+  },
+};
+
+function financeGuideAmount(percent) {
+  return (Number(STATE.financeGuideIncome) || 0) * Number(percent) / 100;
+}
+
+function renderFinanceGuide() {
+  const template = FINANCE_GUIDE_TEMPLATES[STATE.financeGuideTemplate] || FINANCE_GUIDE_TEMPLATES["503020"];
+  const input = document.getElementById("finance-guide-income");
+  const symbol = document.getElementById("finance-guide-currency-symbol");
+  const summary = document.getElementById("finance-guide-summary");
+  const breakdown = document.getElementById("finance-guide-breakdown");
+  if (!summary || !breakdown) return;
+  if (symbol) symbol.textContent = getCurrencySymbol();
+  if (input && document.activeElement !== input) input.value = STATE.financeGuideIncome ? Number(STATE.financeGuideIncome).toLocaleString("en-US") : "";
+  document.querySelectorAll("[data-finance-template]").forEach((button) => {
+    const active = button.dataset.financeTemplate === STATE.financeGuideTemplate;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+  summary.innerHTML = template.sections.map((section, index) => `<article class="finance-summary-${index}"><span>${escHtml(section.name)}</span><strong>${section.percent}%</strong><small>${formatAmount(financeGuideAmount(section.percent))}</small></article>`).join("");
+  breakdown.innerHTML = template.sections.map((section) => `<section><header><div><strong>${escHtml(section.name)}</strong><span>${section.percent}% of income</span></div><b>${formatAmount(financeGuideAmount(section.percent))}</b></header><div>${section.items.map(([name, percent]) => `<p><span>${escHtml(name)} <small>${percent}%</small></span><strong>${formatAmount(financeGuideAmount(percent))}</strong></p>`).join("")}</div></section>`).join("");
+}
+
+function setFinanceGuideTemplate(template) {
+  if (!FINANCE_GUIDE_TEMPLATES[template]) return;
+  STATE.financeGuideTemplate = template;
+  LS.set("fin_finance_guide_template", template);
+  renderFinanceGuide();
+}
+
+function updateFinanceGuideIncome(input) {
+  formatTransactionAmountInput(input);
+  STATE.financeGuideIncome = Math.max(0, parseAmount(input.value));
+  renderFinanceGuide();
 }
 
 const ONBOARDING_STEPS = [
@@ -3963,6 +4022,8 @@ window.setThemePreset = setThemePreset;
 window.saveCustomTheme = saveCustomTheme;
 window.saveReminderDays = saveReminderDays;
 window.setSettingsTab = setSettingsTab;
+window.setFinanceGuideTemplate = setFinanceGuideTemplate;
+window.updateFinanceGuideIncome = updateFinanceGuideIncome;
 window.saveDashboardPrivacy = saveDashboardPrivacy;
 window.toggleDashboardPrivacy = toggleDashboardPrivacy;
 window.enablePlannedReminders = enablePlannedReminders;

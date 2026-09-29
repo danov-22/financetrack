@@ -478,8 +478,32 @@
             <button class="settings-tab" data-settings-tab="organize" onclick="setSettingsTab('organize')">Organize</button>
             <button class="settings-tab" data-settings-tab="data" onclick="setSettingsTab('data')">Data</button>
             <button class="settings-tab" data-settings-tab="guide" onclick="setSettingsTab('guide')">How to use</button>
+            <button class="settings-tab" data-settings-tab="finance-guide" onclick="setSettingsTab('finance-guide')">Finance Guide</button>
           </nav>
           <div class="settings-grid">
+            <div class="settings-card finance-guide-card" data-settings-panel="finance-guide">
+              <div class="finance-guide-heading">
+                <span class="finance-guide-icon" aria-hidden="true">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V9M10 19V5M16 19v-7M22 19V3"/></svg>
+                </span>
+                <div><h3>Finance Management Guide</h3><p class="settings-desc">Choose a budgeting template that fits your financial situation. These percentages are starting guidelines and can be adjusted to your actual needs.</p></div>
+              </div>
+
+              <label class="finance-guide-income" for="finance-guide-income">
+                <span>Monthly income</span>
+                <div><strong id="finance-guide-currency-symbol">Rp</strong><input id="finance-guide-income" class="input-field" type="text" inputmode="decimal" autocomplete="off" placeholder="8,000,000" oninput="updateFinanceGuideIncome(this)" /></div>
+              </label>
+
+              <div class="finance-template-switch" role="group" aria-label="Budgeting template">
+                <button type="button" data-finance-template="503020" onclick="setFinanceGuideTemplate('503020')"><strong>50 / 30 / 20</strong><small>Balanced everyday budget</small></button>
+                <button type="button" data-finance-template="751015" onclick="setFinanceGuideTemplate('751015')"><strong>75 / 15 / 10</strong><small>Higher essential expenses</small></button>
+              </div>
+
+              <div id="finance-guide-summary" class="finance-guide-summary" aria-live="polite"></div>
+              <div id="finance-guide-breakdown" class="finance-guide-breakdown"></div>
+              <p class="finance-guide-disclaimer">These templates are guidelines, not financial advice. Adjust the percentages according to your income, expenses, goals, and circumstances.</p>
+            </div>
+
             <div class="settings-card guide-card" data-settings-panel="guide">
               <div class="guide-heading"><span class="guide-icon" aria-hidden="true">?</span><div><h3>How to use Bewlet</h3><p class="settings-desc">A quick guide from first setup to everyday money tracking.</p></div></div>
               <div class="guide-steps" aria-label="Bewlet quick start">
