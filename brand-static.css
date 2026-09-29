@@ -14,8 +14,8 @@
 
 .admin-brand-lockup img:last-child,
 .legal-brand-lockup img:last-child {
-  width: 82px;
-  height: 24px;
+  width: 52px;
+  height: 17px;
   object-fit: contain;
 }
 
@@ -25,6 +25,6 @@
 }
 
 @media (max-width: 520px) {
-  .admin-brand-lockup img:last-child { width: 68px; }
+  .admin-brand-lockup img:last-child { width: 46px; }
   .brand > small { display: none; }
 }

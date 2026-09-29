@@ -14,7 +14,8 @@ button,a { font:inherit; } button { cursor:pointer; }
 .site-header { height:72px; max-width:1160px; margin:auto; padding:0 24px; display:flex; align-items:center; justify-content:space-between; }
 .brand { display:flex; align-items:center; gap:10px; color:var(--ink); text-decoration:none; font-size:1.15rem; font-weight:800; }
 .brand img { width:34px; height:34px; }.brand .landing-wordmark{width:142px;height:40px;object-fit:contain;object-position:left center}
-.landing-lockup{display:flex;align-items:center;gap:8px}.brand .landing-symbol{width:34px;height:34px;object-fit:contain}.brand .landing-textlogo{width:92px;height:28px;object-fit:contain}
+.landing-lockup{display:flex;align-items:center;gap:8px}.brand .landing-symbol{width:34px;height:34px;object-fit:contain}.brand .landing-textlogo{width:56px;height:18px;object-fit:contain}
+.shot-body aside .shot-brand-mark{overflow:hidden;background:transparent}.shot-brand-mark img{width:25px;height:25px;object-fit:contain}.formula-result .formula-symbol{width:32px;height:32px;object-fit:contain}.formula-result .formula-textlogo{width:52px;height:17px;object-fit:contain}
 nav { display:flex; align-items:center; gap:26px; } nav a { color:var(--muted); text-decoration:none; font-size:.9rem; font-weight:600; }
 .nav-login { border:1px solid var(--line); border-radius:9px; background:#fff; color:var(--ink); padding:8px 14px; font-weight:700; }
 .hero { max-width:1160px; min-height:650px; margin:auto; padding:80px 24px 90px; display:grid; grid-template-columns:1.05fr .95fr; align-items:center; gap:70px; }
