@@ -25,4 +25,40 @@
     apply(next);
     try { localStorage.setItem("bewlet_finance_hub_theme", next); } catch {}
   });
+
+  const incomeInput = document.getElementById("hub-income");
+  const currencyInput = document.getElementById("hub-currency");
+  const resultBox = document.getElementById("hub-calculator-results");
+  const templateButtons = [...document.querySelectorAll(".hub-template-options button")];
+  let selectedTemplate = [50, 30, 20];
+
+  function numericIncome() {
+    const normalized = String(incomeInput?.value || "").replace(/[^0-9.]/g, "");
+    return Math.max(0, Number(normalized) || 0);
+  }
+
+  function formatIncomeInput() {
+    if (!incomeInput) return;
+    const amount = numericIncome();
+    incomeInput.value = amount ? new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(amount) : "";
+  }
+
+  function renderCalculator() {
+    if (!resultBox) return;
+    const income = numericIncome();
+    const symbol = currencyInput?.value || "Rp";
+    const isTwoPart = selectedTemplate[1] === 0;
+    const labels = isTwoPart ? ["Spending", "", "Savings & Future"] : ["Needs", "Wants", "Savings & Future"];
+    resultBox.innerHTML = selectedTemplate.map((percent, index) => percent > 0 ? `<article><span>${labels[index]}</span><strong>${symbol}${new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(income * percent / 100)}</strong><small>${percent}% of monthly income</small></article>` : "").join("");
+  }
+
+  incomeInput?.addEventListener("input", renderCalculator);
+  incomeInput?.addEventListener("blur", () => { formatIncomeInput(); renderCalculator(); });
+  currencyInput?.addEventListener("change", renderCalculator);
+  templateButtons.forEach((templateButton) => templateButton.addEventListener("click", () => {
+    selectedTemplate = templateButton.dataset.template.split(",").map(Number);
+    templateButtons.forEach((item) => item.classList.toggle("active", item === templateButton));
+    renderCalculator();
+  }));
+  renderCalculator();
 })();

@@ -15,7 +15,7 @@
       <picture><source srcset="/bewlet_dark.svg" media="(prefers-color-scheme: dark)"><img class="hub-brand-mark" src="/bewlet.svg" alt=""></picture>
       <picture><source srcset="/textlogo_dark.svg" media="(prefers-color-scheme: dark)"><img class="hub-brand-name" src="/textlogo.svg" alt="Bewlet"></picture>
     </a>
-    <div class="hub-header-controls"><button id="hub-theme-toggle" class="hub-theme-toggle" type="button" aria-label="Switch to dark mode"><span aria-hidden="true">◐</span><b>Dark</b></button><a class="hub-header-action" href="/app">Open Bewlet</a></div>
+    <div class="hub-header-controls"><button id="hub-theme-toggle" class="hub-theme-toggle" type="button" aria-label="Switch to dark mode"><span aria-hidden="true">◐</span><b>Dark</b></button></div>
   </header>
 
   <main>
@@ -30,10 +30,10 @@
         <div class="hub-roadmap" aria-label="Six areas covered in this guide">
           <article><span>01</span><div class="roadmap-visual roadmap-visual--flow"><i></i><i></i><i></i></div><h2>Cash flow</h2><p>See what comes in, what goes out, and when.</p></article>
           <article><span>02</span><div class="roadmap-visual roadmap-visual--budget"><i></i><i></i><i></i></div><h2>Budget</h2><p>Give each part of your income a direction.</p></article>
-          <article><span>03</span><div class="roadmap-visual roadmap-visual--saving"><i></i><i></i><i></i></div><h2>Save</h2><p>Prepare for emergencies and future goals.</p></article>
-          <article><span>04</span><div class="roadmap-visual roadmap-visual--protect"><i></i></div><h2>Protect</h2><p>Manage debt and reduce financial shocks.</p></article>
+          <article><svg class="roadmap-badge roadmap-badge--main" viewBox="0 0 24 24" aria-label="Vault"><rect x="3" y="5" width="18" height="15" rx="3"/><circle cx="12" cy="12.5" r="3"/><path d="M12 9.5v6M9 12.5h6M7 5V3h10v2"/></svg><h2>Save</h2><p>Prepare for emergencies and future goals.</p></article>
+          <article><svg class="roadmap-badge roadmap-badge--main" viewBox="0 0 24 24" aria-label="Shield"><path d="M12 3l7 3v5c0 4.7-2.8 8-7 10-4.2-2-7-5.3-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg><h2>Protect</h2><p>Manage debt and reduce financial shocks.</p></article>
           <article><span>05</span><div class="roadmap-visual roadmap-visual--invest"><i></i><i></i><i></i><i></i></div><h2>Invest</h2><p>Understand risk, return, and diversification.</p></article>
-          <article><span>06</span><div class="roadmap-visual roadmap-visual--grow"><i></i><i></i><i></i></div><h2>Grow</h2><p>Build toward long-term financial freedom.</p></article>
+          <article><svg class="roadmap-badge roadmap-badge--main" viewBox="0 0 24 24" aria-label="Growing plant"><path d="M12 21v-9"/><path d="M12 14c-4 0-7-2-7-6 4 0 7 2 7 6zM12 11c0-4 3-7 7-7 0 4-3 7-7 7z"/><path d="M7 21h10"/></svg><h2>Grow</h2><p>Build toward long-term financial freedom.</p></article>
         </div>
         <p class="hub-disclaimer">Educational guidance only, not personal financial advice. Adapt every method to your circumstances.</p>
       </div>
@@ -61,7 +61,19 @@
           <article class="guide-card"><h3>Zero-based budgeting</h3><p>Assign every unit of income a purpose until planned income minus planned spending equals zero. This does not mean spending everything.</p></article>
           <article class="guide-card"><h3>Pay yourself first</h3><p>Move a chosen amount toward savings or goals before allocating the remainder. Start small if that makes the habit sustainable.</p></article>
         </div>
-        <article class="guide-feature"><div><h3>Choose a tracking rhythm you can maintain</h3><p>Record every purchase for detail, enter a daily total for simplicity, or review weekly, every two weeks, or monthly. Automatic records still need regular review. Consistency is more useful than choosing the most demanding method.</p></div><a href="/app#settings" class="text-link">Calculate a starting budget in Bewlet &rarr;</a></article>
+        <article class="guide-feature"><div><h3>Choose a tracking rhythm you can maintain</h3><p>Record every purchase for detail, enter a daily total for simplicity, or review weekly, every two weeks, or monthly. Automatic records still need regular review. Consistency is more useful than choosing the most demanding method.</p></div></article>
+        <section class="hub-calculator" aria-labelledby="hub-calculator-title">
+          <div class="hub-calculator-heading"><div><p class="section-kicker">Calculate</p><h3 id="hub-calculator-title">Turn a guideline into monthly amounts</h3><p>Enter your monthly income and compare a few starting templates before deciding what fits your life.</p></div><label>Currency<select id="hub-currency"><option value="Rp">IDR — Rp</option><option value="$">USD — $</option><option value="€">EUR — €</option><option value="£">GBP — £</option><option value="¥">JPY — ¥</option></select></label></div>
+          <label class="hub-income">Monthly income<input id="hub-income" type="text" inputmode="decimal" value="8,000,000" aria-describedby="hub-calculator-note"></label>
+          <div class="hub-template-options" role="group" aria-label="Budget template">
+            <button class="active" type="button" data-template="50,30,20"><strong>50 / 30 / 20</strong><span>Needs · Wants · Future</span></button>
+            <button type="button" data-template="75,10,15"><strong>75 / 10 / 15</strong><span>Needs · Wants · Future</span></button>
+            <button type="button" data-template="80,0,20"><strong>80 / 20</strong><span>Spending · Future</span></button>
+            <button type="button" data-template="70,20,10"><strong>70 / 20 / 10</strong><span>Needs · Wants · Future</span></button>
+          </div>
+          <div id="hub-calculator-results" class="hub-calculator-results" aria-live="polite"></div>
+          <p id="hub-calculator-note" class="hub-calculator-note">These amounts are starting guidelines, not financial advice. Adjust them to your actual expenses, goals, and circumstances.</p>
+        </section>
       </section>
 
       <section class="guide-section" id="saving">

@@ -804,49 +804,25 @@
       </a>
     </nav>
 
-    <!-- Movable quick-action buttons -->
+    <!-- Movable quick-action speed dial -->
     <div id="fab-cluster" class="fab-cluster">
-    <button id="fab-drag-handle" class="fab-drag-handle" type="button" title="Drag quick actions" aria-label="Drag quick actions">
-      <span></span><span></span><span></span>
+    <div id="fab-speed-actions" class="fab-speed-actions" aria-hidden="true" inert>
+    <button id="feedback-fab" class="fab feedback-fab" onclick="openFeedbackModal(); closeFabSpeedDial()" title="Feedback &amp; issue report" aria-label="Feedback and issue report">
+      <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a4 4 0 01-4 4H8l-5 3V7a4 4 0 014-4h10a4 4 0 014 4z"/><path d="M8 9h8M8 13h5"/></svg>
+      <span>Feedback &amp; issue report</span>
     </button>
-    <div class="fab-cluster-top">
-    <button id="planner-fab" class="fab planner-fab" onclick="openPlannerQuickAccess()" title="Open spending planner" aria-label="Open spending planner">
+    <button id="planner-fab" class="fab planner-fab" onclick="openPlannerQuickAccess(); closeFabSpeedDial()" title="Open spending planner" aria-label="Open spending planner">
       <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/><path d="M19 4v6M16 7h6"/></svg>
+      <span>Spending plan</span>
+    </button>
+    <button id="fab" class="fab transaction-fab" onclick="openQuickTransaction(); closeFabSpeedDial()" title="Add transaction" aria-label="Add transaction">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <span>Add transaction</span>
     </button>
     </div>
-    <div class="fab-cluster-row">
-    <button
-      id="feedback-fab"
-      class="fab feedback-fab"
-      onclick="openFeedbackModal()"
-      title="Send feedback"
-      aria-label="Send feedback"
-    >
-      <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M21 15a4 4 0 01-4 4H8l-5 3V7a4 4 0 014-4h10a4 4 0 014 4z" />
-        <path d="M8 9h8M8 13h5" />
-      </svg>
+    <button id="fab-speed-trigger" class="fab fab-speed-trigger" type="button" title="Quick actions — drag to move" aria-label="Open quick actions" aria-expanded="false" aria-controls="fab-speed-actions">
+      <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     </button>
-    <button
-      id="fab"
-      class="fab"
-      onclick="openQuickTransaction()"
-      title="Add Transaction"
-    >
-      <svg
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2.5"
-      >
-        <line x1="12" y1="5" x2="12" y2="19" />
-        <line x1="5" y1="12" x2="19" y2="12" />
-      </svg>
-    </button>
-
-    </div>
     </div>
 
     <!-- ============================================================ -->

@@ -1873,3 +1873,22 @@ input, select, textarea { outline: none; }
 .fab-drag-handle span{width:3px;height:3px;border-radius:50%;background:var(--text-3)}
 
 @media(max-width:768px){.finance-learning{grid-template-columns:1fr}.finance-learning>.finance-hub-link{grid-column:auto}.fab-cluster{right:16px;bottom:82px}}
+
+/* Draggable FAB speed dial */
+.fab-cluster{align-items:flex-end;gap:9px;overflow:visible}
+.fab-speed-actions{display:flex;flex-direction:column;align-items:flex-end;gap:8px;pointer-events:none}
+.fab-speed-actions .fab{width:auto;min-width:52px;padding:0 15px;gap:9px;border-radius:16px;opacity:0;visibility:hidden;transform:translateY(14px) scale(.9);transition:opacity .18s ease,transform .18s ease,visibility .18s ease,background .2s ease,box-shadow .2s ease}
+.fab-speed-actions .fab span{max-width:0;overflow:hidden;white-space:nowrap;font-size:.72rem;font-weight:750;opacity:0;transition:max-width .2s ease,opacity .15s ease}
+.fab-cluster.open .fab-speed-actions{pointer-events:auto}
+.fab-cluster.open .fab-speed-actions .fab{opacity:1;visibility:visible;transform:none}
+.fab-cluster.open .fab-speed-actions .fab span{max-width:180px;opacity:1}
+.fab-cluster.open .fab-speed-actions .fab:nth-child(2){transition-delay:.035s}
+.fab-cluster.open .fab-speed-actions .fab:nth-child(3){transition-delay:.07s}
+.fab-speed-trigger{position:static!important;inset:auto!important;flex:0 0 auto;cursor:grab;touch-action:none}
+.fab-speed-trigger:active{cursor:grabbing}
+.fab-cluster.open .fab-speed-trigger svg{transform:rotate(45deg)}
+.fab-speed-trigger svg{transition:transform .2s ease}
+.fab-cluster.dragging .fab-speed-actions{pointer-events:none}
+.fab-cluster.dragging .fab-speed-trigger{cursor:grabbing;transform:scale(.96)}
+.fab-drag-handle,.fab-cluster-row,.fab-cluster-top{display:none!important}
+@media(max-width:600px){.fab-speed-actions .fab span{font-size:.68rem}.fab-cluster.open .fab-speed-actions .fab span{max-width:155px}}

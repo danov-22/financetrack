@@ -4263,14 +4263,16 @@ window.openOnboarding = openOnboarding;
 window.changeOnboardingStep = changeOnboardingStep;
 window.finishOnboarding = finishOnboarding;
 window.continueOnboardingToPreferences = continueOnboardingToPreferences;
+window.closeFabSpeedDial = closeFabSpeedDial;
 
 // ============================================================
 // BOOT
 // ============================================================
 function initDraggableFabCluster() {
   const cluster = document.getElementById("fab-cluster");
-  const handle = document.getElementById("fab-drag-handle");
-  if (!cluster || !handle) return;
+  const trigger = document.getElementById("fab-speed-trigger");
+  const actions = document.getElementById("fab-speed-actions");
+  if (!cluster || !trigger || !actions) return;
   const storageKey = "bewlet_fab_position";
   const margin = 10;
 
@@ -4298,16 +4300,21 @@ function initDraggableFabCluster() {
     }
   } catch {}
 
-  handle.addEventListener("pointerdown", (event) => {
+  trigger.addEventListener("pointerdown", (event) => {
     if (event.button !== undefined && event.button !== 0) return;
     event.preventDefault();
     const startRect = cluster.getBoundingClientRect();
     const offsetX = event.clientX - startRect.left;
     const offsetY = event.clientY - startRect.top;
-    cluster.classList.add("dragging");
-    handle.setPointerCapture?.(event.pointerId);
+    const startX = event.clientX;
+    const startY = event.clientY;
+    let moved = false;
+    trigger.setPointerCapture?.(event.pointerId);
 
     const move = (moveEvent) => {
+      if (!moved && Math.hypot(moveEvent.clientX - startX, moveEvent.clientY - startY) < 7) return;
+      moved = true;
+      cluster.classList.add("dragging");
       const maxLeft = Math.max(margin, window.innerWidth - cluster.offsetWidth - margin);
       const maxTop = Math.max(margin, window.innerHeight - cluster.offsetHeight - margin);
       cluster.style.left = `${Math.min(maxLeft, Math.max(margin, moveEvent.clientX - offsetX))}px`;
@@ -4315,21 +4322,33 @@ function initDraggableFabCluster() {
       cluster.style.right = "auto";
       cluster.style.bottom = "auto";
     };
-    const end = () => {
+    const end = (endEvent) => {
       cluster.classList.remove("dragging");
-      handle.removeEventListener("pointermove", move);
-      handle.removeEventListener("pointerup", end);
-      handle.removeEventListener("pointercancel", end);
-      try { localStorage.setItem(storageKey, JSON.stringify(keepInView())); } catch {}
+      trigger.removeEventListener("pointermove", move);
+      trigger.removeEventListener("pointerup", end);
+      trigger.removeEventListener("pointercancel", end);
+      if (moved) {
+        try { localStorage.setItem(storageKey, JSON.stringify(keepInView())); } catch {}
+      } else if (endEvent.type === "pointerup") {
+        toggleFabSpeedDial();
+      }
     };
-    handle.addEventListener("pointermove", move);
-    handle.addEventListener("pointerup", end);
-    handle.addEventListener("pointercancel", end);
+    trigger.addEventListener("pointermove", move);
+    trigger.addEventListener("pointerup", end);
+    trigger.addEventListener("pointercancel", end);
   });
 
-  handle.addEventListener("dblclick", () => {
-    cluster.removeAttribute("style");
-    try { localStorage.removeItem(storageKey); } catch {}
+  document.addEventListener("pointerdown", (event) => {
+    if (!cluster.contains(event.target)) closeFabSpeedDial();
+  });
+  trigger.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      toggleFabSpeedDial();
+    }
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeFabSpeedDial();
   });
   window.addEventListener("resize", () => {
     if (cluster.style.left) {
@@ -4338,6 +4357,21 @@ function initDraggableFabCluster() {
     }
   });
 }
+
+function toggleFabSpeedDial(force) {
+  const cluster = document.getElementById("fab-cluster");
+  const trigger = document.getElementById("fab-speed-trigger");
+  const actions = document.getElementById("fab-speed-actions");
+  if (!cluster || !trigger || !actions) return;
+  const open = typeof force === "boolean" ? force : !cluster.classList.contains("open");
+  cluster.classList.toggle("open", open);
+  trigger.setAttribute("aria-expanded", String(open));
+  trigger.setAttribute("aria-label", open ? "Close quick actions" : "Open quick actions");
+  actions.setAttribute("aria-hidden", String(!open));
+  actions.inert = !open;
+}
+
+function closeFabSpeedDial() { toggleFabSpeedDial(false); }
 
 function boot() {
   loadStateFromLS();
