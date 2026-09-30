@@ -1843,6 +1843,8 @@ input, select, textarea { outline: none; }
 }
 .sidebar-overlay.active { display: block; }
 
+.button-spinner{display:inline-block;width:14px;height:14px;margin-right:7px;border:2px solid rgb(255 255 255 / .45);border-top-color:#fff;border-radius:50%;vertical-align:-2px;animation:button-spin .7s linear infinite}.transfer-button-label{vertical-align:middle}#btn-submit-transfer[disabled]{cursor:wait;opacity:.82}@keyframes button-spin{to{transform:rotate(360deg)}}
+
 /* Compact Finance Guide learning cards */
 .finance-learning{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:12px}
 .finance-learning-card{min-width:0;padding:16px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2)}

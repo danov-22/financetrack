@@ -2977,8 +2977,11 @@ function parseCsvLine(line) {
 // ============================================================
 // 14. TRANSFER
 // ============================================================
+let TRANSFER_SUBMITTING = false;
+
 async function submitTransfer(event) {
   event.preventDefault();
+  if (TRANSFER_SUBMITTING) return;
 
   const from = document.getElementById("transfer-from").value;
   const to = document.getElementById("transfer-to").value;
@@ -3021,14 +3024,26 @@ async function submitTransfer(event) {
     createdTime: new Date().toISOString(),
   };
 
-  await saveTransaction(debitTx);
-  await saveTransaction(creditTx);
+  const form = document.getElementById("form-transfer");
+  const submitButton = document.getElementById("btn-submit-transfer");
+  const controls = [...(form?.querySelectorAll("input, select, button") || [])];
+  TRANSFER_SUBMITTING = true;
+  form?.setAttribute("aria-busy", "true");
+  controls.forEach((control) => { control.disabled = true; });
+  if (submitButton) submitButton.innerHTML = '<span class="button-spinner" aria-hidden="true"></span><span class="transfer-button-label">Transferring...</span>';
 
-  closeModal("modal-transfer");
-  showToast(
-    `Transfer of ${formatAmount(amount, currency)} completed.`,
-    "success",
-  );
+  try {
+    await saveTransactionBatch([debitTx, creditTx]);
+    closeModal("modal-transfer", true);
+    showToast(`Transfer of ${formatAmount(amount, currency)} completed.`, "success");
+  } catch (error) {
+    showToast(error?.message || "Transfer could not be completed. Please try again.", "error", 6000);
+  } finally {
+    TRANSFER_SUBMITTING = false;
+    form?.removeAttribute("aria-busy");
+    controls.forEach((control) => { control.disabled = false; });
+    if (submitButton) submitButton.innerHTML = '<span class="transfer-button-label">Transfer</span>';
+  }
 }
 
 // ============================================================
@@ -3039,7 +3054,8 @@ function openModal(id) {
   document.body.style.overflow = "hidden";
 }
 
-function closeModal(id) {
+function closeModal(id, force = false) {
+  if (id === "modal-transfer" && TRANSFER_SUBMITTING && !force) return;
   document.getElementById(id)?.classList.remove("open");
   document.body.style.overflow = "";
 }
@@ -3422,6 +3438,12 @@ function openTransferModal() {
   document.getElementById("transfer-currency").value = STATE.currency;
   document.getElementById("transfer-date").value = getTodayISO();
   document.getElementById("transfer-description").value = "";
+  TRANSFER_SUBMITTING = false;
+  const form = document.getElementById("form-transfer");
+  form?.removeAttribute("aria-busy");
+  form?.querySelectorAll("input, select, button").forEach((control) => { control.disabled = false; });
+  const submitButton = document.getElementById("btn-submit-transfer");
+  if (submitButton) submitButton.innerHTML = '<span class="transfer-button-label">Transfer</span>';
   openModal("modal-transfer");
 }
 
