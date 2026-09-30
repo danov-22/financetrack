@@ -4273,8 +4273,9 @@ function initDraggableFabCluster() {
   const trigger = document.getElementById("fab-speed-trigger");
   const actions = document.getElementById("fab-speed-actions");
   if (!cluster || !trigger || !actions) return;
-  const storageKey = "bewlet_fab_position";
+  const storageKey = "bewlet_fab_position_v2";
   const margin = 10;
+  const updateExpansionSide = () => cluster.classList.toggle("expand-right", cluster.getBoundingClientRect().left < window.innerWidth / 2);
 
   const keepInView = () => {
     const rect = cluster.getBoundingClientRect();
@@ -4286,6 +4287,8 @@ function initDraggableFabCluster() {
     cluster.style.top = `${top}px`;
     cluster.style.right = "auto";
     cluster.style.bottom = "auto";
+    cluster.style.transform = "none";
+    updateExpansionSide();
     return { left, top };
   };
 
@@ -4296,6 +4299,8 @@ function initDraggableFabCluster() {
       cluster.style.top = `${saved.top}px`;
       cluster.style.right = "auto";
       cluster.style.bottom = "auto";
+      cluster.style.transform = "none";
+      updateExpansionSide();
       requestAnimationFrame(keepInView);
     }
   } catch {}
@@ -4321,6 +4326,8 @@ function initDraggableFabCluster() {
       cluster.style.top = `${Math.min(maxTop, Math.max(margin, moveEvent.clientY - offsetY))}px`;
       cluster.style.right = "auto";
       cluster.style.bottom = "auto";
+      cluster.style.transform = "none";
+      updateExpansionSide();
     };
     const end = (endEvent) => {
       cluster.classList.remove("dragging");
@@ -4341,6 +4348,7 @@ function initDraggableFabCluster() {
   document.addEventListener("pointerdown", (event) => {
     if (!cluster.contains(event.target)) closeFabSpeedDial();
   });
+  requestAnimationFrame(updateExpansionSide);
   trigger.addEventListener("keydown", (event) => {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();

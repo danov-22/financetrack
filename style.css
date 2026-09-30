@@ -1892,3 +1892,9 @@ input, select, textarea { outline: none; }
 .fab-cluster.dragging .fab-speed-trigger{cursor:grabbing;transform:scale(.96)}
 .fab-drag-handle,.fab-cluster-row,.fab-cluster-top{display:none!important}
 @media(max-width:600px){.fab-speed-actions .fab span{font-size:.68rem}.fab-cluster.open .fab-speed-actions .fab span{max-width:155px}}
+
+/* Keep the speed-dial trigger stationary while actions open above it. */
+.fab-cluster{width:52px;height:52px}
+.fab-speed-actions{position:absolute;right:0;bottom:calc(100% + 9px)}
+.fab-cluster.expand-right .fab-speed-actions{left:0;right:auto;align-items:flex-start}
+@media(max-width:1024px){.fab-cluster{left:50%;right:auto;bottom:82px;transform:translateX(-50%)}}
