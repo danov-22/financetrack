@@ -1278,6 +1278,7 @@ input, select, textarea { outline: none; }
 
 .form-tab.active[data-type="expense"] { background: var(--expense); color: white; }
 .form-tab.active[data-type="income"] { background: var(--income); color: white; }
+.transaction-entry-mode{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:7px}.transaction-entry-mode button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 12px;border:1px solid var(--border);border-radius:9px;background:var(--surface-2);color:var(--text);text-align:left}.transaction-entry-mode button.active{border-color:var(--accent);background:var(--accent-light);box-shadow:0 0 0 1px var(--accent)}.transaction-entry-mode strong{font-size:.78rem}.transaction-entry-mode small{color:var(--text-3);font-size:.65rem}.transaction-entry-hint{margin-bottom:14px;color:var(--text-3);font-size:.7rem;line-height:1.45}.entry-mode-hidden{display:none!important}.multiple-entry-mode .transaction-amount-row{grid-template-columns:1fr}.multi-transaction-panel{margin-bottom:14px}.multi-transaction-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}.multi-transaction-heading strong{font-size:.82rem}.multi-transaction-heading p{margin-top:2px;color:var(--text-3);font-size:.67rem;line-height:1.4}.multi-transaction-rows{display:grid;gap:8px}.multi-transaction-row{display:grid;grid-template-columns:minmax(130px,1.25fr) minmax(110px,1fr) minmax(110px,.8fr) 34px;gap:8px;align-items:end;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2)}.multi-transaction-field{min-width:0}.multi-transaction-field>label{display:block;margin-bottom:5px;color:var(--text-3);font-size:.64rem;font-weight:700}.multi-transaction-field .input-field{background:var(--surface)}.multi-transaction-amount>div{position:relative;display:flex;align-items:center}.multi-transaction-amount span{position:absolute;left:9px;z-index:1;color:var(--text-3);font-size:.7rem;font-weight:700;pointer-events:none}.multi-transaction-amount input{padding-left:31px}.multi-transaction-remove{width:34px;height:38px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--expense);font-size:1.05rem}.multi-transaction-total{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding:11px 12px;border-radius:9px;background:var(--accent-light);color:var(--text-2);font-size:.76rem;font-weight:700}.multi-transaction-total strong{color:var(--accent);font-size:.92rem}
 
 /* ============================================================
    MODALS
@@ -1313,6 +1314,7 @@ input, select, textarea { outline: none; }
   transform: translateY(20px) scale(0.97);
   transition: transform var(--transition);
 }
+#modal-transaction .modal{max-width:720px}
 
 .modal-overlay.open .modal { transform: translateY(0) scale(1); }
 
@@ -1711,6 +1713,7 @@ input, select, textarea { outline: none; }
 
   /* ── Forms ── */
   .form-row { grid-template-columns: 1fr; }
+  .multi-transaction-heading{align-items:stretch;flex-direction:column}.multi-transaction-heading .btn-secondary{width:100%;min-height:40px}.multi-transaction-row{grid-template-columns:minmax(0,1fr) 34px}.multi-transaction-field{grid-column:1}.multi-transaction-remove{grid-column:2;grid-row:1 / span 3;align-self:center}
   .filter-bar { display: grid; grid-template-columns: 1fr 1fr; padding: 12px; }
   .filter-search { grid-column:1/-1;min-width:0; }
   .filter-select, .filter-input { width: 100%; }

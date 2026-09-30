@@ -473,10 +473,8 @@
         <!-- SETTINGS PAGE -->
         <section id="page-settings" class="page">
           <nav class="settings-tabs" aria-label="Settings sections">
-            <button class="settings-tab active" data-settings-tab="account" onclick="setSettingsTab('account')">Account</button>
-            <button class="settings-tab" data-settings-tab="preferences" onclick="setSettingsTab('preferences')">Preferences</button>
-            <button class="settings-tab" data-settings-tab="organize" onclick="setSettingsTab('organize')">Organize</button>
-            <button class="settings-tab" data-settings-tab="data" onclick="setSettingsTab('data')">Data</button>
+            <button class="settings-tab active" data-settings-tab="account" onclick="setSettingsTab('account')">Account &amp; Data</button>
+            <button class="settings-tab" data-settings-tab="preferences" onclick="setSettingsTab('preferences')">Preferences &amp; Organize</button>
             <button class="settings-tab" data-settings-tab="guide" onclick="setSettingsTab('guide')">How to use</button>
             <button class="settings-tab" data-settings-tab="finance-guide" onclick="setSettingsTab('finance-guide')">Finance Guide</button>
           </nav>
@@ -539,8 +537,8 @@
               <div id="account-summary" class="managed-storage-status"><span>✓</span><div><strong>Approved account</strong><small>Loading account details…</small></div></div>
               <p class="settings-label">Personal account name</p><div class="input-row"><input id="account-display-name" class="input-field" maxlength="60" placeholder="e.g. Benny's account"/><button class="btn-secondary" onclick="saveAccountName()">Save</button></div>
               <div id="google-drive-status" class="account-connection"></div>
-              <div id="onboarding-account-hint" class="onboarding-account-hint hidden"><strong>First, connect Google Drive</strong><span>After the connection succeeds, Bewlet will guide you to Preferences.</span></div>
-              <button id="onboarding-preferences-next" class="btn-secondary onboarding-preferences-next hidden" onclick="continueOnboardingToPreferences()">Continue to Preferences</button>
+              <div id="onboarding-account-hint" class="onboarding-account-hint hidden"><strong>First, connect Google Drive</strong><span>After the connection succeeds, Bewlet will guide you to Preferences &amp; Organize.</span></div>
+              <button id="onboarding-preferences-next" class="btn-secondary onboarding-preferences-next hidden" onclick="continueOnboardingToPreferences()">Continue to Preferences &amp; Organize</button>
               <div class="btn-row account-actions"><button id="connect-google-drive" class="btn-primary" onclick="connectGoogleDrive()">Connect Google Drive</button><button class="btn-secondary" onclick="signOutBewlet()">Sign out</button></div>
             </div>
 
@@ -587,7 +585,7 @@
               <a class="rate-attribution" href="https://www.exchangerate-api.com" target="_blank" rel="noopener">Rates by Exchange Rate API</a>
             </div>
 
-            <div class="settings-card" data-settings-panel="organize">
+            <div class="settings-card" data-settings-panel="preferences">
               <h3>Wallets</h3>
               <p class="settings-desc">Create places for your money, such as cash, savings, or travel. Drag or use the arrows to reorder them.</p>
               <div id="settings-wallets-list" class="settings-list"></div>
@@ -642,7 +640,7 @@
               <div id="bottom-nav-settings" class="nav-customizer"></div>
             </div>
 
-            <div class="settings-card" data-settings-panel="organize">
+            <div class="settings-card" data-settings-panel="preferences">
               <h3>Categories</h3>
               <p class="settings-desc">Group transactions for clearer budgets and reports. Drag or use the arrows to reorder them.</p>
               <div id="settings-categories-list" class="settings-list"></div>
@@ -654,7 +652,7 @@
               </button>
             </div>
 
-            <div class="settings-card danger-zone" data-settings-panel="data">
+            <div class="settings-card danger-zone" data-settings-panel="account">
               <h3>Data</h3>
               <p class="settings-desc">
                 Sync data from Google Sheets or reset all local data.
@@ -672,7 +670,7 @@
               <label class="checkbox-label"><input id="keep-drive-files" type="checkbox" checked /> Keep my spreadsheet and backup files in Google Drive</label>
               <button class="btn-danger account-delete" onclick="deleteBewletAccount()">Delete my account</button>
             </div>
-            <div class="settings-card data-trust-card" data-settings-panel="data">
+            <div class="settings-card data-trust-card" data-settings-panel="account">
               <h3>Privacy, ownership &amp; offline use</h3>
               <p class="settings-desc"><strong>You own your financial data.</strong> Bewlet does not sell transaction information or use it for advertising.</p>
               <ul class="trust-list"><li><strong>On this device:</strong> changes are saved locally so the app can continue working offline.</li><li><strong>When connected:</strong> pending changes are synchronized after internet access returns.</li><li><strong>Your Google Sheet:</strong> once account sync is released, each user’s finance records will be stored in their own Google Drive—not the owner’s finance sheet.</li><li><strong>Bewlet access:</strong> only feedback and issue reports are sent to Bewlet’s support storage.</li></ul>
@@ -832,6 +830,11 @@
         </div>
         <form id="form-transaction" onsubmit="submitTransaction(event)">
           <input type="hidden" id="tx-id" />
+          <div id="transaction-entry-mode" class="transaction-entry-mode" role="group" aria-label="Transaction entry mode">
+            <button type="button" class="active" data-entry-mode="single" onclick="setTransactionEntryMode('single')"><strong>Single</strong><small>One transaction</small></button>
+            <button type="button" data-entry-mode="multiple" onclick="setTransactionEntryMode('multiple')"><strong>Multiple</strong><small>Several items, one wallet</small></button>
+          </div>
+          <p id="transaction-entry-hint" class="transaction-entry-hint">Add one income or expense.</p>
           <div class="form-tabs">
             <button
               type="button"
@@ -850,8 +853,8 @@
               Income
             </button>
           </div>
-          <div class="form-row">
-            <div class="form-group">
+          <div class="form-row transaction-amount-row">
+            <div class="form-group" data-single-transaction>
               <label>Amount <span class="required">*</span></label>
               <div class="input-with-currency has-calculator">
                 <span id="tx-currency-symbol" class="currency-symbol">Rp</span>
@@ -886,7 +889,7 @@
               </select>
             </div>
           </div>
-          <div id="tx-calculator" class="transaction-calculator hidden">
+          <div id="tx-calculator" class="transaction-calculator hidden" data-single-transaction>
             <div class="transaction-calculator-display">
               <small>Calculator</small>
               <output id="tx-calculator-display" aria-live="polite">0</output>
@@ -915,12 +918,18 @@
               <div class="field-error" id="err-wallet"></div>
             </div>
           </div>
-          <div class="form-group">
+          <div id="multi-transaction-panel" class="multi-transaction-panel hidden">
+            <div class="multi-transaction-heading"><div><strong>Transaction items</strong><p>All items use the wallet, date, currency, and type selected above.</p></div><button type="button" class="btn-secondary btn-sm" onclick="addMultiTransactionRow()">+ Add item</button></div>
+            <div id="multi-transaction-rows" class="multi-transaction-rows"></div>
+            <div class="multi-transaction-total"><span>Total</span><strong id="multi-transaction-total">Rp0</strong></div>
+            <p id="err-multi-transactions" class="field-error"></p>
+          </div>
+          <div class="form-group" data-single-transaction>
             <label>Category</label>
             <input id="tx-category" class="input-field" type="text" list="tx-category-list" placeholder="Type to search categories" autocomplete="off" />
             <datalist id="tx-category-list"></datalist>
           </div>
-          <div class="form-group">
+          <div class="form-group" data-single-transaction>
             <label>Description</label>
             <input
               type="text"
@@ -934,7 +943,7 @@
             <datalist id="tx-description-list"></datalist>
             <label class="checkbox-label save-description-option"><input id="tx-save-description" type="checkbox" /> Save this description for quicker use</label>
           </div>
-          <div class="form-group">
+          <div class="form-group" data-single-transaction>
             <label class="checkbox-label">
               <input
                 type="checkbox"
@@ -944,14 +953,14 @@
               Recurring transaction
             </label>
           </div>
-          <div class="form-group planned-transaction-option">
+          <div class="form-group planned-transaction-option" data-single-transaction>
             <label class="checkbox-label">
               <input type="checkbox" id="tx-planned" />
               Plan this transaction for later
             </label>
             <p class="form-help">It appears in the calendar but does not affect balances until checked as completed.</p>
           </div>
-          <div id="recurring-options" class="hidden">
+          <div id="recurring-options" class="hidden" data-single-transaction>
             <div class="form-group">
               <label>Repeat every</label>
               <select id="tx-recurring-freq" class="input-field">

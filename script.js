@@ -921,6 +921,40 @@ async function saveTransaction(txData) {
   checkBudgetAlerts();
 }
 
+async function saveTransactionBatch(transactions) {
+  const created = transactions.map((transaction) => ({
+    ...transaction,
+    id: transaction.id || generateId(),
+    createdTime: transaction.createdTime || new Date().toISOString(),
+  }));
+  STATE.transactions.push(...created);
+  persistTransactions();
+
+  if (STATE.gasUrl && STATE.isOnline) {
+    if (isManagedSync()) {
+      try {
+        await managedPush();
+        STATE.lastSynced = Date.now();
+        LS.set("fin_last_synced", STATE.lastSynced);
+      } catch {
+        created.forEach((transaction) => queueOperation({ action: "add", data: transaction }));
+      }
+    } else {
+      for (const transaction of created) {
+        try { await apiAdd(transaction); }
+        catch { queueOperation({ action: "add", data: transaction }); }
+      }
+    }
+  } else if (STATE.gasUrl) {
+    created.forEach((transaction) => queueOperation({ action: "add", data: transaction }));
+  }
+
+  updateSyncDisplay();
+  refreshCurrentPage();
+  checkBudgetAlerts();
+  return created;
+}
+
 async function deleteTransaction(id) {
   STATE.transactions = STATE.transactions.filter((t) => t.id !== id);
   persistTransactions();
@@ -1610,7 +1644,7 @@ function deleteCategory(name) {
 let ACTIVE_SETTINGS_TAB = "account";
 
 function setSettingsTab(tab = "account") {
-  const valid = ["account", "preferences", "organize", "data", "guide", "finance-guide"];
+  const valid = ["account", "preferences", "guide", "finance-guide"];
   ACTIVE_SETTINGS_TAB = valid.includes(tab) ? tab : "account";
   document.querySelectorAll("[data-settings-tab]").forEach((button) => {
     const active = button.dataset.settingsTab === ACTIVE_SETTINGS_TAB;
@@ -1747,7 +1781,7 @@ const ONBOARDING_STEPS = [
   { eyebrow: "Track daily", title: "Record money in seconds", description: "Use the floating + button to add income, expenses, savings, or transfers—including transactions from another date or currency.", icon: '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M7 12h10"/></svg>' },
   { eyebrow: "Plan ahead", title: "Turn plans into progress", description: "Build spending estimates, then keep them as drafts or turn them into budgets, savings goals, and recurring bills. Planned expenses count only after you confirm them.", icon: '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3v3M16 3v3M4 9h16M5 5h14a1 1 0 011 1v14H4V6a1 1 0 011-1z"/><path d="M8 14l2 2 5-5"/></svg>' },
   { eyebrow: "Make it yours", title: "Your Bewlet, your way", description: "Choose a theme, currency, privacy preference, and quick-access pages. On mobile, swipe between those pages or open the full drawer from the left edge.", icon: '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M6 14v6"/></svg>' },
-  { eyebrow: "Ready", title: "Connect first, personalize next", description: "Start by connecting Google Drive for your private Sheet and backups. Once it is ready, Bewlet will take you to Preferences.", icon: '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 18h11a4 4 0 000-8 6 6 0 00-11.5-2A5 5 0 007 18z"/><path d="M9 14l2 2 4-4"/></svg>' },
+  { eyebrow: "Ready", title: "Connect first, personalize next", description: "Start by connecting Google Drive for your private Sheet and backups. Once it is ready, Bewlet will take you to Preferences & Organize.", icon: '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 18h11a4 4 0 000-8 6 6 0 00-11.5-2A5 5 0 007 18z"/><path d="M9 14l2 2 4-4"/></svg>' },
 ];
 let ONBOARDING_STEP = 0;
 let ONBOARDING_REPLAY = false;
@@ -1950,7 +1984,7 @@ function renderOnboardingAccountStep() {
   const next = document.getElementById("onboarding-preferences-next");
   const connected = IS_DEMO_MODE || Boolean(window.BEWLET_AUTH?.account?.google);
   hint?.classList.remove("hidden");
-  if (hint) hint.innerHTML = connected ? "<strong>Google Drive setup</strong><span>Your connection is ready. Continue to Preferences to personalize Bewlet.</span>" : "<strong>First, connect Google Drive</strong><span>After the connection succeeds, Bewlet will guide you to Preferences.</span>";
+  if (hint) hint.innerHTML = connected ? "<strong>Google Drive setup</strong><span>Your connection is ready. Continue to Preferences &amp; Organize to personalize Bewlet.</span>" : "<strong>First, connect Google Drive</strong><span>After the connection succeeds, Bewlet will guide you to Preferences &amp; Organize.</span>";
   next?.classList.toggle("hidden", !connected);
 }
 function continueOnboardingToPreferences() {
@@ -3049,6 +3083,63 @@ function renderTransactionDescriptionSuggestions() {
   if (list) list.innerHTML = unique.map((description) => `<option value="${escHtml(description)}"></option>`).join("");
 }
 
+let TRANSACTION_ENTRY_MODE = "single";
+
+function updateMultiTransactionTotal() {
+  const total = [...document.querySelectorAll(".multi-tx-amount")].reduce((sum, input) => sum + parseAmount(input.value), 0);
+  const output = document.getElementById("multi-transaction-total");
+  const currency = document.getElementById("tx-currency")?.value || STATE.currency;
+  if (output) output.textContent = formatAmount(total, currency);
+}
+
+function addMultiTransactionRow(item = {}) {
+  const container = document.getElementById("multi-transaction-rows");
+  if (!container) return;
+  const row = document.createElement("div");
+  row.className = "multi-transaction-row";
+  row.innerHTML = `<div class="multi-transaction-field"><label>Description</label><input class="input-field multi-tx-description" type="text" list="tx-description-list" maxlength="200" autocomplete="off" placeholder="What was this for?" value="${escHtml(item.description || "")}"/></div><div class="multi-transaction-field"><label>Category</label><input class="input-field multi-tx-category" type="text" list="tx-category-list" autocomplete="off" placeholder="Type to search" value="${escHtml(item.category || "")}"/></div><div class="multi-transaction-field multi-transaction-amount"><label>Amount</label><div><span class="multi-tx-currency-symbol">${escHtml(getCurrencySymbol(document.getElementById("tx-currency")?.value || STATE.currency))}</span><input class="input-field multi-tx-amount" type="text" inputmode="decimal" autocomplete="off" placeholder="0" value="${item.amount ? escHtml(String(item.amount)) : ""}" oninput="formatTransactionAmountInput(this); updateMultiTransactionTotal()"/></div></div><button class="multi-transaction-remove" type="button" onclick="removeMultiTransactionRow(this)" aria-label="Remove transaction item">&times;</button>`;
+  container.appendChild(row);
+  const amountInput = row.querySelector(".multi-tx-amount");
+  if (amountInput?.value) formatTransactionAmountInput(amountInput);
+  updateMultiTransactionTotal();
+}
+
+function removeMultiTransactionRow(button) {
+  const rows = document.querySelectorAll(".multi-transaction-row");
+  if (rows.length <= 2) {
+    showToast("Multiple entry needs at least two transaction rows.", "info");
+    return;
+  }
+  button.closest(".multi-transaction-row")?.remove();
+  updateMultiTransactionTotal();
+}
+
+function setTransactionEntryMode(mode = "single") {
+  const editing = Boolean(document.getElementById("tx-id")?.value);
+  TRANSACTION_ENTRY_MODE = mode === "multiple" && !editing ? "multiple" : "single";
+  const multiple = TRANSACTION_ENTRY_MODE === "multiple";
+  document.getElementById("form-transaction")?.classList.toggle("multiple-entry-mode", multiple);
+  document.querySelectorAll("[data-entry-mode]").forEach((button) => {
+    const active = button.dataset.entryMode === TRANSACTION_ENTRY_MODE;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+  document.querySelectorAll("[data-single-transaction]").forEach((element) => element.classList.toggle("entry-mode-hidden", multiple));
+  document.getElementById("multi-transaction-panel")?.classList.toggle("hidden", !multiple);
+  const amountInput = document.getElementById("tx-amount");
+  if (amountInput) amountInput.required = !multiple;
+  if (multiple && !document.querySelector(".multi-transaction-row")) {
+    addMultiTransactionRow();
+    addMultiTransactionRow();
+  }
+  const hint = document.getElementById("transaction-entry-hint");
+  if (hint) hint.textContent = multiple ? "Add two or more transactions from the same wallet. Use a separate entry for another wallet." : "Add one income or expense.";
+  if (!editing) document.getElementById("modal-transaction-title").textContent = multiple ? "Add Multiple Transactions" : "Add Transaction";
+  const saveButton = document.getElementById("btn-save-tx");
+  if (saveButton) saveButton.textContent = multiple ? "Save transactions" : "Save";
+  updateMultiTransactionTotal();
+}
+
 function openTransactionModal(tx = null, presetDate = null) {
   const isEdit = !!tx;
   document.getElementById("modal-transaction-title").textContent = isEdit
@@ -3062,6 +3153,8 @@ function openTransactionModal(tx = null, presetDate = null) {
   document.getElementById("tx-date").value = tx?.date || presetDate || getTodayISO();
   document.getElementById("tx-description").value = tx?.description || "";
   document.getElementById("tx-save-description").checked = false;
+  document.getElementById("transaction-entry-mode").classList.toggle("hidden", isEdit);
+  document.getElementById("multi-transaction-rows").innerHTML = "";
   document.getElementById("btn-delete-tx").classList.toggle("hidden", !isEdit);
   document.getElementById("tx-recurring").checked = tx?.recurring || false;
   document.getElementById("tx-planned").checked = tx?.status === "planned";
@@ -3077,9 +3170,11 @@ function openTransactionModal(tx = null, presetDate = null) {
   populateWalletOptions("tx-wallet", tx?.wallet || "");
   populateCategoryOptions("tx-category", tx?.category || "");
   renderTransactionDescriptionSuggestions();
+  setTransactionEntryMode("single");
 
   document.getElementById("err-amount").textContent = "";
   document.getElementById("err-wallet").textContent = "";
+  document.getElementById("err-multi-transactions").textContent = "";
 
   openModal("modal-transaction");
 }
@@ -3121,6 +3216,8 @@ function updateTxCurrencySymbol() {
   const cur = document.getElementById("tx-currency")?.value || STATE.currency;
   const symbol = document.getElementById("tx-currency-symbol");
   if (symbol) symbol.textContent = getCurrencySymbol(cur);
+  document.querySelectorAll(".multi-tx-currency-symbol").forEach((item) => { item.textContent = getCurrencySymbol(cur); });
+  updateMultiTransactionTotal();
 }
 
 function toggleRecurring() {
@@ -3133,11 +3230,12 @@ function toggleRecurring() {
 async function submitTransaction(event) {
   event.preventDefault();
 
+  const isMultiple = TRANSACTION_ENTRY_MODE === "multiple" && !document.getElementById("tx-id").value;
   const amount = parseAmount(document.getElementById("tx-amount").value);
   const wallet = document.getElementById("tx-wallet").value;
 
   let valid = true;
-  if (!amount || amount <= 0) {
+  if (!isMultiple && (!amount || amount <= 0)) {
     document.getElementById("err-amount").textContent = "Enter a valid amount.";
     valid = false;
   } else {
@@ -3148,6 +3246,20 @@ async function submitTransaction(event) {
     valid = false;
   } else {
     document.getElementById("err-wallet").textContent = "";
+  }
+  let multipleItems = [];
+  if (isMultiple) {
+    multipleItems = [...document.querySelectorAll(".multi-transaction-row")].map((row) => ({
+      description: row.querySelector(".multi-tx-description")?.value.trim() || "",
+      category: row.querySelector(".multi-tx-category")?.value.trim() || "",
+      amount: parseAmount(row.querySelector(".multi-tx-amount")?.value || ""),
+    })).filter((item) => item.description || item.category || item.amount > 0);
+    const invalidItems = multipleItems.some((item) => !item.amount || item.amount <= 0);
+    const error = document.getElementById("err-multi-transactions");
+    if (multipleItems.length < 2 || invalidItems) {
+      if (error) error.textContent = multipleItems.length < 2 ? "Enter at least two transaction items." : "Every transaction item needs a valid amount.";
+      valid = false;
+    } else if (error) error.textContent = "";
   }
   if (!valid) return;
 
@@ -3160,6 +3272,35 @@ async function submitTransaction(event) {
   const recurringFreq = document.getElementById("tx-recurring-freq").value;
   const isPlanned = document.getElementById("tx-planned").checked;
   const type = getCurrentTxType();
+  const btn = document.getElementById("btn-save-tx");
+  btn.textContent = "Saving...";
+  btn.disabled = true;
+
+  if (isMultiple) {
+    const completedTime = new Date().toISOString();
+    try {
+      await saveTransactionBatch(multipleItems.map((item) => ({
+        date,
+        wallet,
+        type,
+        category: item.category,
+        description: item.description,
+        amount: item.amount,
+        currency,
+        recurring: false,
+        status: "completed",
+        completedTime,
+        createdTime: completedTime,
+      })));
+      closeModal("modal-transaction");
+      showToast(`${multipleItems.length} transactions added.`, "success");
+    } finally {
+      btn.textContent = "Save transactions";
+      btn.disabled = false;
+    }
+    return;
+  }
+
   if (description && document.getElementById("tx-save-description").checked && !STATE.savedDescriptions.includes(description)) {
     STATE.savedDescriptions.unshift(description);
     STATE.savedDescriptions = STATE.savedDescriptions.slice(0, 100);
@@ -3167,7 +3308,7 @@ async function submitTransaction(event) {
   }
 
   const txData = {
-    id: id || generateId(),
+    id: id || undefined,
     date,
     wallet,
     type,
@@ -3187,16 +3328,14 @@ async function submitTransaction(event) {
       : new Date().toISOString(),
   };
 
-  const btn = document.getElementById("btn-save-tx");
-  btn.textContent = "Saving...";
-  btn.disabled = true;
-
-  await saveTransaction(txData);
-  closeModal("modal-transaction");
-  showToast(id ? "Transaction updated." : "Transaction added.", "success");
-
-  btn.textContent = "Save";
-  btn.disabled = false;
+  try {
+    await saveTransaction(txData);
+    closeModal("modal-transaction");
+    showToast(id ? "Transaction updated." : "Transaction added.", "success");
+  } finally {
+    btn.textContent = "Save";
+    btn.disabled = false;
+  }
 }
 
 async function completePlannedTransaction(id) {
@@ -4071,6 +4210,10 @@ window.openTransferModal = openTransferModal;
 window.closeModal = closeModal;
 window.closeModalOutside = closeModalOutside;
 window.submitTransaction = submitTransaction;
+window.setTransactionEntryMode = setTransactionEntryMode;
+window.addMultiTransactionRow = addMultiTransactionRow;
+window.removeMultiTransactionRow = removeMultiTransactionRow;
+window.updateMultiTransactionTotal = updateMultiTransactionTotal;
 window.submitWallet = submitWallet;
 window.submitCategory = submitCategory;
 window.submitTransfer = submitTransfer;
