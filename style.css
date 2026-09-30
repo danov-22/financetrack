@@ -1842,3 +1842,34 @@ input, select, textarea { outline: none; }
   z-index: 290;
 }
 .sidebar-overlay.active { display: block; }
+
+/* Compact Finance Guide learning cards */
+.finance-learning{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:12px}
+.finance-learning-card{min-width:0;padding:16px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2)}
+.finance-learning-intro{display:flex;flex-direction:column;justify-content:space-between;gap:18px}
+.finance-learning-flow{display:flex;align-items:center;flex-wrap:wrap;gap:5px}
+.finance-learning-flow span{padding:5px 8px;border-radius:999px;background:var(--accent-light);color:var(--accent)!important;font-size:.61rem!important;font-weight:750}
+.finance-learning-flow i{color:var(--text-3);font-size:.65rem;font-style:normal}
+.finance-learning-topics{padding:0 14px}
+.finance-learning .finance-learning-section{margin:0;border-bottom:1px solid var(--border)}
+.finance-learning .finance-learning-section:last-child{border-bottom:0}
+.finance-learning .finance-learning-title{position:relative;align-items:center;margin:0;padding:13px 28px 13px 0;cursor:pointer;list-style:none}
+.finance-learning .finance-learning-title::-webkit-details-marker{display:none}
+.finance-learning .finance-learning-title>b{position:absolute;right:2px;width:9px;height:9px;border-right:2px solid var(--text-3);border-bottom:2px solid var(--text-3);transform:rotate(45deg);transition:transform .2s}
+.finance-learning .finance-learning-section[open] .finance-learning-title>b{transform:rotate(225deg)}
+.finance-learning .finance-learning-section[open] .finance-learning-title{padding-bottom:10px}
+.finance-learning .finance-learning-section>.finance-learning-grid,.finance-learning .finance-learning-section>.tracking-style-grid,.finance-learning .finance-learning-section>.finance-tip-grid{padding-bottom:14px}
+.finance-learning>.finance-hub-link{grid-column:1/-1;margin-top:0}
+
+/* Movable quick actions */
+.fab-cluster{position:fixed;right:24px;bottom:90px;z-index:150;display:flex;flex-direction:column;align-items:flex-end;gap:7px;touch-action:none;user-select:none}
+.fab-cluster.dragging{cursor:grabbing}
+.fab-cluster-row{display:flex;gap:8px}
+.fab-cluster-top{display:flex;justify-content:flex-end}
+.fab-cluster .fab{position:static;inset:auto}
+.fab-cluster .feedback-fab,.fab-cluster .planner-fab{inset:auto}
+.fab-drag-handle{align-self:center;display:flex;align-items:center;justify-content:center;gap:3px;width:42px;height:18px;border:1px solid var(--border);border-radius:999px;background:color-mix(in srgb,var(--surface) 92%,transparent);box-shadow:var(--shadow);cursor:grab;touch-action:none}
+.fab-drag-handle:active{cursor:grabbing}
+.fab-drag-handle span{width:3px;height:3px;border-radius:50%;background:var(--text-3)}
+
+@media(max-width:768px){.finance-learning{grid-template-columns:1fr}.finance-learning>.finance-hub-link{grid-column:auto}.fab-cluster{right:16px;bottom:82px}}

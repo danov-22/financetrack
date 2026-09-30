@@ -15,7 +15,7 @@
       <picture><source srcset="/bewlet_dark.svg" media="(prefers-color-scheme: dark)"><img class="hub-brand-mark" src="/bewlet.svg" alt=""></picture>
       <picture><source srcset="/textlogo_dark.svg" media="(prefers-color-scheme: dark)"><img class="hub-brand-name" src="/textlogo.svg" alt="Bewlet"></picture>
     </a>
-    <a class="hub-header-action" href="/app">Open Bewlet</a>
+    <div class="hub-header-controls"><button id="hub-theme-toggle" class="hub-theme-toggle" type="button" aria-label="Switch to dark mode"><span aria-hidden="true">◐</span><b>Dark</b></button><a class="hub-header-action" href="/app">Open Bewlet</a></div>
   </header>
 
   <main>
@@ -26,6 +26,14 @@
         <p class="hub-lead">Build a stronger understanding of your money, then turn what you learn into a routine you can maintain in Bewlet.</p>
         <div class="learning-path" aria-label="Learning path">
           <span>Learn</span><i aria-hidden="true">&rarr;</i><span>Understand</span><i aria-hidden="true">&rarr;</i><span>Calculate</span><i aria-hidden="true">&rarr;</i><span>Track</span><i aria-hidden="true">&rarr;</i><span>Review</span>
+        </div>
+        <div class="hub-roadmap" aria-label="Six areas covered in this guide">
+          <article><span>01</span><div class="roadmap-visual roadmap-visual--flow"><i></i><i></i><i></i></div><h2>Cash flow</h2><p>See what comes in, what goes out, and when.</p></article>
+          <article><span>02</span><div class="roadmap-visual roadmap-visual--budget"><i></i><i></i><i></i></div><h2>Budget</h2><p>Give each part of your income a direction.</p></article>
+          <article><span>03</span><div class="roadmap-visual roadmap-visual--saving"><i></i><i></i><i></i></div><h2>Save</h2><p>Prepare for emergencies and future goals.</p></article>
+          <article><span>04</span><div class="roadmap-visual roadmap-visual--protect"><i></i></div><h2>Protect</h2><p>Manage debt and reduce financial shocks.</p></article>
+          <article><span>05</span><div class="roadmap-visual roadmap-visual--invest"><i></i><i></i><i></i><i></i></div><h2>Invest</h2><p>Understand risk, return, and diversification.</p></article>
+          <article><span>06</span><div class="roadmap-visual roadmap-visual--grow"><i></i><i></i><i></i></div><h2>Grow</h2><p>Build toward long-term financial freedom.</p></article>
         </div>
         <p class="hub-disclaimer">Educational guidance only, not personal financial advice. Adapt every method to your circumstances.</p>
       </div>
@@ -96,5 +104,6 @@
   </main>
 
   <footer class="hub-footer"><div class="hub-shell"><span>Bewlet Finance Management Hub</span><div><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/">Home</a></div></div></footer>
+  <script src="/finance-management.js"></script>
 </body>
 </html>

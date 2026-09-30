@@ -4267,6 +4267,78 @@ window.continueOnboardingToPreferences = continueOnboardingToPreferences;
 // ============================================================
 // BOOT
 // ============================================================
+function initDraggableFabCluster() {
+  const cluster = document.getElementById("fab-cluster");
+  const handle = document.getElementById("fab-drag-handle");
+  if (!cluster || !handle) return;
+  const storageKey = "bewlet_fab_position";
+  const margin = 10;
+
+  const keepInView = () => {
+    const rect = cluster.getBoundingClientRect();
+    const maxLeft = Math.max(margin, window.innerWidth - rect.width - margin);
+    const maxTop = Math.max(margin, window.innerHeight - rect.height - margin);
+    const left = Math.min(maxLeft, Math.max(margin, rect.left));
+    const top = Math.min(maxTop, Math.max(margin, rect.top));
+    cluster.style.left = `${left}px`;
+    cluster.style.top = `${top}px`;
+    cluster.style.right = "auto";
+    cluster.style.bottom = "auto";
+    return { left, top };
+  };
+
+  try {
+    const saved = JSON.parse(localStorage.getItem(storageKey) || "null");
+    if (Number.isFinite(saved?.left) && Number.isFinite(saved?.top)) {
+      cluster.style.left = `${saved.left}px`;
+      cluster.style.top = `${saved.top}px`;
+      cluster.style.right = "auto";
+      cluster.style.bottom = "auto";
+      requestAnimationFrame(keepInView);
+    }
+  } catch {}
+
+  handle.addEventListener("pointerdown", (event) => {
+    if (event.button !== undefined && event.button !== 0) return;
+    event.preventDefault();
+    const startRect = cluster.getBoundingClientRect();
+    const offsetX = event.clientX - startRect.left;
+    const offsetY = event.clientY - startRect.top;
+    cluster.classList.add("dragging");
+    handle.setPointerCapture?.(event.pointerId);
+
+    const move = (moveEvent) => {
+      const maxLeft = Math.max(margin, window.innerWidth - cluster.offsetWidth - margin);
+      const maxTop = Math.max(margin, window.innerHeight - cluster.offsetHeight - margin);
+      cluster.style.left = `${Math.min(maxLeft, Math.max(margin, moveEvent.clientX - offsetX))}px`;
+      cluster.style.top = `${Math.min(maxTop, Math.max(margin, moveEvent.clientY - offsetY))}px`;
+      cluster.style.right = "auto";
+      cluster.style.bottom = "auto";
+    };
+    const end = () => {
+      cluster.classList.remove("dragging");
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("pointerup", end);
+      handle.removeEventListener("pointercancel", end);
+      try { localStorage.setItem(storageKey, JSON.stringify(keepInView())); } catch {}
+    };
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", end);
+    handle.addEventListener("pointercancel", end);
+  });
+
+  handle.addEventListener("dblclick", () => {
+    cluster.removeAttribute("style");
+    try { localStorage.removeItem(storageKey); } catch {}
+  });
+  window.addEventListener("resize", () => {
+    if (cluster.style.left) {
+      const position = keepInView();
+      try { localStorage.setItem(storageKey, JSON.stringify(position)); } catch {}
+    }
+  });
+}
+
 function boot() {
   loadStateFromLS();
   if (IS_DEMO_MODE) applyDemoState();
@@ -4286,6 +4358,7 @@ function boot() {
   initEventListeners();
   initSidebarSwipeGestures();
   initQuickPageSwipeGestures();
+  initDraggableFabCluster();
 
   // Check recurring on startup
   checkRecurringTransactions();
