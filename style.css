@@ -1671,6 +1671,10 @@ input, select, textarea { outline: none; }
     width: 52px;
     height: 52px;
   }
+  .planner-fab {
+    bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 76px);
+    right: 24px;
+  }
 
   /* ── Page content ── */
   .page {
