@@ -4,6 +4,7 @@
     { "source": "/demo", "destination": "/app.html" },
     { "source": "/privacy", "destination": "/privacy.html" },
     { "source": "/terms", "destination": "/terms.html" },
+    { "source": "/finance-management", "destination": "/finance-management.html" },
     { "source": "/admin", "destination": "/admin.html" }
   ]
 }

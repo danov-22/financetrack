@@ -1,8 +1,9 @@
-const CACHE_NAME = "bewlet-shell-v79";
+const CACHE_NAME = "bewlet-shell-v80";
 const CHART_URL = "https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js";
 const APP_SHELL = [
   "/", "/index.html", "/landing.css", "/auth.js", "/bewlet.svg", "/bewlet_dark.svg", "/bewlet_app_icon_v2.svg", "/textlogo.svg", "/textlogo_dark.svg",
   "/app", "/demo", "/app.html", "/style.css", "/brand-static.css", "/main.js", "/script.js",
+  "/finance-management", "/finance-management.html", "/finance-management.css",
   "/manifest.webmanifest", CHART_URL
 ];
 
